@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "iconos": "node scripts/generar-iconos.mjs",
-    "verificar": "npm run lint && npm run typecheck && npm test"
+    "verificar": "npm run lint && npm run typecheck && npm test",
+    "esquema": "node scripts/unir-migraciones.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

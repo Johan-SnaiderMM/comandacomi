@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-// @ts-expect-error: script de Node sin tipos
 import { construir } from "../../scripts/unir-migraciones.mjs";
 
 describe("supabase/esquema-completo.sql", () => {

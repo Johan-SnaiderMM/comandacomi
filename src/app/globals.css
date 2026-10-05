@@ -107,6 +107,7 @@ textarea {
 
 /* Cifras alineadas (importes, contadores). */
 @utility cifra {
+  white-space: nowrap; /* una cifra nunca se parte en dos líneas */
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
   font-weight: 800;

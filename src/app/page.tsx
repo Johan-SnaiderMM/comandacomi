@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { Flame } from "lucide-react";
 import { BarraAccion } from "@/components/layout/barra-accion";
-import { botonVariantes } from "@/components/ui/button";
+import { FormularioEntrar } from "@/components/sesion/formulario-entrar";
 import { MARCA } from "@/lib/marca";
 
-/** Portada de la demo. La tesis: tu día entero cabe en un tiquete y se lee de un vistazo. */
+/** Portada de la demo (estática: carga al instante). La tesis: tu día entero cabe en un tiquete. */
 export default function Portada() {
   return (
     <div className="columna-app pb-accion flex flex-col px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))]">
@@ -45,10 +44,7 @@ export default function Portada() {
       </section>
 
       <BarraAccion>
-        <Link href="/inicio" className={botonVariantes({ variante: "primario", tamano: "lg", bloque: true })}>
-          Entrar a la demo
-        </Link>
-        <p className="mt-2 text-center text-sm text-tinta-2">Sin registro. Todos los datos son de ejemplo.</p>
+        <FormularioEntrar />
       </BarraAccion>
     </div>
   );

@@ -6,36 +6,15 @@
  * Cada llamada de `como()` simula una petición de Supabase: abre una transacción, cambia al rol
  * `authenticated` (o `anon`) y fija el JWT; si la función falla, se revierte todo.
  */
-import fs from "node:fs";
-import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { leerMigraciones, reclamosJwt, SUPABASE_MINIMO } from "@/lib/local/esquema-supabase";
 
-export const DIR_MIGRACIONES = path.join(process.cwd(), "supabase", "migrations");
-export const MIGRACIONES = fs
-  .readdirSync(DIR_MIGRACIONES)
-  .filter((f) => f.endsWith(".sql"))
-  .sort();
-
-/** Lo que Supabase ya trae y las migraciones usan (auth.users, auth.uid(), roles, privilegios por defecto). */
-const SUPABASE_MINIMO = `
-  create role anon nologin; create role authenticated nologin; create role service_role nologin;
-  create schema if not exists extensions; create schema auth;
-  grant usage on schema public, extensions, auth to anon, authenticated, service_role;
-  create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_app_meta_data jsonb);
-  create function auth.jwt() returns jsonb language sql stable as $$
-    select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
-  create function auth.uid() returns uuid language sql stable as $$ select nullif(auth.jwt() ->> 'sub', '')::uuid $$;
-  -- Supabase da acceso total por defecto sobre lo nuevo en public: las migraciones deben cerrarlo.
-  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-  alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
-`;
+export const MIGRACIONES = leerMigraciones().map(([nombre]) => nombre);
 
 export async function crearBase(): Promise<PGlite> {
   const db = new PGlite();
   await db.exec(SUPABASE_MINIMO);
-  for (const archivo of MIGRACIONES) {
-    await db.exec(fs.readFileSync(path.join(DIR_MIGRACIONES, archivo), "utf8"));
-  }
+  for (const [, sql] of leerMigraciones()) await db.exec(sql);
   return db;
 }
 
@@ -61,9 +40,7 @@ export async function como<T extends Record<string, unknown> = Record<string, un
 ): Promise<T[]> {
   return db.transaction(async (tx) => {
     await tx.exec(`set local role ${actor ? "authenticated" : "anon"}`);
-    await tx.query(`select set_config('request.jwt.claims', $1, true)`, [
-      JSON.stringify(actor ? { sub: actor, role: "authenticated" } : { role: "anon" }),
-    ]);
+    await tx.query(`select set_config('request.jwt.claims', $1, true)`, [reclamosJwt(actor)]);
     const res = await tx.query<T>(texto, params);
     return res.rows;
   });

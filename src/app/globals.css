@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/*
+ * SISTEMA DE DISEÑO · mobile-first (se diseña para 360×640 y 390×844; en pantallas grandes solo se centra).
+ *
+ * Ideas que guían las decisiones:
+ *  - Se usa al sol, de pie y con una mano: máximo contraste (tinta casi negra sobre blanco) y bordes gruesos.
+ *  - Los botones son "teclas de caja registradora": borde grueso + sombra dura que se hunde al tocar.
+ *    No dependen de hover; el feedback es inmediato.
+ *  - Amarillo "taxi" = acción principal. Rojo ají = deuda/alerta. Verde = listo/ok. Nada más.
+ *  - El tiquete de comanda (borde dentado, separadores punteados, cifras tabulares) es la firma visual.
+ *  - Sin fuentes web salvo la de títulos (una sola familia, dos pesos). El cuerpo usa la del sistema.
+ */
+@theme {
+  --color-tinta: #16140f;
+  --color-tinta-2: #3c4046; /* texto secundario: 9:1 sobre blanco */
+  --color-fondo: #e8eaec;
+  --color-papel: #ffffff;
+  --color-linea: #c4c9cf;
+
+  --color-sol: #ffc20e; /* acción principal */
+  --color-sol-suave: #fff3c4;
+  --color-aji: #c8261a; /* deuda / alerta (5,6:1 con blanco) */
+  --color-aji-suave: #fde5e2;
+  --color-listo: #12703a; /* listo / ok (6,2:1 con blanco) */
+  --color-listo-suave: #dcf2e3;
+
+  --font-display: var(--font-barlow), "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --shadow-sello: 0 3px 0 0 var(--color-tinta);
+  --shadow-sello-chico: 0 2px 0 0 var(--color-tinta);
+}
+
+:root {
+  --tap: 3rem; /* 48 px: objetivo táctil mínimo */
+  --tap-lg: 3.5rem; /* 56 px: acciones principales */
+  --nav-h: 4.5rem; /* barra de navegación inferior */
+  --accion-h: 5.25rem; /* barra de acción fija sobre la navegación */
+  --ancho-app: 30rem; /* en pantallas grandes la app queda en una columna centrada */
+  --seguro-abajo: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-tinta);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 1rem; /* 16 px: evita el zoom automático al enfocar campos */
+  line-height: 1.4;
+  color: var(--color-tinta);
+  background: var(--color-fondo);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Columna de la app: ocupa todo el celular y, en pantallas grandes, queda centrada. */
+.columna-app {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--ancho-app);
+  min-height: 100dvh;
+  background: var(--color-fondo);
+}
+
+/* Quita el retraso del doble toque sin bloquear el zoom con dos dedos. */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Los campos nunca bajan de 16 px (en iPhone y Android, menos provoca zoom al enfocar). */
+input,
+select,
+textarea {
+  font-size: max(1rem, 16px);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-tinta);
+  outline-offset: 2px;
+}
+
+/* Objetivo táctil mínimo. */
+@utility tap {
+  min-height: var(--tap);
+  min-width: var(--tap);
+}
+
+/* Relleno inferior para que el contenido no quede bajo las barras fijas. */
+@utility pb-nav {
+  padding-bottom: calc(var(--nav-h) + var(--seguro-abajo) + 1rem);
+}
+@utility pb-nav-accion {
+  padding-bottom: calc(var(--nav-h) + var(--accion-h) + var(--seguro-abajo) + 1rem);
+}
+@utility pb-accion {
+  padding-bottom: calc(var(--accion-h) + var(--seguro-abajo) + 1rem);
+}
+
+/* Cifras alineadas (importes, contadores). */
+@utility cifra {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/*
+ * Tiquete de comanda: papel blanco con borde inferior dentado.
+ * El color del papel se toma de --papel-tiquete para poder cambiarlo.
+ */
+.tiquete {
+  --papel-tiquete: var(--color-papel);
+  position: relative;
+  background: var(--papel-tiquete);
+  margin-bottom: 10px;
+}
+/* Dientes: triángulos que apuntan hacia abajo, recortados con una máscara (el color sale del papel). */
+.tiquete::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+  background: var(--papel-tiquete);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10'%3E%3Cpolygon points='0,0 14,0 7,10'/%3E%3C/svg%3E") 0 0 / 14px 10px repeat-x;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10'%3E%3Cpolygon points='0,0 14,0 7,10'/%3E%3C/svg%3E") 0 0 / 14px 10px repeat-x;
+}
+
+.separador-punteado {
+  border: 0;
+  border-top: 2px dashed color-mix(in srgb, var(--color-tinta) 35%, transparent);
+}
+
+/* Hoja inferior (bottom sheet) sobre <dialog> nativo: entra desde abajo, sin librerías. */
+@keyframes hoja-sube {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes fondo-aparece {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.hoja[open] {
+  animation: hoja-sube 0.18s ease-out;
+}
+.hoja[open]::backdrop {
+  animation: fondo-aparece 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoja[open],
+  .hoja[open]::backdrop {
+    animation: none;
+  }
+  .animate-pulse {
+    animation: none;
+  }
+}
+
+::selection {
+  background: var(--color-sol);
+}

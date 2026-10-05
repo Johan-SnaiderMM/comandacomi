@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e8eaec" />
+    <title>Sin señal</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 16px;
+        padding: 24px 16px;
+        box-sizing: border-box;
+        background: #e8eaec;
+        color: #16140f;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 18px;
+        line-height: 1.4;
+      }
+      h1 {
+        margin: 0;
+        font: 800 40px/0.95 "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: -0.01em;
+      }
+      p {
+        margin: 0;
+        color: #3c4046;
+      }
+      button {
+        align-self: flex-start;
+        min-height: 56px;
+        padding: 0 24px;
+        border: 2px solid #16140f;
+        border-radius: 12px;
+        background: #ffc20e;
+        box-shadow: 0 3px 0 0 #16140f;
+        color: #16140f;
+        font: 700 18px system-ui, sans-serif;
+      }
+      button:active {
+        transform: translateY(3px);
+        box-shadow: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Sin señal</h1>
+    <p>No se pudo abrir esta pantalla. Lo que ya estaba guardado sigue ahí. Busca mejor señal e intenta de nuevo.</p>
+    <button type="button" onclick="location.reload()">Reintentar</button>
+  </body>
+</html>

@@ -1,0 +1,53 @@
+# dependencias
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# pruebas
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# producción
+/build
+
+# varios
+.DS_Store
+*.pem
+
+# depuración
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# variables de entorno: nunca se suben; solo el ejemplo (sin valores reales)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# base de datos local de desarrollo (PGlite) y subidas locales
+/.local/
+
+# contexto comercial (precios, planes): solo local, no se sube
+ROADMAP-RESTAURANTES.md
+PROMPT-DEMO-RESTAURANTES.md
+
+# credenciales sueltas: nunca se suben
+*password*.txt
+
+# ajustes locales de Claude Code
+.claude/settings.local.json

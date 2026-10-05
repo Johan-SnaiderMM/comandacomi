@@ -2007,9 +2007,10 @@ begin
 
   -- 2) Menú
   insert into public.categorias_producto (restaurante_id, nombre, icono, orden) values
+    -- Emojis antiguos (Unicode ≤ 6): se ven bien incluso en Androids viejos de gama baja.
     (p_rest, 'Hamburguesas', '🍔', 1), (p_rest, 'Perros', '🌭', 2), (p_rest, 'Salchipapas', '🍟', 3),
-    (p_rest, 'A la plancha', '🥩', 4), (p_rest, 'Pollo', '🍗', 5), (p_rest, 'Arepas', '🫓', 6),
-    (p_rest, 'Bebidas', '🥤', 7);
+    (p_rest, 'A la plancha', '🍖', 4), (p_rest, 'Pollo', '🍗', 5), (p_rest, 'Arepas', '🌮', 6),
+    (p_rest, 'Bebidas', '🍹', 7);
 
   insert into public.productos (restaurante_id, categoria_id, nombre, precio, orden)
   select p_rest, c.id, v.nombre, v.precio, v.orden

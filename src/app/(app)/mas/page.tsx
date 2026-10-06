@@ -64,7 +64,7 @@ export default async function Mas() {
           </a>
         )}
         <div className="space-y-3 pt-3">
-          {contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && <BotonReiniciar className={fila} />}
+          {contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} />}
           <BotonSalir className={`${fila} text-tinta-2`} />
         </div>
       </main>

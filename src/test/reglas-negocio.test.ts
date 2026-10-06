@@ -319,4 +319,26 @@ describe("reiniciar la demo", () => {
     const g = await rpc<{ gastos: { monto: number }[] }>(db, U, "listar_gastos");
     expect(g.gastos.some((x) => x.monto === 999)).toBe(false);
   });
+
+  it("le pone el nombre del local que se va a visitar", async () => {
+    const nombre = async () => (await rpc<{ restaurante: { nombre: string } }>(db, U, "obtener_contexto")).restaurante.nombre;
+    await rpc(db, U, "reiniciar_demo", { p_nombre: "  Fladi  " });
+    expect(await nombre()).toBe("Fladi");
+    await rpc(db, U, "reiniciar_demo", { p_nombre: "Picnic Delicias" });
+    expect(await nombre()).toBe("Picnic Delicias");
+    // sin nombre se conserva el actual y los datos igual se recargan
+    await rpc(db, U, "reiniciar_demo");
+    expect(await nombre()).toBe("Picnic Delicias");
+    expect((await rpc<Menu>(db, U, "obtener_menu_para_pedido")).productos).toHaveLength(25);
+  });
+
+  it("rechaza un nombre vacío o demasiado largo sin tocar los datos", async () => {
+    const fresco = await rpc<Menu>(db, U, "obtener_menu_para_pedido"); // los reinicios anteriores cambiaron los ids
+    await pedidoNuevo([{ producto_id: fresco.productos.find((x) => x.nombre === "Perro caliente")!.id }]);
+    await expect(rpc(db, U, "reiniciar_demo", { p_nombre: "   " })).rejects.toThrow(/Escribe el nombre/);
+    await expect(rpc(db, U, "reiniciar_demo", { p_nombre: "x".repeat(61) })).rejects.toThrow(/muy largo/);
+    const lista = await rpc<{ id: string }[]>(db, U, "listar_pedidos_pendientes");
+    expect(lista.length).toBeGreaterThan(4); // el pedido creado sigue ahí: no se reinició nada
+    await rpc(db, U, "reiniciar_demo"); // deja la base como la esperan las demás pruebas
+  });
 });

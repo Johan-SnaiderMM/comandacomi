@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ejecutar } from "@/lib/datos/llamar";
 import type { Resultado } from "@/lib/errores";
-import { esquemaCategoria, esquemaDisponibilidad, esquemaProducto } from "@/lib/esquemas/menu";
+import { esquemaCategoria, esquemaDisponibilidad, esquemaNombreRestaurante, esquemaProducto } from "@/lib/esquemas/menu";
 
 function refrescar() {
   revalidatePath("/", "layout");
@@ -53,9 +53,14 @@ export async function cambiarDisponibilidad(productoId: string, disponible: bool
   return { ok: true };
 }
 
-/** Borra lo creado en la demo y vuelve a cargar los datos de ejemplo. Solo restaurantes de demostración. */
-export async function reiniciarDemo(): Promise<Resultado> {
-  const r = await ejecutar("reiniciar_demo");
+/**
+ * Borra lo creado en la demo, vuelve a cargar los datos de ejemplo y le pone el nombre del local que se va a visitar.
+ * Solo restaurantes de demostración.
+ */
+export async function reiniciarDemo(nombre: string): Promise<Resultado> {
+  const parsed = esquemaNombreRestaurante.safeParse(nombre);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa el nombre." };
+  const r = await ejecutar("reiniciar_demo", { p_nombre: parsed.data });
   if (!r.ok) return r;
   refrescar();
   redirect("/inicio?reiniciada=1");

@@ -271,6 +271,7 @@ describe("sin sesión o sin restaurante: nada", () => {
     await db.query(`insert into public.perfiles (user_id, restaurante_id, rol, nombre) values ($1, $2, 'ayudante', 'Ayudante')`, [u.rows[0].id, A.restauranteId]);
     await expect(rpc(db, u.rows[0].id, "guardar_categoria", { p_id: null, p_nombre: "Nueva" })).rejects.toThrow(/Solo el dueño/);
     await expect(rpc(db, u.rows[0].id, "reiniciar_demo")).rejects.toThrow(/Solo el dueño/);
+    await expect(rpc(db, u.rows[0].id, "reiniciar_demo", { p_nombre: "Otro nombre" })).rejects.toThrow(/Solo el dueño/);
     // pero sí puede marcar "se acabó" y trabajar con pedidos
     const menu = await rpc<{ productos: { id: string }[] }>(db, u.rows[0].id, "obtener_menu_para_pedido");
     await expect(rpc(db, u.rows[0].id, "cambiar_disponibilidad", { p_producto_id: menu.productos[0].id, p_disponible: false })).resolves.toBeTruthy();

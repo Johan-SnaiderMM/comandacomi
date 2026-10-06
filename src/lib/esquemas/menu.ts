@@ -18,6 +18,9 @@ export const esquemaCategoria = z.object({
   activa: z.boolean().default(true),
 });
 
+/** Nombre del restaurante al reiniciar la demo. */
+export const esquemaNombreRestaurante = z.string().trim().min(1, "Escribe el nombre del restaurante.").max(60, "El nombre es muy largo (máximo 60 caracteres).");
+
 export const esquemaDisponibilidad = z.object({
   productoId: z.uuid("El plato no es válido."),
   disponible: z.boolean(),

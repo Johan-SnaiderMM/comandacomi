@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, MessageCircle, ReceiptText, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { MARCA } from "@/lib/marca";
@@ -52,7 +53,8 @@ export default async function Mas() {
             <ChevronRight className="size-5 shrink-0" aria-hidden />
           </a>
         )}
-        <div className="pt-3">
+        <div className="space-y-3 pt-3">
+          {contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && <BotonReiniciar className={fila} />}
           <BotonSalir className={`${fila} text-tinta-2`} />
         </div>
       </main>

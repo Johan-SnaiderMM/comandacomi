@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, NotebookPen, ReceiptText, Wallet } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { AvisoUrl } from "@/components/ui/aviso-url";
 import { botonVariantes } from "@/components/ui/button";
 import { obtenerContexto, obtenerInicio } from "@/lib/datos/inicio";
 import { formatearPesos } from "@/lib/dinero";
@@ -13,7 +14,8 @@ export const metadata = { title: "Inicio" };
 const tarjeta =
   "block rounded-2xl border-2 border-tinta p-4 shadow-sello transition-[transform,box-shadow] duration-75 active:translate-y-[3px] active:shadow-none";
 
-export default async function Inicio() {
+export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
+  const sp = await searchParams;
   const [inicio, contexto] = await Promise.all([obtenerInicio(), obtenerContexto()]);
   const veredicto = veredictoDelDia(inicio.ventas_hoy, inicio.gastos_hoy);
 
@@ -28,6 +30,7 @@ export default async function Inicio() {
         }
       />
       <main className="pb-nav space-y-3 px-4 pt-3">
+        {sp.reiniciada === "1" && <AvisoUrl>Demo reiniciada: los datos de ejemplo están como nuevos.</AvisoUrl>}
         <div>
           <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">{fechaLarga(inicio.fecha)}</p>
           <h2

@@ -19,6 +19,10 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
 - Pruebas de SQL/RLS: Postgres real en memoria con PGlite (`src/test/base-datos.ts`), no hay Docker ni CLI de Supabase.
 - Diseño: objetivos táctiles ≥ 48 px, texto ≥ 16 px, acciones principales abajo, sin `hover`, sin scroll horizontal.
   Verifica cada pantalla a 360×640 y 390×844.
+- Los componentes `"use client"` NO pueden importar Zod ni `server-only` (directa ni indirectamente): una prueba
+  (`src/test/peso-del-cliente.test.ts`) lo verifica. Las constantes que necesite el cliente viven fuera de `lib/esquemas/`.
+- Después de cobrar/guardar, la acción revalida todo (`revalidatePath("/", "layout")`) y la página refresca: una pantalla
+  que muestra una confirmación debe conservarla (la página siempre renderiza el mismo componente, ver Cobrar).
 - No agregar lo aplazado: facturación electrónica, cocina en tiempo real, inventario con recetas, gráficas,
   cola sin conexión completa, WhatsApp automático, impresión térmica, pagos en línea, multi-sede.
 - No hacer push ni despliegues, ni tocar servicios externos, sin avisar antes. Commits pequeños están bien.

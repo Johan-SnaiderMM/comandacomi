@@ -7,7 +7,14 @@ export type EstadoEntrada = { error: string | null };
 
 /** "Entrar a la demo": sin pedir datos. Las credenciales viven solo en variables de entorno del servidor. */
 export async function entrarDemo(_anterior: EstadoEntrada): Promise<EstadoEntrada> {
-  const { error } = await (await bd()).entrarDemo();
+  let error: string | null;
+  try {
+    ({ error } = await (await bd()).entrarDemo());
+  } catch (e) {
+    // Lo más común: se publicó sin configurar Supabase. El detalle va al registro del servidor, no a la pantalla.
+    console.error("[sesion] no se pudo abrir la base de datos:", e instanceof Error ? e.message : e);
+    error = "La demo todavía no está configurada. Avisa a quien te la compartió.";
+  }
   if (error) return { error };
   redirect("/inicio");
 }

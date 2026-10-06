@@ -141,7 +141,9 @@ export function CierreDia({
             )}
           </dl>
           <hr className="separador-punteado my-2" />
-          <Fila etiqueta="Debería haber" valor={formatearPesos(esperado)} fuerte />
+          <dl>
+            <Fila etiqueta="Debería haber" valor={formatearPesos(esperado)} fuerte />
+          </dl>
 
           <div className="mt-3 flex items-center justify-between gap-2">
             <p className="text-base font-bold">Contaste</p>

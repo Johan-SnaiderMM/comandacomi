@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Interruptor } from "@/components/ui/interruptor";
 import { Label } from "@/components/ui/label";
 import type { MenuAdmin } from "@/lib/datos/tipos";
-import { ICONOS_CATEGORIA } from "@/lib/esquemas/menu";
+import { ICONOS_CATEGORIA } from "@/lib/iconos-categoria";
 import { cn } from "@/lib/utils";
 
 type Categoria = MenuAdmin["categorias"][number];

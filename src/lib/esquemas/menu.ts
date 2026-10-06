@@ -22,6 +22,3 @@ export const esquemaDisponibilidad = z.object({
   productoId: z.uuid("El plato no es válido."),
   disponible: z.boolean(),
 });
-
-/** Emojis para las categorías: todos de Unicode antiguo, se ven bien hasta en Androids viejos de gama baja. */
-export const ICONOS_CATEGORIA = ["🍔", "🌭", "🍟", "🍖", "🍗", "🌮", "🍹", "🍕", "🍝", "🍰", "🍳", "☕"];

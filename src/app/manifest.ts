@@ -6,7 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: MARCA.nombre,
     short_name: MARCA.nombre,
     description: MARCA.lema,
-    start_url: "/",
+    // La app instalada abre directo en Inicio; sin sesión, Inicio vuelve a la portada ("Entrar a la demo").
+    start_url: "/inicio",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

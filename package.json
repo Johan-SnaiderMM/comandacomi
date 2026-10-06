@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "iconos": "node scripts/generar-iconos.mjs",
     "verificar": "npm run lint && npm run typecheck && npm test",
-    "esquema": "node scripts/unir-migraciones.mjs"
+    "esquema": "node scripts/unir-migraciones.mjs",
+    "e2e": "node scripts/e2e-sin-conexion.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "playwright-core": "^1.63.0",
     "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "typescript": "^5",

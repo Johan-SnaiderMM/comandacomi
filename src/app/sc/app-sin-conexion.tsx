@@ -151,7 +151,11 @@ export function AppSinConexion() {
           const p = vista.pendientes.find((x) => x.id === id);
           return p ? <Cobrar detalle={detalleDe(p)} clientes={vista.clientes} /> : <NoEncontrado />;
         }
-        return conBarra(<InicioSC vista={vista} />);
+        if (ruta === "/") return conBarra(<InicioSC vista={vista} />);
+        // Una pantalla de la app normal que no existe aquí (cierre, menú, ficha de cliente…): llegó por el # que arma
+        // el service worker al faltar la señal. Se explica y se ofrece abrirla cuando haya conexión.
+        const resto = query.toString();
+        return <RequiereConexion ruta={resto ? `${ruta}?${resto}` : ruta} />;
       }
     }
   }

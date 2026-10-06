@@ -250,6 +250,21 @@ describe("refrescar la copia", () => {
   });
 });
 
+describe("dos pestañas", () => {
+  it("lo que una guarda lo ve la otra al recargar, sin pisarse", async () => {
+    const e = escenario({ enLinea: false });
+    const otra = e.nuevo(); // segunda pestaña, mismo almacén
+    await e.motor.ejecutar("crear_pedido", pedido("p-1"));
+    expect(otra.estado().ops).toHaveLength(0); // todavía no se enteró
+    otra.recargarDesdeAlmacen();
+    expect(otra.estado().ops.map((o) => o.clave)).toEqual(["clave-1"]);
+    await e.motor.ejecutar("crear_pedido", pedido("p-2"));
+    otra.recargarDesdeAlmacen();
+    expect(otra.estado().ops).toHaveLength(2);
+    expect(otra.estado().ops.map((o) => o.numeroLocal)).toEqual([1, 2]);
+  });
+});
+
 describe("revisar lo que falló", () => {
   it("reintentar vuelve a ponerla pendiente y la sube; descartar la quita", async () => {
     let aceptar = false;

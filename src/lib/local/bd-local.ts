@@ -15,7 +15,8 @@ import { huellaMigraciones, leerMigraciones, reclamosJwt, SUPABASE_MINIMO } from
 
 const CORREO_LOCAL = "demo@local.test";
 const COOKIE = "bd_local_uid";
-const DIR = path.join(process.cwd(), ".local");
+// DEMO_BD_DIR (solo desarrollo) permite tener otra base local aparte, por ejemplo para la prueba de punta a punta.
+const DIR = path.resolve(process.cwd(), process.env.DEMO_BD_DIR || ".local");
 const DIR_BD = path.join(DIR, "pglite");
 const DIR_FOTOS = path.join(DIR, "fotos");
 const ARCHIVO_HUELLA = path.join(DIR, "huella.txt");

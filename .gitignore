@@ -51,3 +51,5 @@ PROMPT-DEMO-RESTAURANTES.md
 
 # ajustes locales de Claude Code
 .claude/settings.local.json
+.local-e2e/
+e2e-capturas/

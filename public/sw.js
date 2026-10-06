@@ -77,20 +77,28 @@ async function precargarApp() {
   };
   buscar(html);
 
+  // Los scripts cargan otros scripts por su cuenta (el cargador de Next/Turbopack sabe cuáles hacen falta): se leen
+  // también para guardarlos, con un tope por si algo se sale de lo normal.
   const pendientes = [...rutas];
   const vistas = new Set();
-  while (pendientes.length > 0) {
+  while (pendientes.length > 0 && vistas.size < 400) {
     const ruta = pendientes.pop();
     if (vistas.has(ruta)) continue;
     vistas.add(ruta);
-    if (await estatico.match(ruta)) continue;
     try {
-      const r = await fetch(ruta, { credentials: "same-origin" });
-      if (!r.ok) continue;
-      await estatico.put(ruta, r.clone());
+      let r = await estatico.match(ruta);
+      if (!r) {
+        const bajada = await fetch(ruta, { credentials: "same-origin" });
+        if (!bajada.ok) continue;
+        await estatico.put(ruta, bajada.clone());
+        r = bajada;
+      }
       if (ruta.endsWith(".css")) {
         const css = await r.clone().text();
         for (const m of css.matchAll(/url\(\s*["']?([^"')\s]*\/_next\/static\/media\/[^"')\s]+)["']?\s*\)/g)) pendientes.push(new URL(m[1], self.location.origin).pathname);
+      } else if (ruta.endsWith(".js")) {
+        const js = await r.clone().text();
+        for (const m of js.matchAll(/static\/(?:chunks|css|media)\/[A-Za-z0-9_\-./%~]+\.(?:js|css|woff2?)/g)) pendientes.push(`/_next/${m[0]}`);
       }
     } catch {
       // un archivo que no baja no impide guardar los demás

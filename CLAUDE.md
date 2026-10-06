@@ -23,7 +23,14 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   (`src/test/peso-del-cliente.test.ts`) lo verifica. Las constantes que necesite el cliente viven fuera de `lib/esquemas/`.
 - Después de cobrar/guardar, la acción revalida todo (`revalidatePath("/", "layout")`) y la página refresca: una pantalla
   que muestra una confirmación debe conservarla (la página siempre renderiza el mismo componente, ver Cobrar).
+- Trabajo sin conexión: toda escritura del mostrador (pedido, estado, cobro, cliente, abono, gasto) pasa por
+  `src/lib/sync/acciones.ts` → `Motor` (cola en localStorage) → acción `aplicarOperacion` → `aplicar_operacion` en la base
+  (clave única = idempotente; trae `ocurrido_en`). Las pantallas usan `Enlace`/`useIr` de `src/lib/navegacion.tsx` (no `next/link`
+  ni `useRouter` directos) para que sirvan también en `/sc`. Un tipo de operación nuevo toca: `lib/sync/tipos.ts`, `vista.ts`,
+  `describir.ts`, `lib/esquemas/operacion.ts`, el `case` de `aplicar_operacion` (migración nueva) y la prueba
+  `src/test/contrato-operaciones.test.ts`. Antes de dar por buena una de esas piezas corre `npm run e2e`.
+- Pedidos hechos sin señal llevan número provisional negativo: mostrar siempre con `numeroVisible()`.
 - No agregar lo aplazado: facturación electrónica, cocina en tiempo real, inventario con recetas, gráficas,
-  cola sin conexión completa, WhatsApp automático, impresión térmica, pagos en línea, multi-sede.
+  WhatsApp automático, impresión térmica, pagos en línea, multi-sede.
 - No hacer push ni despliegues, ni tocar servicios externos, sin avisar antes. Commits pequeños están bien.
 - Referencia de patrones (NO copiar módulos de taller ni su auto-deploy): `C:\Users\johan\Desktop\Polo Air Cool`.

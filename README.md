@@ -43,6 +43,26 @@ El **modo local** corre las mismas migraciones y funciones de `supabase/` en una
 en `.local/`. Solo funciona fuera de producción. Para empezar de cero, borra la carpeta `.local/` (también se
 recrea sola si cambian las migraciones).
 
+## Trabajar sin conexión
+
+La app sigue funcionando cuando se va la señal y sube todo sola cuando vuelve:
+
+- **Qué se puede hacer sin señal:** tomar pedidos, marcarlos listos/entregados, agregar platos, cobrar (efectivo, Nequi
+  o fiado, con cliente nuevo incluido), abonar al fiado y anotar gastos (sin foto). Lo que se hace se ve de inmediato y
+  los pedidos nuevos llevan un número provisional ("N1", "N2"…) hasta que el servidor les da el definitivo.
+- **Qué necesita señal:** cierre del día, menú, gastos de días anteriores, fichas de clientes, anular y la foto del gasto.
+  Esas pantallas lo explican en vez de fallar.
+- **Cómo funciona:** el celular guarda una copia (menú, pedidos, clientes) y una cola de lo que se hace. Sin señal el
+  service worker abre la **app sin conexión** (`/sc`, una página estática), que usa los mismos componentes con la copia
+  local. Al volver la señal la cola se sube en orden. Cada operación lleva una clave única (`aplicar_operacion` en la
+  base la ejecuta una sola vez aunque llegue repetida) y la fecha en que ocurrió: un cobro hecho a las 11 p. m. sin
+  señal cuenta en ese día aunque suba al siguiente (máximo 7 días).
+- **La franja de arriba** avisa: *Sin conexión · N por subir*, *Subiendo…* o *N cambios no se pudieron subir* (el
+  servidor rechazó algo, por ejemplo un plato que ya no existe): **Más → Sincronización** deja reintentar o descartar.
+- **Al salir de la sesión** se borran la copia y la cola (si quedan cambios sin subir, avisa antes).
+- **Probarlo:** `npm run e2e` abre un Chrome real, corta la red y verifica de punta a punta (necesita Chrome instalado;
+  `CHROME_PATH` si está en otra ruta). Para probar a mano: DevTools → Network → *Offline*.
+
 ## Cómo reiniciar los datos de ejemplo
 
 - **Desde la app:** *Más → Reiniciar demo*. Borra lo creado (pedidos, gastos, cobros, fiado, cambios al menú) y
@@ -98,20 +118,23 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 | `npm run verificar` | Lint + tipos + pruebas (lo que debe estar en verde) |
 | `npm run esquema` | Regenera `supabase/esquema-completo.sql` desde las migraciones |
 | `npm run iconos` | Regenera los íconos de la PWA (`public/icons`) |
+| `npm run e2e` | Prueba de punta a punta del trabajo sin conexión (Chrome real; ~3 min) |
 
 ## Estructura
 
 ```
 src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fiado, Más, Gastos, Menú
 src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente
-src/app/acciones/     Acciones del servidor (escrituras): validan con Zod y llaman funciones SQL
+src/app/acciones/     Acciones del servidor: sync.ts (aplicarOperacion/obtenerSnapshot) y anulaciones; validan con Zod y llaman funciones SQL
+src/app/sc/           App sin conexión: una página estática con los mismos componentes y la copia local
+src/lib/sync/         Trabajo sin conexión: tipos, vista local, motor de la cola, acciones del celular
 src/app/api/foto/     Sirve las fotos de gastos solo con sesión y solo del propio restaurante
 src/components/       ui (botón, hoja inferior, teclado numérico…), layout, fiado, gastos, sesión
 src/lib/              dinero.ts (TODOS los cálculos), fechas, whatsapp, teclado, esquemas/ (Zod), datos/ (lecturas)
 src/lib/local/        Modo local de desarrollo (PGlite)
 supabase/migrations/  Tablas, RLS, funciones de lectura/escritura, demo, permisos, almacenamiento
 supabase/seed.sql     Carga de la demo en Supabase (idempotente)
-public/               sw.js (solo el cascarón de la PWA), offline.html, íconos
+public/               sw.js (service worker: estáticos + app sin conexión), offline.html, íconos
 ```
 
 ## Reglas del proyecto
@@ -142,9 +165,9 @@ public/               sw.js (solo el cascarón de la PWA), offline.html, íconos
 
 ## Qué NO hace (aplazado a propósito)
 
-Facturación electrónica, pantalla de cocina en tiempo real, recetas/inventario con descuento, gráficas, cola sin
-conexión completa (solo el cascarón de la PWA está en caché), WhatsApp automático u oficial, impresión térmica,
-pagos en línea y multi-sede.
+Facturación electrónica, pantalla de cocina en tiempo real, recetas/inventario con descuento, gráficas, WhatsApp
+automático u oficial, impresión térmica, pagos en línea y multi-sede. (Sin conexión funciona el trabajo del mostrador;
+el cierre, el menú y las anulaciones esperan a tener señal.)
 
 ## Problemas frecuentes
 

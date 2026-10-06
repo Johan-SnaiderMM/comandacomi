@@ -217,6 +217,15 @@ export class Motor {
     this.cambiar({ ops: this.est.ops.filter((o) => o.clave !== clave) });
   }
 
+  /** Vuelve a leer lo guardado cuando otra pestaña lo cambió. No escribe nada (para no pisar a la otra). */
+  recargarDesdeAlmacen(): void {
+    const cola = this.leerCola();
+    this.siguienteLocal = Math.max(this.siguienteLocal, cola.siguienteLocal);
+    this.ultimaLocalGuardada = this.siguienteLocal;
+    this.est = { ...this.est, snapshot: this.leerSnapshot(), ops: cola.ops };
+    this.avisar();
+  }
+
   /** Borra la copia y la cola (al salir de la sesión). */
   limpiarTodo(): void {
     this.siguienteLocal = 1;

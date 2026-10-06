@@ -8,7 +8,7 @@
 import { useSyncExternalStore } from "react";
 import { aplicarOperacion, obtenerSnapshot } from "@/app/acciones/sync";
 import { almacenLocal } from "./almacen";
-import { Motor, type EstadoMotor } from "./motor";
+import { CLAVE_COLA, CLAVE_SNAPSHOT, Motor, type EstadoMotor } from "./motor";
 import type { Snapshot } from "./tipos";
 
 /** Si el servidor no contesta en este tiempo se considera que no hay señal (la operación se guarda y se reintenta). */
@@ -31,6 +31,7 @@ function conLimite<T>(promesa: Promise<T>): Promise<T> {
 }
 
 let motor: Motor | null = null;
+let escuchandoOtrasPestanas = false;
 
 /** El motor de esta pestaña (null en el servidor: allí no hay nada que sincronizar). */
 export function obtenerMotor(): Motor | null {
@@ -41,6 +42,13 @@ export function obtenerMotor(): Motor | null {
     transporte: (op) => conLimite(aplicarOperacion({ clave: op.clave, tipo: op.tipo, ocurridoEn: op.ocurridoEn, datos: op.datos })),
     descargarSnapshot: () => conLimite(obtenerSnapshot()),
   });
+  if (!escuchandoOtrasPestanas) {
+    escuchandoOtrasPestanas = true;
+    // Dos pestañas de la app comparten la misma cola guardada: lo que una cambia, la otra lo lee (no se pisan).
+    window.addEventListener("storage", (e) => {
+      if (e.key === CLAVE_COLA || e.key === CLAVE_SNAPSHOT || e.key === null) motor?.recargarDesdeAlmacen();
+    });
+  }
   return motor;
 }
 

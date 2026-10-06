@@ -83,6 +83,7 @@ async function crearBdSupabase(): Promise<BaseDatos> {
       const password = process.env.DEMO_PASSWORD;
       if (!email || !password) return { error: "La demo no está configurada (faltan DEMO_EMAIL y DEMO_PASSWORD)." };
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) console.error(`[bd] entrar a la demo falló: ${error.status ?? "?"} ${error.code ?? ""} ${error.message}`);
       return { error: error ? "No se pudo entrar a la demo. Intenta de nuevo en un momento." : null };
     },
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { AvanzaGuia } from "@/components/guia/avanza-guia";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { botonVariantes } from "@/components/ui/button";
 import { ETIQUETA_MEDIO, formatearPesos } from "@/lib/dinero";
@@ -14,6 +15,8 @@ export function Confirmacion({ resultado: r }: { resultado: Resultado }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* Recorrido guiado: el paso "Cobra" termina aquí; la guía sigue sola tras dejar ver el vuelto. */}
+      <AvanzaGuia desde={4} espera={2000} />
       <main className="flex flex-1 flex-col items-start justify-center gap-4 px-4 pb-accion">
         <span className="flex size-16 items-center justify-center rounded-full border-2 border-tinta bg-listo text-papel shadow-sello">
           <Check className="size-9" strokeWidth={4} aria-hidden />

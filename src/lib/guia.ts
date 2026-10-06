@@ -53,7 +53,7 @@ export const PASOS: readonly PasoGuia[] = [
   {
     titulo: "Cobra",
     texto:
-      "Efectivo (con teclado y vuelto), Nequi, o fiado si el cliente paga después. Prueba cobrar en efectivo. Al terminar, toca «Siguiente paso».",
+      "Efectivo (con teclado y vuelto), Nequi, o fiado si el cliente paga después. Prueba cobrar en efectivo: al terminar, la guía sigue sola.",
     ruta: /^\/pedidos\/[^/]+\/cobrar$/,
     ir: "/pedidos",
     alLlegarA: /^\/fiado/,
@@ -149,6 +149,10 @@ export function iniciarGuia() {
 export function irAPaso(paso: number) {
   if (paso >= PASOS.length) emitir(null);
   else emitir({ paso: Math.max(0, paso), abierta: true });
+}
+/** Si la guía está en `paso`, pasa al siguiente (lo usan las pantallas que saben que el usuario ya hizo lo pedido). */
+export function avanzarDesde(paso: number) {
+  if (leerGuia()?.paso === paso) irAPaso(paso + 1);
 }
 export function abrirGuia() {
   const actual = leerGuia();

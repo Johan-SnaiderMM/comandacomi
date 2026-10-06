@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
  */
 export function BotonReiniciar({ className, nombreActual }: { className?: string; nombreActual: string }) {
   const [abierta, setAbierta] = useState(false);
-  const [nombre, setNombre] = useState(nombreActual);
+  const [nombre, setNombre] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
 
@@ -46,7 +46,7 @@ export function BotonReiniciar({ className, nombreActual }: { className?: string
             onChange={(e) => setNombre(e.target.value)}
             maxLength={60}
             enterKeyHint="done"
-            placeholder="Ej.: Picnic Delicias"
+            placeholder={nombreActual}
             disabled={pendiente}
           />
           <p className="mt-3 text-base">Se borra todo lo que creaste (pedidos, gastos, cobros, fiado y cambios al menú) y vuelven los datos de ejemplo de los últimos 7 días.</p>

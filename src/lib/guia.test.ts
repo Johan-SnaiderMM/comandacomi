@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PASOS, pasoEnRuta, pasoTrasNavegar } from "./guia";
+import { avanzarDesde, irAPaso, leerGuia, PASOS, pasoEnRuta, pasoTrasNavegar, terminarGuia } from "./guia";
 
 describe("recorrido guiado", () => {
   it("avanza solo cuando el usuario llega a la pantalla que se le pidió", () => {
@@ -32,5 +32,18 @@ describe("recorrido guiado", () => {
     for (const [i, ruta] of Object.entries(muestras)) {
       expect(pasoEnRuta(Number(i) + 1, ruta), `paso ${Number(i) + 1}`).toBe(true);
     }
+  });
+});
+
+describe("avanzar desde una pantalla de confirmación", () => {
+  it("solo avanza si la guía está en ese paso", () => {
+    irAPaso(4);
+    avanzarDesde(3);
+    expect(leerGuia()?.paso).toBe(4);
+    avanzarDesde(4); // cobro confirmado
+    expect(leerGuia()).toEqual({ paso: 5, abierta: true });
+    terminarGuia();
+    avanzarDesde(4); // sin guía activa no hace nada
+    expect(leerGuia()).toBeNull();
   });
 });

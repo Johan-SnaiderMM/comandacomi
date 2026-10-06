@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, SlidersHorizontal } from "lucide-react";
 import { enviarPedido } from "@/app/acciones/pedidos";
+import { ChipGuia } from "@/components/guia/chip-guia";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Button } from "@/components/ui/button";
 import type { MenuParaPedido } from "@/lib/datos/tipos";
@@ -106,6 +107,9 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
             <ChevronDown className="size-5 shrink-0" aria-hidden />
           </button>
         )}
+        <span className={agregar ? "ml-auto" : undefined}>
+          <ChipGuia />
+        </span>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -139,6 +143,7 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
               return (
                 <div
                   key={p.id}
+                  data-guia="plato"
                   className={cn(
                     "relative flex flex-col overflow-hidden rounded-xl border-2 border-tinta shadow-sello-chico",
                     cant > 0 ? "bg-sol-suave" : "bg-papel",

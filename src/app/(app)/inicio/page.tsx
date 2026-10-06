@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ClipboardList, NotebookPen, ReceiptText, Wallet } from "lucide-react";
+import { ClipboardList, Lightbulb, NotebookPen, ReceiptText, Wallet } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { BotonGuia } from "@/components/guia/boton-guia";
 import { AvisoUrl } from "@/components/ui/aviso-url";
 import { botonVariantes } from "@/components/ui/button";
 import { obtenerContexto, obtenerInicio } from "@/lib/datos/inicio";
@@ -30,6 +31,11 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
         }
       />
       <main className="pb-nav space-y-3 px-4 pt-3">
+        {contexto.restaurante?.es_demo && (
+          <BotonGuia className={botonVariantes({ variante: "primario", tamano: "lg", bloque: true })}>
+            <Lightbulb className="size-5" aria-hidden /> Recorrido guiado · 2 minutos
+          </BotonGuia>
+        )}
         {sp.reiniciada === "1" && <AvisoUrl>Demo reiniciada: los datos de ejemplo están como nuevos.</AvisoUrl>}
         <div>
           <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">{fechaLarga(inicio.fecha)}</p>
@@ -46,7 +52,7 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
         </div>
 
         {/* El día en un tiquete: ventas − gastos = ganancia aproximada */}
-        <section aria-label="Resumen de hoy" className="tiquete border-2 border-b-0 border-tinta px-4 pt-3 pb-4">
+        <section aria-label="Resumen de hoy" data-guia="resumen" className="tiquete border-2 border-b-0 border-tinta px-4 pt-3 pb-4">
           <p className="flex items-baseline justify-between text-sm font-bold uppercase tracking-wide text-tinta-2">
             <span>Ventas de hoy</span>
             <span className="font-normal normal-case tracking-normal">

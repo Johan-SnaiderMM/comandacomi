@@ -42,7 +42,7 @@ export function BarraNavegacion({ pendientes = 0 }: { pendientes?: number }) {
                 )}
               >
                 {central ? (
-                  <span className="-mt-7 flex size-16 items-center justify-center rounded-full border-2 border-tinta bg-sol text-tinta shadow-sello transition-[transform,box-shadow] duration-75 active:translate-y-[3px] active:shadow-none">
+                  <span data-guia="tomar" className="-mt-7 flex size-16 items-center justify-center rounded-full border-2 border-tinta bg-sol text-tinta shadow-sello transition-[transform,box-shadow] duration-75 active:translate-y-[3px] active:shadow-none">
                     <Icono className="size-8" strokeWidth={3} aria-hidden />
                   </span>
                 ) : (

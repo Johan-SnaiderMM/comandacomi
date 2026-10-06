@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ChevronRight, MessageCircle, ReceiptText, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { ChevronRight, Lightbulb, MessageCircle, ReceiptText, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { BotonGuia } from "@/components/guia/boton-guia";
 import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
 import { obtenerContexto } from "@/lib/datos/inicio";
@@ -35,6 +36,15 @@ export default async function Mas() {
         <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">
           {contexto.restaurante?.nombre} · {contexto.perfil?.nombre}
         </p>
+        {contexto.restaurante?.es_demo && (
+          <BotonGuia className={`${fila} bg-sol`}>
+            <Lightbulb className="size-6 shrink-0" aria-hidden />
+            <span className="flex-1 text-left leading-tight">
+              Recorrido guiado
+              <span className="block text-sm font-normal">Paso a paso: pedido, cobro, fiado y cierre</span>
+            </span>
+          </BotonGuia>
+        )}
         <Enlace href="/gastos" Icono={Wallet} titulo="Gastos del día" detalle="Carne, pan, gas, domiciliario…" />
         <Enlace href="/cierre" Icono={ReceiptText} titulo="Cierre del día" detalle="Ventas, gastos y efectivo de la caja" />
         <Enlace href="/menu" Icono={UtensilsCrossed} titulo="Menú" detalle="Platos, precios y disponibilidad" />

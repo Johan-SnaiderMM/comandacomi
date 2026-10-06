@@ -34,7 +34,7 @@ export function AccionesFiado({
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
-        <a href={enlace} target="_blank" rel="noopener noreferrer" className={botonVariantes({ variante: "secundario", tamano: "md" })}>
+        <a href={enlace} data-guia="recordar" target="_blank" rel="noopener noreferrer" className={botonVariantes({ variante: "secundario", tamano: "md" })}>
           <MessageCircle className="size-5 shrink-0" aria-hidden /> Recordar
         </a>
         <Button onClick={() => setAbonando(true)}>

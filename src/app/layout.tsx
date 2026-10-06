@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed } from "next/font/google";
+import { GuiaRecorrido } from "@/components/guia/guia-recorrido";
 import { RegistrarServiceWorker } from "@/components/pwa/registrar-sw";
 import { COLOR_TEMA, MARCA } from "@/lib/marca";
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="es" className={barlow.variable}>
       <body>
         {children}
+        <GuiaRecorrido />
         <RegistrarServiceWorker />
       </body>
     </html>

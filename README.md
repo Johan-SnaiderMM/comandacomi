@@ -11,6 +11,8 @@ grandes solo se centra una columna.
 ## Recorrido de 5 minutos (una sola mano)
 
 1. **Entrar a la demo** (un toque, sin datos) → **Inicio**: ventas de hoy, ganancia aproximada, por cobrar y pendientes.
+   Toca **Recorrido guiado · 2 minutos** (o **Más → Recorrido guiado**): una hoja por paso, un aro rojo que late sobre
+   lo que hay que tocar, y la guía avanza sola al llegar a cada pantalla. La ficha **💡 n/9** del encabezado la reabre.
 2. **Tomar** (botón amarillo): mesa → toca los platos (un toque agrega; "Extras y nota" para adiciones) → **Enviar a cocina**.
 3. **Pendientes**: **Marcar listo** → **Entregado**.
 4. **Cobrar**: efectivo (teclado propio, vuelto), Nequi, o **fiado** (cliente nuevo y pago parcial).

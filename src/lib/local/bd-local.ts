@@ -38,7 +38,7 @@ async function iniciar(): Promise<PGlite> {
     await db.exec(SUPABASE_MINIMO);
     for (const [, sql] of leerMigraciones()) await db.exec(sql);
     const u = await db.query<{ id: string }>(`insert into auth.users (email) values ($1) returning id`, [CORREO_LOCAL]);
-    await db.query(`select public.fn_provisionar_demo($1, 'La Plancha de Don Beto', 'Don Beto')`, [u.rows[0].id]);
+    await db.query(`select public.fn_provisionar_demo($1, 'Picnic Delicias', 'Administrador')`, [u.rows[0].id]);
   }
   fs.writeFileSync(ARCHIVO_HUELLA, huella);
   return db;

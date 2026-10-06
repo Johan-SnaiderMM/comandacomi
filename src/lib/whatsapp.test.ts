@@ -21,10 +21,10 @@ describe("enlaces de WhatsApp (wa.me)", () => {
 
 describe("mensajes", () => {
   it("recordatorio de fiado: nombre de pila, saldo y restaurante", () => {
-    const m = mensajeRecordatorio({ cliente: "Marleny Ríos", saldo: 21000, restaurante: "La Plancha de Don Beto" });
+    const m = mensajeRecordatorio({ cliente: "Marleny Ríos", saldo: 21000, restaurante: "Picnic Delicias" });
     expect(m).toContain("Hola Marleny,");
     expect(m).toContain("$ 21.000");
-    expect(m).toContain("La Plancha de Don Beto");
+    expect(m).toContain("Picnic Delicias");
     expect(m).not.toContain("Ríos");
     expect(mensajeRecordatorio({ cliente: "Don Jairo Cárdenas", saldo: 1000, restaurante: "R" })).toContain("Hola Don Jairo,");
   });

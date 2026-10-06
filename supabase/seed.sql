@@ -20,5 +20,5 @@ begin
     raise exception 'No existe el usuario %. Créalo primero en Authentication > Users.', v_correo;
   end if;
 
-  perform public.fn_provisionar_demo(v_user, 'La Plancha de Don Beto', 'Don Beto');
+  perform public.fn_provisionar_demo(v_user, 'Picnic Delicias', 'Administrador');
 end $$;

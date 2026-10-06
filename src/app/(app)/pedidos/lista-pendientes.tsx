@@ -67,6 +67,8 @@ export function ListaPendientes({
       .filter((p) => !(p.estado === "entregado" && p.cobrado))
   );
 
+  const numeroMasNuevo = pendientes.reduce((m, p) => Math.max(m, p.numero), 0);
+
   function mover(id: string, estado: EstadoPedido) {
     setError(null);
     setMenuDe(null);
@@ -119,6 +121,7 @@ export function ListaPendientes({
         ) : (
           <ul className="space-y-4 px-4 pt-3">
             {lista.map((p) => {
+              const guia = p.numero === numeroMasNuevo ? "avanzar" : undefined; // el recorrido guiado sigue al pedido recién enviado
               const Icono = ICONO_TIPO[p.tipo];
               const siguiente = SIGUIENTE[p.estado];
               return (
@@ -173,12 +176,12 @@ export function ListaPendientes({
 
                   <div className="mt-3 flex gap-2">
                     {siguiente && (
-                      <Button variante={siguiente.variante} tamano="lg" className="flex-1" onClick={() => mover(p.id, siguiente.estado)}>
+                      <Button variante={siguiente.variante} tamano="lg" className="flex-1" data-guia={guia} onClick={() => mover(p.id, siguiente.estado)}>
                         {siguiente.etiqueta}
                       </Button>
                     )}
                     {!p.cobrado && (
-                      <Link href={`/pedidos/${p.id}/cobrar`} className={cn(botonVariantes({ variante: "primario", tamano: "lg" }), "flex-1")}>
+                      <Link href={`/pedidos/${p.id}/cobrar`} data-guia={guia} className={cn(botonVariantes({ variante: "primario", tamano: "lg" }), "flex-1")}>
                         Cobrar
                       </Link>
                     )}

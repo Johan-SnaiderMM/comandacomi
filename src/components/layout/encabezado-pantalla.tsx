@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { ChipGuia } from "@/components/guia/chip-guia";
 
 /**
  * Encabezado fijo arriba de cada pantalla: título corto en letra de letrero y, si la pantalla es de
@@ -28,7 +29,10 @@ export function EncabezadoPantalla({
       <h1 className={`font-display text-3xl font-extrabold uppercase leading-none tracking-tight ${atras ? "" : "pl-2"}`}>
         {titulo}
       </h1>
-      {derecha && <div className="ml-auto flex items-center gap-1">{derecha}</div>}
+      <div className="ml-auto flex items-center gap-1">
+        {derecha}
+        <ChipGuia />
+      </div>
     </header>
   );
 }

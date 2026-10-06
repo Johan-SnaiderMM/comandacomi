@@ -113,7 +113,30 @@ export type PagoPlan = {
   clienteId?: string;
 };
 
-export type ValidacionCobro = { ok: true; vuelto: Pesos; fiado: Pesos } | { ok: false; error: string };
+/**
+ * Arma los pagos del cobro según lo elegido en pantalla:
+ *  - efectivo: un pago por todo lo que se cobra, con lo recibido (el vuelto sale de ahí).
+ *  - transferencia (Nequi/banco): un pago, con referencia opcional.
+ *  - fiado: todo a la cuenta del cliente; o, si paga una parte ahora, esa parte en efectivo y el resto a fiado.
+ */
+export function planDePagos(e: {
+  medio: MedioPago;
+  aCobrar: Pesos;
+  recibido: Pesos;
+  referencia: string;
+  clienteId: string | null;
+  pagaAhora: Pesos;
+}): PagoPlan[] {
+  if (e.medio === "efectivo") return [{ medio: "efectivo", monto: e.aCobrar, recibido: e.recibido }];
+  if (e.medio === "transferencia") return [{ medio: "transferencia", monto: e.aCobrar, referencia: e.referencia.trim() || undefined }];
+
+  const ahora = Math.max(0, e.pagaAhora);
+  const resto = e.aCobrar - ahora;
+  const fiado: PagoPlan = { medio: "fiado", monto: resto, clienteId: e.clienteId ?? undefined };
+  return ahora > 0 ? [{ medio: "efectivo", monto: ahora, recibido: ahora }, fiado] : [fiado];
+}
+
+export type ValidacionCobro ={ ok: true; vuelto: Pesos; fiado: Pesos } | { ok: false; error: string };
 
 /** Valida un cobro igual que cobrar_pedido en la base: los pagos deben sumar total + propina. */
 export function validarCobro(total: Pesos, propina: Pesos, pagos: PagoPlan[]): ValidacionCobro {

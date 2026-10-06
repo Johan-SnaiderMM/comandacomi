@@ -15,7 +15,7 @@ export function EncabezadoPantalla({
   derecha?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex min-h-14 items-center gap-1 border-b-2 border-tinta bg-fondo px-2 pt-[env(safe-area-inset-top,0px)]">
+    <header className="sticky top-0 z-20 flex min-h-12 items-center gap-1 border-b-2 border-tinta bg-fondo px-2 pt-[env(safe-area-inset-top,0px)]">
       {atras && (
         <Link
           href={atras}

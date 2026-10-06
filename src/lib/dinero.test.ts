@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aPesos, atajosEfectivo, calcularCierre, calcularEfectivo, diferenciaCaja, formatearMiles, formatearPesos,
-  leerPesos, propinaSugerida, saldoFiado, subtotalLinea, totalPedido, validarAbono, validarCobro,
+  leerPesos, planDePagos, propinaSugerida, saldoFiado, subtotalLinea, totalPedido, validarAbono, validarCobro,
 } from "./dinero";
 
 describe("formato y lectura de pesos", () => {
@@ -91,6 +91,36 @@ describe("validar cobro (igual que la base)", () => {
     expect(validarCobro(9000, -1, [{ medio: "efectivo", monto: 8999 }])).toMatchObject({ ok: false, error: expect.stringContaining("propina") });
     expect(validarCobro(9000, 9001, [{ medio: "efectivo", monto: 18001 }])).toMatchObject({ ok: false, error: expect.stringContaining("propina") });
     expect(validarCobro(9000, 0, [{ medio: "efectivo", monto: 0 }])).toMatchObject({ ok: false });
+  });
+});
+
+describe("plan de pagos según lo elegido en pantalla", () => {
+  const base = { aCobrar: 26500, recibido: 0, referencia: "", clienteId: null, pagaAhora: 0 };
+
+  it("efectivo: un pago con lo recibido", () => {
+    const plan = planDePagos({ ...base, medio: "efectivo", recibido: 30000 });
+    expect(plan).toEqual([{ medio: "efectivo", monto: 26500, recibido: 30000 }]);
+    expect(validarCobro(24000, 2500, plan)).toEqual({ ok: true, vuelto: 3500, fiado: 0 });
+  });
+
+  it("transferencia: referencia opcional, sin espacios sobrantes", () => {
+    expect(planDePagos({ ...base, medio: "transferencia", referencia: "  NEQ99 " })).toEqual([{ medio: "transferencia", monto: 26500, referencia: "NEQ99" }]);
+    expect(planDePagos({ ...base, medio: "transferencia" })[0].referencia).toBeUndefined();
+  });
+
+  it("fiado: todo a la cuenta, o una parte en efectivo y el resto a fiado", () => {
+    expect(planDePagos({ ...base, medio: "fiado", clienteId: "c1" })).toEqual([{ medio: "fiado", monto: 26500, clienteId: "c1" }]);
+    const mixto = planDePagos({ ...base, medio: "fiado", clienteId: "c1", pagaAhora: 10000 });
+    expect(mixto).toEqual([
+      { medio: "efectivo", monto: 10000, recibido: 10000 },
+      { medio: "fiado", monto: 16500, clienteId: "c1" },
+    ]);
+    expect(validarCobro(24000, 2500, mixto)).toEqual({ ok: true, vuelto: 0, fiado: 16500 });
+  });
+
+  it("fiado sin cliente, o pagando todo ahora, no pasa la validación", () => {
+    expect(validarCobro(24000, 2500, planDePagos({ ...base, medio: "fiado" }))).toMatchObject({ ok: false, error: expect.stringContaining("a quién") });
+    expect(validarCobro(24000, 2500, planDePagos({ ...base, medio: "fiado", clienteId: "c1", pagaAhora: 26500 }))).toMatchObject({ ok: false });
   });
 });
 

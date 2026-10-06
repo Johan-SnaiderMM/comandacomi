@@ -18,10 +18,10 @@ export function BarraAccion({
   return (
     <div
       className={cn(
-        "fixed left-1/2 z-20 w-full max-w-[var(--ancho-app)] -translate-x-1/2 border-t-2 border-tinta bg-papel px-4 pt-3",
+        "fixed left-1/2 z-20 w-full max-w-[var(--ancho-app)] -translate-x-1/2 border-t-2 border-tinta bg-papel px-4 pt-2",
         sobreNav
-          ? "bottom-[calc(var(--nav-h)+var(--seguro-abajo))] pb-3"
-          : "bottom-0 pb-[calc(0.75rem+var(--seguro-abajo))]",
+          ? "bottom-[calc(var(--nav-h)+var(--seguro-abajo))] pb-2"
+          : "bottom-0 pb-[calc(0.5rem+var(--seguro-abajo))]",
         className
       )}
     >

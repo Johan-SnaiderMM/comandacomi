@@ -36,7 +36,7 @@
   --tap: 3rem; /* 48 px: objetivo táctil mínimo */
   --tap-lg: 3.5rem; /* 56 px: acciones principales */
   --nav-h: 4.5rem; /* barra de navegación inferior */
-  --accion-h: 5.25rem; /* barra de acción fija sobre la navegación */
+  --accion-h: 4.75rem; /* barra de acción fija: botón de 56 px + 2 × 8 px + borde */
   --ancho-app: 30rem; /* en pantallas grandes la app queda en una columna centrada */
   --seguro-abajo: env(safe-area-inset-bottom, 0px);
 }

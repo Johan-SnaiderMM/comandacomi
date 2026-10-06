@@ -1,28 +1,30 @@
 /*
- * Service worker: solo el "cascarón" de la PWA para que la app abra aunque la señal sea mala.
+ * Service worker: hace que la app abra y se pueda trabajar sin señal.
  *
- *  - Estáticos (/_next/static, íconos): primero la copia guardada y se actualiza en segundo plano.
- *  - Pantallas (HTML y datos RSC de la navegación): primero la red (4 s); si tarda o falla, la última
- *    versión vista; si no hay copia, /offline.html.
+ *  - Estáticos (/_next/static, íconos, fuentes): primero la copia guardada y se actualiza en segundo plano.
+ *  - La app sin conexión (/sc): una página estática, sin datos de nadie, que se guarda junto con todo lo que necesita
+ *    para abrir. Los datos que muestra salen de la copia local del celular (localStorage), no de aquí.
+ *  - Pantallas normales de la app: primero la red (8 s). Si no hay señal, en vez de mostrar una copia vieja con datos
+ *    de ayer, se lleva a la persona a la app sin conexión, a la pantalla equivalente (/sc#/pedidos, etc.).
  *
- * NO hace (a propósito, la demo no lleva cola sin conexión): no toca POST (acciones del servidor),
- * no guarda nada que no sea de esta app, no usa IndexedDB. Al salir de la demo la app borra estas cachés.
+ * NO toca POST (acciones del servidor: la cola de la app las reintenta con su propia clave), no guarda páginas con
+ * datos del restaurante y no usa IndexedDB. Al salir de la sesión la app borra estas cachés.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE_ESTATICO = `estatico-${VERSION}`;
-// HTML y payloads RSC en cachés separadas: una petición RSC nunca recibe un HTML guardado ni al revés.
-const CACHE_PAGINAS = `paginas-${VERSION}`;
-const CACHE_RSC = `rsc-${VERSION}`;
+const CACHE_SC = `sc-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
-const MAX_PAGINAS = 60;
-const TIMEOUT_RED_MS = 4000;
+const SC_URL = "/sc";
+const TIMEOUT_RED_MS = 8000;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE_ESTATICO)
-      .then((cache) => cache.addAll([OFFLINE_URL, "/icons/icon-192.png"]))
-      .then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE_ESTATICO);
+      await cache.addAll([OFFLINE_URL, "/icons/icon-192.png"]);
+      await precargarApp().catch(() => {}); // si no se puede ahora, se reintenta en la próxima visita
+      await self.skipWaiting();
+    })()
   );
 });
 
@@ -37,11 +39,9 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-/** Recorta la caché a las entradas más recientes. */
-async function recortar(cache) {
-  const claves = await cache.keys();
-  for (let i = 0; i < claves.length - MAX_PAGINAS; i++) await cache.delete(claves[i]);
-}
+self.addEventListener("message", (event) => {
+  if (event.data === "precargar") event.waitUntil(precargarApp().catch(() => {}));
+});
 
 function conTimeout(promesa, ms) {
   return new Promise((resolve, reject) => {
@@ -59,6 +59,46 @@ function conTimeout(promesa, ms) {
   });
 }
 
+/**
+ * Guarda la app sin conexión: su HTML y todo lo estático que usa (scripts, estilos, fuentes). Las rutas salen del propio
+ * HTML (incluye las del payload de React) y de los CSS. Se vuelve a correr en cada visita con señal, así una versión
+ * nueva reemplaza a la anterior.
+ */
+async function precargarApp() {
+  const res = await fetch(SC_URL, { cache: "reload", credentials: "same-origin" });
+  if (!res.ok || res.redirected) return;
+  const html = await res.clone().text();
+  const sc = await caches.open(CACHE_SC);
+  const estatico = await caches.open(CACHE_ESTATICO);
+
+  const rutas = new Set();
+  const buscar = (texto) => {
+    for (const m of texto.matchAll(/static\/(?:chunks|css|media)\/[A-Za-z0-9_\-./%~]+\.(?:js|css|woff2?)/g)) rutas.add(`/_next/${m[0]}`);
+  };
+  buscar(html);
+
+  const pendientes = [...rutas];
+  const vistas = new Set();
+  while (pendientes.length > 0) {
+    const ruta = pendientes.pop();
+    if (vistas.has(ruta)) continue;
+    vistas.add(ruta);
+    if (await estatico.match(ruta)) continue;
+    try {
+      const r = await fetch(ruta, { credentials: "same-origin" });
+      if (!r.ok) continue;
+      await estatico.put(ruta, r.clone());
+      if (ruta.endsWith(".css")) {
+        const css = await r.clone().text();
+        for (const m of css.matchAll(/url\(\s*["']?([^"')\s]*\/_next\/static\/media\/[^"')\s]+)["']?\s*\)/g)) pendientes.push(new URL(m[1], self.location.origin).pathname);
+      }
+    } catch {
+      // un archivo que no baja no impide guardar los demás
+    }
+  }
+  await sc.put(SC_URL, res); // al final: solo se da por guardada si lo anterior se intentó
+}
+
 async function estatico(request) {
   const cache = await caches.open(CACHE_ESTATICO);
   const guardado = await cache.match(request);
@@ -71,24 +111,20 @@ async function estatico(request) {
   return guardado || (await actualizar) || Response.error();
 }
 
-async function paginas(request, esRsc) {
-  const cache = await caches.open(esRsc ? CACHE_RSC : CACHE_PAGINAS);
+async function navegar(request) {
+  const url = new URL(request.url);
   try {
     const res = await conTimeout(fetch(request), TIMEOUT_RED_MS);
-    // Solo respuestas reales de la pantalla: nada de redirecciones ni errores.
-    if (res.ok && !res.redirected && res.type === "basic") {
-      cache.put(request, res.clone()).then(() => recortar(cache));
+    if (url.pathname === SC_URL && res.ok && !res.redirected) {
+      const cache = await caches.open(CACHE_SC);
+      cache.put(SC_URL, res.clone());
     }
     return res;
   } catch {
-    // RSC: la URL trae un parámetro _rsc variable y cabeceras Vary que cambian; se ignoran para servir la última copia.
-    const copia = await cache.match(request, esRsc ? { ignoreSearch: true, ignoreVary: true } : undefined);
-    if (copia) return copia;
-    if (request.mode === "navigate") {
-      const offline = await caches.match(OFFLINE_URL);
-      if (offline) return offline;
-    }
-    return new Response("Sin conexión", { status: 503, statusText: "Sin conexión" });
+    const copia = await (await caches.open(CACHE_SC)).match(SC_URL);
+    if (url.pathname === SC_URL) return copia || (await caches.match(OFFLINE_URL)) || new Response("Sin conexión", { status: 503 });
+    if (copia) return Response.redirect(`${SC_URL}#${url.pathname}${url.search}`, 302);
+    return (await caches.match(OFFLINE_URL)) || new Response("Sin conexión", { status: 503 });
   }
 }
 
@@ -107,11 +143,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Precargas de enlaces: se dejan pasar (podrían ser payloads parciales).
-  if (request.headers.get("Next-Router-Prefetch") || request.headers.get("Purpose") === "prefetch") return;
-
-  const esRsc = request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
-  if (request.mode === "navigate" || esRsc) {
-    event.respondWith(paginas(request, esRsc));
-  }
+  // Solo se intervienen las navegaciones (abrir la app, escribir una dirección, recargar). Los datos de navegación
+  // de Next (RSC) y las precargas se dejan pasar: si fallan, Next hace una navegación completa y esa sí llega aquí.
+  if (request.mode === "navigate") event.respondWith(navegar(request));
 });

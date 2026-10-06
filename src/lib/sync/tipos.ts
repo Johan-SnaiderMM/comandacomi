@@ -53,7 +53,8 @@ export type DatosOperacion = {
   cobrar: { pedidoId: string; propina: number; pagos: PagoOperacion[] };
   crear_cliente: { id: string; nombre: string; telefono: string };
   abonar: { clienteId: string; monto: number; medio: MedioAbono; referencia: string };
-  gasto: { monto: number; categoria: CategoriaGasto; nota: string; deCaja: boolean };
+  /** `fotoPath`: ruta de una foto que YA se subió (sin señal no se puede subir una). */
+  gasto: { monto: number; categoria: CategoriaGasto; nota: string; deCaja: boolean; fotoPath: string | null };
 };
 
 export type TipoOperacion = keyof DatosOperacion;

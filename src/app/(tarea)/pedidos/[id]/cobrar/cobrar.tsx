@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { Banknote, ChevronDown, Smartphone, NotebookPen } from "lucide-react";
-import { cobrarPedido, type Cobrado } from "@/app/acciones/cobro";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { Aviso } from "@/components/ui/aviso";
@@ -15,6 +13,9 @@ import { TecladoNumerico } from "@/components/ui/teclado-numerico";
 import type { ClienteFiado, PedidoDetalle } from "@/lib/datos/tipos";
 import { atajosEfectivo, calcularEfectivo, formatearPesos, planDePagos, validarCobro, type MedioPago } from "@/lib/dinero";
 import { nombreCorto } from "@/lib/nombres";
+import { Enlace } from "@/lib/navegacion";
+import { cobrarPedido, type Cobrado } from "@/lib/sync/acciones";
+import { numeroVisible } from "@/lib/sync/numero";
 import { aplicarTecla } from "@/lib/teclado";
 import { cn } from "@/lib/utils";
 import { Confirmacion } from "./confirmacion";
@@ -28,11 +29,11 @@ function NoCobrable({ numero, anulado }: { numero: number; anulado: boolean }) {
     <main className="flex min-h-dvh flex-col items-start justify-center gap-4 px-4">
       <h1 className="font-display text-4xl font-extrabold uppercase leading-none">{anulado ? "Pedido anulado" : "Ya está cobrado"}</h1>
       <p className="text-lg text-tinta-2">
-        El pedido #{numero} {anulado ? "fue anulado" : "ya se cobró"}. No hay nada más por hacer aquí.
+        El pedido {numeroVisible(numero)} {anulado ? "fue anulado" : "ya se cobró"}. No hay nada más por hacer aquí.
       </p>
-      <Link href="/pedidos" className={botonVariantes({ tamano: "lg" })}>
+      <Enlace href="/pedidos" className={botonVariantes({ tamano: "lg" })}>
         Volver a pendientes
-      </Link>
+      </Enlace>
     </main>
   );
 }
@@ -100,7 +101,7 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
   return (
     <div className="flex min-h-dvh flex-col">
       <EncabezadoPantalla
-        titulo={`Cobrar #${pedido.numero}`}
+        titulo={`Cobrar ${numeroVisible(pedido.numero)}`}
         atras="/pedidos"
         derecha={<span className="mr-2 max-w-28 truncate text-base font-bold">{donde}</span>}
       />

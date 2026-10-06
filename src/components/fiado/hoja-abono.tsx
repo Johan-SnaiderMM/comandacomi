@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Banknote, Smartphone } from "lucide-react";
-import { registrarAbono } from "@/app/acciones/fiado";
 import { Button } from "@/components/ui/button";
 import { HojaInferior } from "@/components/ui/hoja-inferior";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { Segmentado } from "@/components/ui/segmentado";
 import { TecladoNumerico } from "@/components/ui/teclado-numerico";
 import { formatearPesos, validarAbono, type MedioAbono } from "@/lib/dinero";
 import { nombreCorto } from "@/lib/nombres";
+import { registrarAbono } from "@/lib/sync/acciones";
 import { aplicarTecla } from "@/lib/teclado";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +37,13 @@ export function HojaAbono({
   function guardar() {
     setError(null);
     empezar(async () => {
-      const r = await registrarAbono({ clienteId: cliente.id, monto, medio, referencia });
+      const r = await registrarAbono({ clienteId: cliente.id, monto, medio, referencia }, saldo);
       if (!r.ok) {
         setError(r.error);
         return;
       }
-      onHecho(r.datos.saldo === 0 ? `${cliente.nombre} quedó al día. Abono de ${formatearPesos(monto)} registrado.` : `Abono de ${formatearPesos(monto)} registrado. ${cliente.nombre} debe ${formatearPesos(r.datos.saldo)}.`);
+      const aviso = r.datos.saldo === 0 ? `${cliente.nombre} quedó al día. Abono de ${formatearPesos(monto)} registrado.` : `Abono de ${formatearPesos(monto)} registrado. ${cliente.nombre} debe ${formatearPesos(r.datos.saldo)}.`;
+      onHecho(r.datos.pendiente ? `${aviso} Sin señal: se sube solo cuando vuelva.` : aviso);
       onCerrar();
     });
   }

@@ -7,7 +7,7 @@ export const metadata = { title: "Pendientes" };
 export default async function Pendientes({ searchParams }: PageProps<"/pedidos">) {
   const sp = await searchParams;
   const numero = typeof sp.enviado === "string" ? Number(sp.enviado) : NaN;
-  const enviado = Number.isInteger(numero) && numero > 0 ? { numero, agregado: sp.agregado === "1" } : null;
+  const enviado = Number.isInteger(numero) && numero !== 0 ? { numero, agregado: sp.agregado === "1", pendiente: sp.pendiente === "1" } : null;
 
   const [pendientes, cobrados] = await Promise.all([listarPedidosPendientes(), listarPedidosCobradosHoy()]);
 

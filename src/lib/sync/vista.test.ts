@@ -171,7 +171,7 @@ describe("clientes y abonos", () => {
 
   it("un gasto no cambia lo que se ve", () => {
     const s = snapshotDeEjemplo();
-    const gasto: Operacion<"gasto"> = { clave: "g1", tipo: "gasto", ocurridoEn: AHORA, datos: { monto: 5000, categoria: "gas", nota: "", deCaja: true } };
+    const gasto: Operacion<"gasto"> = { clave: "g1", tipo: "gasto", ocurridoEn: AHORA, datos: { monto: 5000, categoria: "gas", nota: "", deCaja: true, fotoPath: null } };
     expect(aplicarOperacion(s, gasto)).toBe(s);
   });
 });

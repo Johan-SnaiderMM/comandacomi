@@ -5,7 +5,7 @@ import { bd, } from "@/lib/datos/bd";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { ejecutar } from "@/lib/datos/llamar";
 import { MENSAJE_GENERICO, type Resultado } from "@/lib/errores";
-import { esquemaGasto, FOTO_MAX_BYTES, FOTO_TIPOS } from "@/lib/esquemas/gasto";
+import { FOTO_MAX_BYTES, FOTO_TIPOS } from "@/lib/esquemas/gasto";
 import { esquemaAnulacion } from "@/lib/esquemas/pedido";
 import { exigirSesion } from "@/lib/sesion";
 
@@ -28,22 +28,6 @@ export async function subirFotoGasto(formData: FormData): Promise<Resultado<{ ru
   const { error } = await (await bd()).subirArchivo(ruta, new Uint8Array(await foto.arrayBuffer()), foto.type);
   if (error) return { ok: false, error };
   return { ok: true, datos: { ruta } };
-}
-
-export async function registrarGasto(entrada: unknown): Promise<Resultado<{ id: string }>> {
-  const parsed = esquemaGasto.safeParse(entrada);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa el gasto." };
-  const v = parsed.data;
-  const r = await ejecutar<{ id: string }>("registrar_gasto", {
-    p_monto: v.monto,
-    p_categoria: v.categoria,
-    p_nota: v.nota || null,
-    p_foto_path: v.fotoPath || null,
-    p_de_caja: v.deCaja,
-  });
-  if (!r.ok) return r;
-  revalidatePath("/", "layout");
-  return r;
 }
 
 export async function anularGasto(id: string, motivo: string): Promise<Resultado> {

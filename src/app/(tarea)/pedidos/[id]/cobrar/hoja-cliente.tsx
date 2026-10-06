@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { UserPlus } from "lucide-react";
-import { crearCliente } from "@/app/acciones/fiado";
 import { Button } from "@/components/ui/button";
 import { HojaInferior } from "@/components/ui/hoja-inferior";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClienteFiado } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
+import { crearCliente } from "@/lib/sync/acciones";
 
 /** ¿A quién se le fía? Lista de clientes (con lo que ya deben) y alta rápida de uno nuevo. */
 export function HojaCliente({

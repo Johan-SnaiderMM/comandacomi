@@ -1,10 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Bike, ClipboardList, Ellipsis, MapPin, Phone, ShoppingBag, Undo2, Utensils } from "lucide-react";
-import { anularCobro, anularPedido, cambiarEstado } from "@/app/acciones/pedidos";
 import { Aviso } from "@/components/ui/aviso";
 import { Badge } from "@/components/ui/badge";
 import { botonVariantes, Button } from "@/components/ui/button";
@@ -14,6 +11,10 @@ import { Segmentado } from "@/components/ui/segmentado";
 import type { EstadoPedido, PedidoCobrado, PedidoPendiente, TipoPedido } from "@/lib/datos/tipos";
 import { ETIQUETA_MEDIO, formatearPesos } from "@/lib/dinero";
 import { horaCorta } from "@/lib/fechas";
+import { Enlace, useIr } from "@/lib/navegacion";
+import { anularCobro, anularPedido, cambiarEstado } from "@/lib/sync/acciones";
+import { useEstadoSync } from "@/lib/sync/cliente";
+import { numeroVisible } from "@/lib/sync/numero";
 import { formatearTelefono } from "@/lib/telefono";
 import { cn } from "@/lib/utils";
 import { Espera } from "./espera";
@@ -50,9 +51,9 @@ export function ListaPendientes({
   cobrados: PedidoCobrado[];
   ahora: string;
   /** Número del pedido recién enviado (para el aviso verde). */
-  enviado: { numero: number; agregado: boolean } | null;
+  enviado: { numero: number; agregado: boolean; pendiente?: boolean } | null;
 }) {
-  const router = useRouter();
+  const router = useIr();
   const [vista, setVista] = useState<Vista>("pendientes");
   const [error, setError] = useState<string | null>(null);
   const [avisoEnviado, setAvisoEnviado] = useState(enviado);
@@ -67,6 +68,12 @@ export function ListaPendientes({
       .filter((p) => !(p.estado === "entregado" && p.cobrado))
   );
 
+  // Pedidos con cambios todavía por subir: no se pueden anular hasta que el servidor los conozca.
+  const enCola = new Set(
+    useEstadoSync()
+      .ops.filter((o) => o.estado !== "fallida")
+      .flatMap((o) => ("pedidoId" in o.datos ? [o.datos.pedidoId] : o.tipo === "crear_pedido" ? [o.datos.id] : []))
+  );
   const numeroMasNuevo = pendientes.reduce((m, p) => Math.max(m, p.numero), 0);
 
   function mover(id: string, estado: EstadoPedido) {
@@ -89,7 +96,8 @@ export function ListaPendientes({
       <div className="space-y-3 px-4 pt-3">
         {avisoEnviado && (
           <Aviso tipo="ok" onCerrar={cerrarAviso}>
-            {avisoEnviado.agregado ? `Platos agregados al pedido #${avisoEnviado.numero}.` : `Pedido #${avisoEnviado.numero} enviado a cocina.`}
+            {avisoEnviado.agregado ? `Platos agregados al pedido ${numeroVisible(avisoEnviado.numero)}.` : `Pedido ${numeroVisible(avisoEnviado.numero)} enviado a cocina.`}
+            {avisoEnviado.pendiente && " Sin señal: se sube solo cuando vuelva."}
           </Aviso>
         )}
         {error && (
@@ -114,9 +122,9 @@ export function ListaPendientes({
             <ClipboardList className="size-10" aria-hidden />
             <h2 className="font-display text-4xl font-extrabold uppercase leading-none">Todo al día</h2>
             <p className="text-lg text-tinta-2">No hay pedidos por entregar ni por cobrar.</p>
-            <Link href="/pedido/nuevo" className={botonVariantes({ tamano: "lg" })}>
+            <Enlace href="/pedido/nuevo" className={botonVariantes({ tamano: "lg" })}>
               Tomar un pedido
-            </Link>
+            </Enlace>
           </div>
         ) : (
           <ul className="space-y-4 px-4 pt-3">
@@ -129,7 +137,7 @@ export function ListaPendientes({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="flex items-center gap-2">
-                        <span className="cifra text-3xl">#{p.numero}</span>
+                        <span className="cifra text-3xl">{numeroVisible(p.numero)}</span>
                         <span className="flex min-w-0 items-center gap-1 text-lg font-bold leading-tight">
                           <Icono className="size-5 shrink-0" aria-hidden />
                           <span className="truncate">{dondeEs(p)}</span>
@@ -181,11 +189,11 @@ export function ListaPendientes({
                       </Button>
                     )}
                     {!p.cobrado && (
-                      <Link href={`/pedidos/${p.id}/cobrar`} data-guia={guia} className={cn(botonVariantes({ variante: "primario", tamano: "lg" }), "flex-1")}>
+                      <Enlace href={`/pedidos/${p.id}/cobrar`} data-guia={guia} className={cn(botonVariantes({ variante: "primario", tamano: "lg" }), "flex-1")}>
                         Cobrar
-                      </Link>
+                      </Enlace>
                     )}
-                    <Button variante="secundario" tamano="icono" className="size-14 shrink-0" aria-label={`Más opciones del pedido ${p.numero}`} onClick={() => setMenuDe(p)}>
+                    <Button variante="secundario" tamano="icono" className="size-14 shrink-0" aria-label={`Más opciones del pedido ${numeroVisible(p.numero)}`} onClick={() => setMenuDe(p)}>
                       <Ellipsis className="size-6" aria-hidden />
                     </Button>
                   </div>
@@ -202,7 +210,7 @@ export function ListaPendientes({
             <li key={c.id} className="rounded-2xl border-2 border-tinta bg-papel p-3 shadow-sello-chico">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="flex items-baseline gap-2">
-                  <span className="cifra text-2xl">#{c.numero}</span>
+                  <span className="cifra text-2xl">{numeroVisible(c.numero)}</span>
                   <span className="text-base font-bold">{dondeEs(c)}</span>
                 </p>
                 <span className="cifra text-2xl">{formatearPesos(c.total + c.propina)}</span>
@@ -211,43 +219,51 @@ export function ListaPendientes({
                 {horaCorta(c.cobrado_at)} · {c.medios.map((m) => ETIQUETA_MEDIO[m]).join(" + ")}
                 {c.propina > 0 && ` · propina ${formatearPesos(c.propina)}`}
               </p>
-              <Button variante="secundario" className="mt-2" onClick={() => setAnulando({ tipo: "cobro", id: c.id, numero: c.numero })}>
-                <Undo2 className="size-5" aria-hidden /> Anular cobro
-              </Button>
+              {enCola.has(c.id) ? (
+                <p className="mt-2 text-base text-tinta-2">Se sube con la señal; después podrás anularlo si hace falta.</p>
+              ) : (
+                <Button variante="secundario" className="mt-2" onClick={() => setAnulando({ tipo: "cobro", id: c.id, numero: c.numero })}>
+                  <Undo2 className="size-5" aria-hidden /> Anular cobro
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
 
       {menuDe && (
-        <HojaInferior titulo={`Pedido #${menuDe.numero}`} onCerrar={() => setMenuDe(null)}>
+        <HojaInferior titulo={`Pedido ${numeroVisible(menuDe.numero)}`} onCerrar={() => setMenuDe(null)}>
           <div className="space-y-3">
-            <Link href={`/pedido/nuevo?agregar=${menuDe.id}`} className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
+            <Enlace href={`/pedido/nuevo?agregar=${menuDe.id}`} className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
               Agregar platos
-            </Link>
+            </Enlace>
             {ANTERIOR[menuDe.estado] && (
               <Button variante="secundario" tamano="lg" bloque onClick={() => mover(menuDe.id, ANTERIOR[menuDe.estado]!.estado)}>
                 {ANTERIOR[menuDe.estado]!.etiqueta}
               </Button>
             )}
-            <Button
-              variante="peligro"
-              tamano="lg"
-              bloque
-              onClick={() => {
-                setAnulando({ tipo: "pedido", id: menuDe.id, numero: menuDe.numero });
-                setMenuDe(null);
-              }}
-            >
-              Anular pedido
-            </Button>
+            {enCola.has(menuDe.id) ? (
+              <p className="text-base text-tinta-2">Este pedido tiene cambios por subir: cuando se suban podrás anularlo.</p>
+            ) : (
+              <Button
+                variante="peligro"
+                tamano="lg"
+                bloque
+                onClick={() => {
+                  setAnulando({ tipo: "pedido", id: menuDe.id, numero: menuDe.numero });
+                  setMenuDe(null);
+                }}
+              >
+                Anular pedido
+              </Button>
+            )}
           </div>
         </HojaInferior>
       )}
 
       {anulando && (
         <HojaMotivo
-          titulo={anulando.tipo === "pedido" ? `Anular pedido #${anulando.numero}` : `Anular cobro #${anulando.numero}`}
+          titulo={anulando.tipo === "pedido" ? `Anular pedido ${numeroVisible(anulando.numero)}` : `Anular cobro ${numeroVisible(anulando.numero)}`}
           descripcion={
             anulando.tipo === "pedido"
               ? "No se borra: queda registrado con el motivo y quién lo anuló. Si estaba cobrado o fiado, también se anula."

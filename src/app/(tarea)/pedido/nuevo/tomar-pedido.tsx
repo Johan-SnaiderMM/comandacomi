@@ -1,15 +1,16 @@
 "use client";
 
 import { useReducer, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, SlidersHorizontal } from "lucide-react";
-import { enviarPedido } from "@/app/acciones/pedidos";
 import { ChipGuia } from "@/components/guia/chip-guia";
+import { BandaSync } from "@/components/sync/banda-sync";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Button } from "@/components/ui/button";
 import type { MenuParaPedido } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
+import { Enlace, useIr } from "@/lib/navegacion";
+import { enviarPedido } from "@/lib/sync/acciones";
+import { numeroVisible } from "@/lib/sync/numero";
 import {
   aItemsDeEnvio, BORRADOR_VACIO, cantidadDe, DESTINO_INICIAL, etiquetaDestino, faltaEnDestino, reducir, totalBorrador, totalUnidades,
   type AdicionElegida, type Destino,
@@ -25,7 +26,7 @@ type Producto = MenuParaPedido["productos"][number];
 export type ModoAgregar = { pedidoId: string; numero: number; tipo: Destino["tipo"]; etiqueta: string };
 
 export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: ModoAgregar | null }) {
-  const router = useRouter();
+  const router = useIr();
   const [borrador, despachar] = useReducer(reducir, BORRADOR_VACIO);
   const [destino, setDestino] = useState<Destino>(
     agregar ? { ...DESTINO_INICIAL, tipo: agregar.tipo, agregarA: agregar.pedidoId } : DESTINO_INICIAL
@@ -71,7 +72,7 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
         return;
       }
       despachar({ tipo: "vaciar" });
-      router.push(`/pedidos?enviado=${r.datos.numero}${r.datos.agregado ? "&agregado=1" : ""}`);
+      router.push(`/pedidos?enviado=${r.datos.numero}${r.datos.agregado ? "&agregado=1" : ""}${r.datos.pendiente ? "&pendiente=1" : ""}`);
     });
   }
 
@@ -80,20 +81,23 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
       <main className="flex min-h-dvh flex-col items-start justify-center gap-4 px-4">
         <h1 className="font-display text-4xl font-extrabold uppercase leading-none">El menú está vacío</h1>
         <p className="text-lg text-tinta-2">Primero agrega categorías y platos para poder tomar pedidos.</p>
-        <Link href="/menu" className="inline-flex min-h-14 items-center rounded-xl border-2 border-tinta bg-sol px-5 text-lg font-bold shadow-sello">
+        <Enlace href="/menu" className="inline-flex min-h-14 items-center rounded-xl border-2 border-tinta bg-sol px-5 text-lg font-bold shadow-sello">
           Ir al menú
-        </Link>
+        </Enlace>
       </main>
     );
   }
 
   return (
     <div className="flex h-dvh flex-col">
+      <div className="shrink-0">
+        <BandaSync />
+      </div>
       <header className="flex min-h-14 shrink-0 items-center gap-1 border-b-2 border-tinta bg-fondo px-2 pt-[env(safe-area-inset-top,0px)]">
-        <Link href={agregar ? "/pedidos" : "/inicio"} aria-label="Volver" className="tap flex items-center justify-center rounded-full active:bg-tinta/10">
+        <Enlace href={agregar ? "/pedidos" : "/inicio"} aria-label="Volver" className="tap flex items-center justify-center rounded-full active:bg-tinta/10">
           <ChevronLeft className="size-7" strokeWidth={3} aria-hidden />
-        </Link>
-        <h1 className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight">{agregar ? `Agregar #${agregar.numero}` : "Pedido"}</h1>
+        </Enlace>
+        <h1 className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight">{agregar ? `Agregar ${numeroVisible(agregar.numero)}` : "Pedido"}</h1>
         {!agregar && (
           <button
             type="button"

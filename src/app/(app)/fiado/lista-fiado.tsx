@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { AccionesFiado } from "@/components/fiado/acciones-fiado";
 import { Aviso } from "@/components/ui/aviso";
 import type { ClienteFiado } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
 import { diasEntre, fechaCorta, textoDias } from "@/lib/fechas";
+import { Enlace } from "@/lib/navegacion";
 import { cn } from "@/lib/utils";
 
 /** Quién debe y cuánto: el que más debe primero, con desde cuándo y los dos botones de siempre. */
@@ -46,7 +46,7 @@ export function ListaFiado({
           const dias = c.debe_desde ? diasEntre(c.debe_desde, hoy) : 0;
           return (
             <li key={c.id} className="rounded-2xl border-2 border-tinta bg-papel p-3 shadow-sello-chico">
-              <Link href={`/fiado/${c.id}`} className="flex min-h-12 items-center justify-between gap-2 active:opacity-70">
+              <Enlace href={`/fiado/${c.id}`} className="flex min-h-12 items-center justify-between gap-2 active:opacity-70">
                 <span className="min-w-0">
                   <span className="block truncate text-lg font-bold leading-tight">{c.nombre}</span>
                   <span className={cn("block text-sm", dias >= 5 ? "font-bold text-aji" : "text-tinta-2")}>
@@ -57,7 +57,7 @@ export function ListaFiado({
                   <span className="cifra text-3xl text-aji">{formatearPesos(c.saldo)}</span>
                   <ChevronRight className="size-5" aria-hidden />
                 </span>
-              </Link>
+              </Enlace>
               <div className="mt-2">
                 <AccionesFiado cliente={c} saldo={c.saldo} restaurante={restaurante} onAbono={setAviso} />
               </div>
@@ -74,10 +74,10 @@ export function ListaFiado({
           <ul className="divide-y-2 divide-dashed divide-tinta/30 border-t-2 border-tinta">
             {alDia.map((c) => (
               <li key={c.id}>
-                <Link href={`/fiado/${c.id}`} className="flex min-h-12 items-center justify-between px-4 text-base active:bg-tinta/10">
+                <Enlace href={`/fiado/${c.id}`} className="flex min-h-12 items-center justify-between px-4 text-base active:bg-tinta/10">
                   <span className="font-bold">{c.nombre}</span>
                   <span className="text-tinta-2">Sin deuda</span>
-                </Link>
+                </Enlace>
               </li>
             ))}
           </ul>

@@ -36,7 +36,7 @@ function escenario(opciones: { enLinea?: boolean; guion?: Guion; snapshot?: () =
 }
 
 const estadoDe = (clave: string, m: Motor) => m.estado().ops.find((o) => o.clave === clave)?.estado;
-const cambio = (pedidoId = ID.pedidoViejo, estado: DatosOperacion["cambiar_estado"]["estado"] = "entregado"): DatosOperacion["cambiar_estado"] => ({ pedidoId, estado });
+const cambio = (pedidoId: string = ID.pedidoViejo, estado: DatosOperacion["cambiar_estado"]["estado"] = "entregado"): DatosOperacion["cambiar_estado"] => ({ pedidoId, estado });
 const pedido = (id: string): DatosOperacion["crear_pedido"] => ({
   id,
   tipo: "llevar",

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed } from "next/font/google";
 import { GuiaRecorrido } from "@/components/guia/guia-recorrido";
+import { ProveedorSync } from "@/components/sync/proveedor-sync";
 import { RegistrarServiceWorker } from "@/components/pwa/registrar-sw";
 import { COLOR_TEMA, MARCA } from "@/lib/marca";
 import "./globals.css";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         {children}
         <GuiaRecorrido />
+        <ProveedorSync />
         <RegistrarServiceWorker />
       </body>
     </html>

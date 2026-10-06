@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { ClipboardList, Ellipsis, House, NotebookPen, Plus, type LucideIcon } from "lucide-react";
+import { Enlace, useRuta } from "@/lib/navegacion";
 import { cn } from "@/lib/utils";
 
 type Item = { href: string; etiqueta: string; Icono: LucideIcon; central?: boolean; /** Otras rutas que cuentan como "esta pestaña". */ tambien?: string[] };
@@ -21,7 +20,7 @@ const ITEMS: Item[] = [
  * amarillo Y con `aria-current`, no solo con color.
  */
 export function BarraNavegacion({ pendientes = 0 }: { pendientes?: number }) {
-  const ruta = usePathname();
+  const ruta = useRuta();
 
   return (
     <nav
@@ -33,7 +32,7 @@ export function BarraNavegacion({ pendientes = 0 }: { pendientes?: number }) {
           const activo = [href, ...(tambien ?? [])].some((r) => ruta === r || (r !== "/inicio" && ruta.startsWith(`${r}/`)));
           return (
             <li key={href} className="relative">
-              <Link
+              <Enlace
                 href={href}
                 aria-current={activo ? "page" : undefined}
                 className={cn(
@@ -56,7 +55,7 @@ export function BarraNavegacion({ pendientes = 0 }: { pendientes?: number }) {
                   </span>
                 )}
                 <span className={cn(central && "font-extrabold text-tinta")}>{etiqueta}</span>
-              </Link>
+              </Enlace>
             </li>
           );
         })}

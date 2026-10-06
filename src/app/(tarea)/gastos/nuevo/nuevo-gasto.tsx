@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Camera, Pencil, X } from "lucide-react";
-import { registrarGasto, subirFotoGasto } from "@/app/acciones/gastos";
+import { subirFotoGasto } from "@/app/acciones/gastos";
 import { IconoCategoria } from "@/components/gastos/icono-categoria";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
@@ -15,6 +14,9 @@ import type { CategoriaGasto } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
 import { CATEGORIAS_GASTO } from "@/lib/gastos";
 import { comprimirImagen } from "@/lib/imagen";
+import { useIr } from "@/lib/navegacion";
+import { registrarGasto } from "@/lib/sync/acciones";
+import { useEnLinea } from "@/lib/sync/cliente";
 import { aplicarTecla } from "@/lib/teclado";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +27,8 @@ type Foto = { blob: Blob; vista: string };
  * 3) guardar. La foto se comprime en el celular antes de subirla.
  */
 export function NuevoGasto() {
-  const router = useRouter();
+  const router = useIr();
+  const enLinea = useEnLinea();
   const [paso, setPaso] = useState<"monto" | "detalle">("monto");
   const [monto, setMonto] = useState(0);
   const [categoria, setCategoria] = useState<CategoriaGasto | null>(null);
@@ -62,7 +65,13 @@ export function NuevoGasto() {
       if (foto) {
         const datos = new FormData();
         datos.set("foto", new File([foto.blob], "gasto.jpg", { type: "image/jpeg" }));
-        const subida = await subirFotoGasto(datos);
+        let subida: Awaited<ReturnType<typeof subirFotoGasto>>;
+        try {
+          subida = await subirFotoGasto(datos);
+        } catch {
+          setError("No se pudo subir la foto (¿sin señal?). Puedes guardar el gasto sin foto.");
+          return;
+        }
         if (!subida.ok) {
           setError(`${subida.error} Puedes guardar el gasto sin foto.`);
           return;
@@ -74,7 +83,7 @@ export function NuevoGasto() {
         setError(r.error);
         return;
       }
-      router.push(`/gastos?guardado=${monto}`);
+      router.push(`/gastos?guardado=${monto}${r.datos.pendiente ? "&pendiente=1" : ""}`);
     });
   }
 
@@ -167,8 +176,8 @@ export function NuevoGasto() {
             </Button>
           </div>
         ) : (
-          <Button variante="secundario" onClick={() => entradaFoto.current?.click()}>
-            <Camera className="size-5" aria-hidden /> Foto del recibo (opcional)
+          <Button variante="secundario" disabled={!enLinea} onClick={() => entradaFoto.current?.click()}>
+            <Camera className="size-5" aria-hidden /> {enLinea ? "Foto del recibo (opcional)" : "Sin señal: la foto no se puede subir ahora"}
           </Button>
         )}
 

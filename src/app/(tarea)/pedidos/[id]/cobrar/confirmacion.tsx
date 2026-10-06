@@ -1,9 +1,11 @@
-import Link from "next/link";
 import { Check } from "lucide-react";
 import { AvanzaGuia } from "@/components/guia/avanza-guia";
+import { BandaSync } from "@/components/sync/banda-sync";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { botonVariantes } from "@/components/ui/button";
 import { ETIQUETA_MEDIO, formatearPesos } from "@/lib/dinero";
+import { Enlace } from "@/lib/navegacion";
+import { numeroVisible } from "@/lib/sync/numero";
 import type { Resultado } from "./cobrar";
 
 /**
@@ -15,6 +17,7 @@ export function Confirmacion({ resultado: r }: { resultado: Resultado }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <BandaSync />
       {/* Recorrido guiado: el paso "Cobra" termina aquí; la guía sigue sola tras dejar ver el vuelto. */}
       <AvanzaGuia desde={4} espera={2000} />
       <main className="flex flex-1 flex-col items-start justify-center gap-4 px-4 pb-accion">
@@ -22,9 +25,15 @@ export function Confirmacion({ resultado: r }: { resultado: Resultado }) {
           <Check className="size-9" strokeWidth={4} aria-hidden />
         </span>
         <div>
-          <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">Pedido #{r.numero}</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">Pedido {numeroVisible(r.numero)}</p>
           <h1 className="font-display text-5xl font-extrabold uppercase leading-none">Cobrado</h1>
         </div>
+
+        {r.pendiente && (
+          <p className="w-full rounded-xl border-2 border-tinta bg-sol-suave px-3 py-2 text-base font-bold">
+            Sin señal: el cobro quedó guardado en el celular y se sube solo cuando vuelva.
+          </p>
+        )}
 
         {r.vuelto > 0 && (
           <div className="w-full rounded-2xl border-2 border-tinta bg-sol p-4 shadow-sello">
@@ -65,12 +74,12 @@ export function Confirmacion({ resultado: r }: { resultado: Resultado }) {
       </main>
 
       <BarraAccion className="flex gap-2">
-        <Link href="/pedido/nuevo" className={botonVariantes({ variante: "secundario", tamano: "lg", className: "flex-1" })}>
+        <Enlace href="/pedido/nuevo" className={botonVariantes({ variante: "secundario", tamano: "lg", className: "flex-1" })}>
           Otro pedido
-        </Link>
-        <Link href="/pedidos" className={botonVariantes({ variante: "primario", tamano: "lg", className: "flex-1" })}>
+        </Enlace>
+        <Enlace href="/pedidos" className={botonVariantes({ variante: "primario", tamano: "lg", className: "flex-1" })}>
           Listo
-        </Link>
+        </Enlace>
       </BarraAccion>
     </div>
   );

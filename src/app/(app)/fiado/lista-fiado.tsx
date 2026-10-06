@@ -15,12 +15,10 @@ export function ListaFiado({
   clientes,
   hoy,
   restaurante,
-  demo,
 }: {
   clientes: ClienteFiado[];
   hoy: string;
   restaurante: string;
-  demo: boolean;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const conDeuda = clientes.filter((c) => c.saldo > 0);
@@ -61,7 +59,7 @@ export function ListaFiado({
                 </span>
               </Link>
               <div className="mt-2">
-                <AccionesFiado cliente={c} saldo={c.saldo} restaurante={restaurante} demo={demo} onAbono={setAviso} />
+                <AccionesFiado cliente={c} saldo={c.saldo} restaurante={restaurante} onAbono={setAviso} />
               </div>
             </li>
           );

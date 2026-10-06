@@ -16,7 +16,6 @@ export default async function Fiado() {
           clientes={clientes}
           hoy={hoyBogota()}
           restaurante={contexto.restaurante?.nombre ?? "tu restaurante"}
-          demo={contexto.restaurante?.es_demo ?? false}
         />
       </main>
     </>

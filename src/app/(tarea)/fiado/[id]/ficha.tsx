@@ -15,7 +15,7 @@ import { formatearTelefono } from "@/lib/telefono";
 import { cn } from "@/lib/utils";
 
 /** Ficha de un cliente: cuánto debe, acciones y el libro de cargos y abonos (lo anulado queda a la vista, tachado). */
-export function Ficha({ ficha, restaurante, demo }: { ficha: FichaFiado; restaurante: string; demo: boolean }) {
+export function Ficha({ ficha, restaurante }: { ficha: FichaFiado; restaurante: string }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [anulando, setAnulando] = useState<{ id: string; monto: number } | null>(null);
 
@@ -33,7 +33,7 @@ export function Ficha({ ficha, restaurante, demo }: { ficha: FichaFiado; restaur
         {ficha.cliente.telefono && <p className="text-base text-tinta-2">{formatearTelefono(ficha.cliente.telefono)}</p>}
       </section>
 
-      <AccionesFiado cliente={ficha.cliente} saldo={ficha.saldo} restaurante={restaurante} demo={demo} onAbono={setAviso} />
+      <AccionesFiado cliente={ficha.cliente} saldo={ficha.saldo} restaurante={restaurante} onAbono={setAviso} />
 
       <section aria-label="Movimientos">
         <h2 className="font-display mb-2 text-2xl font-extrabold uppercase leading-none">Movimientos</h2>

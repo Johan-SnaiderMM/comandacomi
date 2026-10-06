@@ -134,8 +134,9 @@ public/               sw.js (solo el cascarón de la PWA), offline.html, íconos
 - **Aislamiento entre restaurantes demostrado con pruebas** (`src/test/aislamiento.test.ts`, Postgres real): un
   usuario del restaurante A no puede leer, insertar, modificar, anular ni subir fotos en el B, por ninguna tabla ni
   función; sin sesión no se ejecuta ninguna función ni se lee ninguna tabla.
-- En la demo, los enlaces de WhatsApp **no llevan número** (los teléfonos son inventados y podrían ser de alguien
-  real): WhatsApp abre con el mensaje listo y eliges a quién enviarlo.
+- **Recordar** (fiado) abre WhatsApp con el teléfono que se guardó al crear el cliente. Los clientes de ejemplo de
+  la demo traen teléfonos inventados (bloque +57 300 000 0xxx, podrían ser de alguien real): a esos el enlace no
+  les pone número y eliges tú a quién enviarlo. El resumen del cierre tampoco lleva número.
 
 ## Qué NO hace (aplazado a propósito)
 

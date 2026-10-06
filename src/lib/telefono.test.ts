@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatearTelefono } from "./telefono";
+import { esTelefonoDeEjemplo, formatearTelefono } from "./telefono";
 
 describe("formatearTelefono", () => {
   it("celular colombiano en grupos de 3-3-4", () => {
@@ -10,5 +10,17 @@ describe("formatearTelefono", () => {
     expect(formatearTelefono("+14155550100")).toBe("+14155550100");
     expect(formatearTelefono(null)).toBe("");
     expect(formatearTelefono(undefined)).toBe("");
+  });
+});
+
+describe("esTelefonoDeEjemplo", () => {
+  it("reconoce el bloque inventado de la demo", () => {
+    expect(esTelefonoDeEjemplo("+573000000101")).toBe(true);
+    expect(esTelefonoDeEjemplo("+573000000108")).toBe(true);
+  });
+  it("no marca números reales ni vacíos", () => {
+    expect(esTelefonoDeEjemplo("+573001234567")).toBe(false);
+    expect(esTelefonoDeEjemplo("+573104445566")).toBe(false);
+    expect(esTelefonoDeEjemplo(null)).toBe(false);
   });
 });

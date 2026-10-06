@@ -12,8 +12,8 @@ export function soloDigitos(telefono: string): string {
 
 /**
  * https://wa.me/<número>?text=<mensaje>. Sin número, WhatsApp deja elegir el contacto.
- * En la DEMO los teléfonos son inventados (podrían ser de alguien real), así que se omite el número: el vendedor
- * ve el mensaje listo y escoge él a quién mandarlo (por ejemplo, a sí mismo).
+ * Con `sinNumero` (clientes de ejemplo, con teléfonos inventados que podrían ser de alguien real) se omite el
+ * número: el vendedor ve el mensaje listo y escoge él a quién mandarlo (por ejemplo, a sí mismo).
  */
 export function enlaceWhatsapp({ telefono, texto, sinNumero = false }: { telefono?: string | null; texto: string; sinNumero?: boolean }): string {
   const numero = !sinNumero && telefono ? soloDigitos(telefono) : "";

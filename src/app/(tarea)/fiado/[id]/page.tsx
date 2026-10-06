@@ -26,7 +26,7 @@ export default async function PaginaCliente({ params }: PageProps<"/fiado/[id]">
     <>
       <EncabezadoPantalla titulo={ficha.cliente.nombre} atras="/fiado" />
       <main>
-        <Ficha ficha={ficha} restaurante={contexto.restaurante?.nombre ?? "tu restaurante"} demo={contexto.restaurante?.es_demo ?? false} />
+        <Ficha ficha={ficha} restaurante={contexto.restaurante?.nombre ?? "tu restaurante"} />
       </main>
     </>
   );

@@ -3,24 +3,23 @@
 import { useState } from "react";
 import { HandCoins, MessageCircle } from "lucide-react";
 import { botonVariantes, Button } from "@/components/ui/button";
+import { esTelefonoDeEjemplo } from "@/lib/telefono";
 import { enlaceWhatsapp, mensajeRecordatorio } from "@/lib/whatsapp";
 import { HojaAbono } from "./hoja-abono";
 
 /**
  * Las dos acciones de un cliente que debe: recordarle por WhatsApp (un toque: abre el chat con el mensaje listo)
- * y registrar un abono. En la demo el enlace no lleva número (los teléfonos son inventados).
+ * y registrar un abono. El enlace lleva el teléfono guardado del cliente, salvo en los clientes de ejemplo (inventados).
  */
 export function AccionesFiado({
   cliente,
   saldo,
   restaurante,
-  demo,
   onAbono,
 }: {
   cliente: { id: string; nombre: string; telefono: string | null };
   saldo: number;
   restaurante: string;
-  demo: boolean;
   onAbono?: (mensaje: string) => void;
 }) {
   const [abonando, setAbonando] = useState(false);
@@ -29,7 +28,7 @@ export function AccionesFiado({
   const enlace = enlaceWhatsapp({
     telefono: cliente.telefono,
     texto: mensajeRecordatorio({ cliente: cliente.nombre, saldo, restaurante }),
-    sinNumero: demo,
+    sinNumero: esTelefonoDeEjemplo(cliente.telefono),
   });
 
   return (

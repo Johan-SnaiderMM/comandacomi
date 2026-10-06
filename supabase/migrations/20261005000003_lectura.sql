@@ -420,8 +420,8 @@ begin
     'cierres_recientes', coalesce((
       select jsonb_agg(jsonb_build_object(
                'id', c.id, 'fecha', c.fecha, 'ventas', c.ventas, 'gastos', c.gastos, 'ganancia', c.ganancia,
-               'efectivo_esperado', c.efectivo_esperado, 'efectivo_contado', c.efectivo_contado,
-               'diferencia', c.diferencia) order by c.fecha desc)
+               'base_caja', c.base_caja, 'efectivo_esperado', c.efectivo_esperado,
+               'efectivo_contado', c.efectivo_contado, 'diferencia', c.diferencia) order by c.fecha desc)
         from (select * from public.cierres_dia
                where restaurante_id = v_rest and not anulado order by fecha desc limit 7) c), '[]'::jsonb)
   );

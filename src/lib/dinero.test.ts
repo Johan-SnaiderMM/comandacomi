@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  aPesos, atajosEfectivo, calcularCierre, calcularEfectivo, diferenciaCaja, formatearMiles, formatearPesos,
+  aPesos, atajosEfectivo, calcularCierre, calcularEfectivo, describirDiferencia, diferenciaCaja, efectivoEsperado, formatearMiles, formatearPesos,
   leerPesos, planDePagos, propinaSugerida, saldoFiado, subtotalLinea, totalPedido, validarAbono, validarCobro,
 } from "./dinero";
 
@@ -200,5 +200,18 @@ describe("cierre del día", () => {
     expect(diferenciaCaja(46500, 46500)).toBe(0);
     expect(diferenciaCaja(44500, 46500)).toBe(-2000);
     expect(diferenciaCaja(50000, 46500)).toBe(3500);
+  });
+
+  it("el efectivo esperado se recalcula al cambiar la base, igual que calcularCierre", () => {
+    const r = calcularCierre(datos);
+    expect(efectivoEsperado(r, 50000)).toBe(r.efectivoEsperado);
+    expect(efectivoEsperado(r, 80000)).toBe(r.efectivoEsperado + 30000);
+    expect(efectivoEsperado({ cobradoEfectivo: 0, abonosEfectivo: 0, gastosCaja: 0 }, 0)).toBe(0);
+  });
+
+  it("describe la diferencia en palabras", () => {
+    expect(describirDiferencia(0)).toEqual({ texto: "La caja cuadra", tono: "ok" });
+    expect(describirDiferencia(-2000)).toEqual({ texto: "Faltan $ 2.000", tono: "falta" });
+    expect(describirDiferencia(5000)).toEqual({ texto: "Sobran $ 5.000", tono: "sobra" });
   });
 });

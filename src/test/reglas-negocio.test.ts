@@ -1,6 +1,7 @@
 /** Reglas de dinero y de negocio de las funciones SQL, sobre Postgres real (PGlite). */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
+import { CATEGORIAS_GASTO } from "@/lib/gastos";
 import { crearBase, crearRestauranteDemo, rpc } from "./base-datos";
 
 type Menu = {
@@ -240,6 +241,21 @@ describe("gastos y cierre del día", () => {
     expect((await inicio()).gastos_hoy).toBe(antes.gastos_hoy);
     const lista = await rpc<{ gastos: { id: string; anulado: boolean; anulado_motivo: string }[] }>(db, U, "listar_gastos");
     expect(lista.gastos.find((x) => x.id === g.id)).toMatchObject({ anulado: true, anulado_motivo: "Monto mal digitado" });
+  });
+
+  it("la base acepta cada categoría de gasto de la interfaz (src/lib/gastos.ts)", async () => {
+    for (const c of CATEGORIAS_GASTO) {
+      await expect(rpc(db, U, "registrar_gasto", { p_monto: 1000, p_categoria: c.valor }), c.valor).resolves.toBeTruthy();
+    }
+  });
+
+  it("un gasto que no salió de la caja no baja el efectivo esperado, pero sí la ganancia", async () => {
+    const antes = (await rpc<{ resumen: Record<string, number> }>(db, U, "obtener_resumen_dia", { p_base: 0 })).resumen;
+    await rpc(db, U, "registrar_gasto", { p_monto: 40000, p_categoria: "carnes", p_de_caja: false });
+    const despues = (await rpc<{ resumen: Record<string, number> }>(db, U, "obtener_resumen_dia", { p_base: 0 })).resumen;
+    expect(despues.gastos).toBe(antes.gastos + 40000);
+    expect(despues.ganancia).toBe(antes.ganancia - 40000);
+    expect(despues.efectivo_esperado).toBe(antes.efectivo_esperado);
   });
 
   it("el cierre calcula ganancia y efectivo esperado, guarda la diferencia y no se repite el mismo día", async () => {

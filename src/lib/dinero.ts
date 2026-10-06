@@ -249,3 +249,14 @@ export function calcularCierre(d: DatosCierre): ResumenCierre {
 export function diferenciaCaja(contado: Pesos, esperado: Pesos): Pesos {
   return contado - esperado;
 }
+
+/** Efectivo que debería haber: base + efectivo cobrado (con propina) + abonos en efectivo − gastos que salieron de la caja. */
+export function efectivoEsperado(r: { cobradoEfectivo: Pesos; abonosEfectivo: Pesos; gastosCaja: Pesos }, base: Pesos): Pesos {
+  return base + r.cobradoEfectivo + r.abonosEfectivo - r.gastosCaja;
+}
+
+/** "La caja cuadra", "Faltan $ 2.000" o "Sobran $ 5.000", con su tono para colorear (nunca solo por color: lleva texto). */
+export function describirDiferencia(dif: Pesos): { texto: string; tono: "ok" | "falta" | "sobra" } {
+  if (dif === 0) return { texto: "La caja cuadra", tono: "ok" };
+  return dif < 0 ? { texto: `Faltan ${formatearPesos(-dif)}`, tono: "falta" } : { texto: `Sobran ${formatearPesos(dif)}`, tono: "sobra" };
+}

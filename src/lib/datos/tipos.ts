@@ -182,12 +182,18 @@ export type CierreDia = {
   efectivo_contado: number;
   diferencia: number;
   notas: string | null;
+  created_at: string;
 };
+
+export type CierreReciente = Pick<
+  CierreDia,
+  "id" | "fecha" | "ventas" | "gastos" | "ganancia" | "base_caja" | "efectivo_esperado" | "efectivo_contado" | "diferencia"
+>;
 
 export type CierreDelDia = {
   resumen: ResumenDia;
   cierre: CierreDia | null;
-  cierres_recientes: Omit<CierreDia, "base_caja" | "notas">[];
+  cierres_recientes: CierreReciente[];
 };
 
 export type MenuAdmin = {

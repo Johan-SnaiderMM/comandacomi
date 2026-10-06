@@ -198,6 +198,35 @@ describe("funciones de escritura: A no puede tocar ids de B", () => {
   });
 });
 
+describe("almacenamiento: las fotos de gastos son de cada restaurante", () => {
+  it("A sube y ve en su carpeta; no puede subir ni ver en la de B", async () => {
+    await como(db, A.userId, `insert into storage.objects (bucket_id, name) values ('gastos-fotos', $1)`, [`${A.restauranteId}/a.jpg`]);
+    await como(db, B.userId, `insert into storage.objects (bucket_id, name) values ('gastos-fotos', $1)`, [`${B.restauranteId}/b.jpg`]);
+
+    await expect(
+      como(db, A.userId, `insert into storage.objects (bucket_id, name) values ('gastos-fotos', $1)`, [`${B.restauranteId}/intruso.jpg`])
+    ).rejects.toThrow(/row-level security/);
+    await expect(
+      como(db, A.userId, `insert into storage.objects (bucket_id, name) values ('gastos-fotos', 'suelta.jpg')`)
+    ).rejects.toThrow(/row-level security/);
+    await expect(
+      como(db, A.userId, `insert into storage.objects (bucket_id, name) values ('otro-bucket', $1)`, [`${A.restauranteId}/x.jpg`])
+    ).rejects.toThrow(/row-level security/);
+
+    const vistas = await como<{ name: string }>(db, A.userId, `select name from storage.objects`);
+    expect(vistas.map((o) => o.name)).toEqual([`${A.restauranteId}/a.jpg`]);
+  });
+
+  it("nadie edita ni borra fotos (son evidencia) y sin sesión no se ve nada", async () => {
+    await como(db, A.userId, `update storage.objects set name = name`).then((f) => expect(f).toEqual([]));
+    const antes = (await db.query<{ n: number }>(`select count(*)::int as n from storage.objects`)).rows[0].n;
+    await como(db, A.userId, `delete from storage.objects`);
+    await como(db, A.userId, `update storage.objects set name = 'x/y.jpg'`);
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from storage.objects`)).rows[0].n).toBe(antes);
+    expect(await como(db, null, `select 1 from storage.objects`).catch(() => [])).toHaveLength(0);
+  });
+});
+
 describe("sin sesión o sin restaurante: nada", () => {
   it("anon no lee ninguna tabla", async () => {
     for (const tabla of [...TABLAS_NEGOCIO, "restaurantes", "perfiles"]) {

@@ -34,6 +34,12 @@ const csp = [
 const nextConfig: NextConfig = {
   // PGlite (base local de desarrollo) usa WASM: no debe empaquetarse.
   serverExternalPackages: ["@electric-sql/pglite"],
+  experimental: {
+    serverActions: {
+      // Las fotos de los gastos llegan comprimidas (~300 KB); el tope del bucket es 1,5 MB.
+      bodySizeLimit: "2mb",
+    },
+  },
   async headers() {
     return [
       {

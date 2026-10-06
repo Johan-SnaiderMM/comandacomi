@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { ClipboardList, Ellipsis, House, NotebookPen, Plus, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Item = { href: string; etiqueta: string; Icono: LucideIcon; central?: boolean };
+type Item = { href: string; etiqueta: string; Icono: LucideIcon; central?: boolean; /** Otras rutas que cuentan como "esta pestaña". */ tambien?: string[] };
 
 const ITEMS: Item[] = [
   { href: "/inicio", etiqueta: "Inicio", Icono: House },
   { href: "/pedidos", etiqueta: "Pendientes", Icono: ClipboardList },
   { href: "/pedido/nuevo", etiqueta: "Tomar", Icono: Plus, central: true },
   { href: "/fiado", etiqueta: "Fiado", Icono: NotebookPen },
-  { href: "/mas", etiqueta: "Más", Icono: Ellipsis },
+  { href: "/mas", etiqueta: "Más", Icono: Ellipsis, tambien: ["/gastos", "/menu"] },
 ];
 
 /**
@@ -29,8 +29,8 @@ export function BarraNavegacion({ pendientes = 0 }: { pendientes?: number }) {
       className="fixed bottom-0 left-1/2 z-30 w-full max-w-[var(--ancho-app)] -translate-x-1/2 border-t-2 border-tinta bg-papel pb-[var(--seguro-abajo)]"
     >
       <ul className="grid h-[var(--nav-h)] grid-cols-5">
-        {ITEMS.map(({ href, etiqueta, Icono, central }) => {
-          const activo = ruta === href || (href !== "/inicio" && ruta.startsWith(`${href}/`));
+        {ITEMS.map(({ href, etiqueta, Icono, central, tambien }) => {
+          const activo = [href, ...(tambien ?? [])].some((r) => ruta === r || (r !== "/inicio" && ruta.startsWith(`${r}/`)));
           return (
             <li key={href} className="relative">
               <Link

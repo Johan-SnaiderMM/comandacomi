@@ -14,6 +14,7 @@ import { Segmentado } from "@/components/ui/segmentado";
 import { TecladoNumerico } from "@/components/ui/teclado-numerico";
 import type { ClienteFiado, PedidoDetalle } from "@/lib/datos/tipos";
 import { atajosEfectivo, calcularEfectivo, formatearPesos, planDePagos, validarCobro, type MedioPago } from "@/lib/dinero";
+import { nombreCorto } from "@/lib/nombres";
 import { aplicarTecla } from "@/lib/teclado";
 import { cn } from "@/lib/utils";
 import { Confirmacion } from "./confirmacion";
@@ -91,7 +92,7 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
   } else if (medio === "transferencia") {
     etiquetaAccion = `Cobrar ${formatearPesos(aCobrar)}`;
   } else {
-    etiquetaAccion = cliente ? `Fiar ${formatearPesos(restoFiado)} a ${cliente.nombre.split(" ")[0]}` : "Elige a quién se le fía";
+    etiquetaAccion = cliente ? `Fiar ${formatearPesos(restoFiado)} a ${nombreCorto(cliente.nombre)}` : "Elige a quién se le fía";
     puedeCobrar = puedeCobrar && cliente !== null;
   }
   if (enviando) etiquetaAccion = "Cobrando…";

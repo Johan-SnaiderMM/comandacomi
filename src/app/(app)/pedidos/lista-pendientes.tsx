@@ -14,6 +14,7 @@ import { Segmentado } from "@/components/ui/segmentado";
 import type { EstadoPedido, PedidoCobrado, PedidoPendiente, TipoPedido } from "@/lib/datos/tipos";
 import { ETIQUETA_MEDIO, formatearPesos } from "@/lib/dinero";
 import { horaCorta } from "@/lib/fechas";
+import { formatearTelefono } from "@/lib/telefono";
 import { cn } from "@/lib/utils";
 import { Espera } from "./espera";
 
@@ -147,7 +148,7 @@ export function ListaPendientes({
                       )}
                       {p.contacto_telefono && (
                         <p className="flex items-center gap-1.5">
-                          <Phone className="size-4 shrink-0" aria-hidden /> {p.contacto_telefono.replace("+57", "")}
+                          <Phone className="size-4 shrink-0" aria-hidden /> {formatearTelefono(p.contacto_telefono)}
                         </p>
                       )}
                     </div>

@@ -15,5 +15,8 @@ export default defineConfig({
     // PGlite arranca una base completa en memoria: se da margen a los hooks de preparación.
     hookTimeout: 60_000,
     testTimeout: 30_000,
+    // Cada archivo con PGlite levanta su propio Postgres en WebAssembly; en paralelo sin tope la memoria no
+    // alcanza y una suite cae con "Array buffer allocation failed" (visto en Windows con 23 workers).
+    maxWorkers: 4,
   },
 });

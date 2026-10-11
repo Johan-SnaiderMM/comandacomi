@@ -12,7 +12,7 @@
 -- =====================================================================
 do $$
 declare
-  v_correo constant text := 'demo@ejemplo.com';   -- <-- CAMBIA ESTE CORREO por el del usuario demo
+  v_correo constant text := 'administrador@comandacomi.com';   -- <-- CAMBIA ESTE CORREO por el del usuario demo
   v_user uuid;
 begin
   select id into v_user from auth.users where lower(email) = lower(v_correo);

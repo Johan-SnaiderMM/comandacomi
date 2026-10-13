@@ -172,7 +172,7 @@ async function correr() {
   await ir(dueno.pagina, "/");
   await dueno.pagina.getByRole("button", { name: "Entrar a la demo" }).click();
   await dueno.pagina.waitForURL("**/inicio", { timeout: 120000 });
-  await dueno.pagina.getByRole("link", { name: /En línea/ }).waitFor();
+  await dueno.pagina.getByRole("link", { name: /En línea/ }).first().waitFor();
   log("el inicio tiene los atajos «Plancha» y «En línea»");
 
   await ir(dueno.pagina, "/pedidos-en-linea");

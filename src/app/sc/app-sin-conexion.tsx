@@ -104,7 +104,7 @@ export function AppSinConexion() {
     const conBarra = (contenido: React.ReactNode) => (
       <div className="columna-app">
         {contenido}
-        <BarraNavegacion pendientes={vista.pendientes.filter((p) => !(p.estado === "entregado" && p.cobrado)).length} />
+        <BarraNavegacion sinConexion pendientes={vista.pendientes.filter((p) => !(p.estado === "entregado" && p.cobrado)).length} />
       </div>
     );
 

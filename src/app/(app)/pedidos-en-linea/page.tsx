@@ -18,7 +18,7 @@ export default async function PaginaPedidosEnLinea() {
   if (!contexto.restaurante.slug) {
     return (
       <>
-        <EncabezadoPantalla titulo="Pedidos en línea" atras="/mas" />
+        <EncabezadoPantalla titulo="Pedidos en línea" />
         <main className="pb-nav px-4 pt-4">
           <Aviso tipo="error">
             Falta aplicar la actualización de la base de datos para recibir pedidos en línea. Pega el archivo{" "}
@@ -34,7 +34,7 @@ export default async function PaginaPedidosEnLinea() {
   const enHorario = abiertoPorHorario(horario, ahora);
   return (
     <>
-      <EncabezadoPantalla titulo="Pedidos en línea" atras="/mas" />
+      <EncabezadoPantalla titulo="Pedidos en línea" />
       <main className="pb-nav space-y-4 px-4 pt-4">
         <PanelPedidosEnLinea
           slug={contexto.restaurante.slug}

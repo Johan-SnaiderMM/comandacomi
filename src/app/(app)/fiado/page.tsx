@@ -10,7 +10,7 @@ export default async function Fiado() {
   const [clientes, contexto] = await Promise.all([listarClientes(), obtenerContexto()]);
   return (
     <>
-      <EncabezadoPantalla titulo="Fiado" />
+      <EncabezadoPantalla titulo="Fiado" atras="/mas" />
       <main className="pb-nav">
         <ListaFiado
           clientes={clientes}

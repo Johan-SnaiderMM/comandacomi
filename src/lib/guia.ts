@@ -29,7 +29,7 @@ export const PASOS: readonly PasoGuia[] = [
   {
     titulo: "Toma un pedido",
     texto: "Toca el botón amarillo «Tomar» de abajo.",
-    ruta: /^\/inicio$|^\/pedidos$|^\/fiado$|^\/mas$/,
+    ruta: /^\/inicio$|^\/pedidos$|^\/pedidos-en-linea$|^\/fiado$|^\/mas$/,
     ir: "/inicio",
     objetivo: "tomar",
     alLlegarA: /^\/pedido\/nuevo$/,

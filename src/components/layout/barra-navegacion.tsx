@@ -1,26 +1,34 @@
 "use client";
 
-import { ClipboardList, Ellipsis, House, NotebookPen, Plus, type LucideIcon } from "lucide-react";
+import { ClipboardList, Ellipsis, House, NotebookPen, Plus, Smartphone, type LucideIcon } from "lucide-react";
 import { Enlace, useRuta } from "@/lib/navegacion";
 import { cn } from "@/lib/utils";
 
 type Item = { href: string; etiqueta: string; Icono: LucideIcon; central?: boolean; /** Otras rutas que cuentan como "esta pestaña". */ tambien?: string[] };
 
-const ITEMS: Item[] = [
+const EN_LINEA: Item = { href: "/pedidos-en-linea", etiqueta: "En línea", Icono: Smartphone };
+const FIADO: Item = { href: "/fiado", etiqueta: "Fiado", Icono: NotebookPen };
+
+/** La cuarta pestaña es "En línea" (pedidos de clientes); Fiado vive en Más. Sin conexión es al revés (ver abajo). */
+const items = (sinConexion: boolean): Item[] => [
   { href: "/inicio", etiqueta: "Inicio", Icono: House },
   { href: "/pedidos", etiqueta: "Pendientes", Icono: ClipboardList },
   { href: "/pedido/nuevo", etiqueta: "Tomar", Icono: Plus, central: true },
-  { href: "/fiado", etiqueta: "Fiado", Icono: NotebookPen },
-  { href: "/mas", etiqueta: "Más", Icono: Ellipsis, tambien: ["/gastos", "/menu"] },
+  sinConexion ? FIADO : EN_LINEA,
+  { href: "/mas", etiqueta: "Más", Icono: Ellipsis, tambien: sinConexion ? ["/gastos"] : ["/gastos", "/menu", "/mesas", "/fiado"] },
 ];
 
 /**
  * Barra de navegación inferior (zona del pulgar). Cinco destinos de 72 px de alto; el central
  * ("Tomar pedido") es la acción más frecuente y sobresale. La pestaña activa se marca con relleno
  * amarillo Y con `aria-current`, no solo con color.
+ *
+ * `sinConexion`: en la app sin conexión (/sc) la cuarta pestaña sigue siendo Fiado. Los pedidos en línea necesitan
+ * señal (allí la pestaña solo llevaría a "esto necesita conexión"), y el fiado sí se trabaja sin ella.
  */
-export function BarraNavegacion({ pendientes = 0 }: { pendientes?: number }) {
+export function BarraNavegacion({ pendientes = 0, sinConexion = false }: { pendientes?: number; sinConexion?: boolean }) {
   const ruta = useRuta();
+  const ITEMS = items(sinConexion);
 
   return (
     <nav

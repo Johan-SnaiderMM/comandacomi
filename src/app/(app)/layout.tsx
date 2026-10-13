@@ -10,7 +10,7 @@ async function NavegacionConPendientes() {
   return <BarraNavegacion pendientes={pendientes} />;
 }
 
-/** Pantallas con navegación inferior (Inicio, Pendientes, Fiado, Más). Exigen sesión. */
+/** Pantallas con navegación inferior (Inicio, Pendientes, En línea, Más y lo que cuelga de Más). Exigen sesión. */
 export default async function LayoutApp({ children }: LayoutProps<"/">) {
   await exigirSesion();
   return (

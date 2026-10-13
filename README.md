@@ -18,10 +18,10 @@ grandes solo se centra una columna.
    el motivo) o anular el pedido.
 4. **Cobrar**: efectivo (teclado propio, vuelto), Nequi, **una parte en efectivo y el resto por Nequi**, o **fiado**
    (cliente nuevo y pago parcial).
-5. **Fiado**: quién debe, **Abonar**, **Recordar** por WhatsApp.
+5. **Más → Fiado**: quién debe, **Abonar**, **Recordar** por WhatsApp.
 6. **Más → Gastos del día**: registrar un gasto (monto → categoría → guardar, foto opcional).
 7. **Más → Cierre del día**: contar el efectivo, ver la diferencia, cerrar y **Enviar resumen por WhatsApp**.
-8. **Más → Pedidos en línea**: el enlace (y el QR) para que los clientes pidan solos desde su celular. Ábrelo en otro
+8. **En línea** (en la barra de abajo): el enlace (y el QR) para que los clientes pidan solos desde su celular. Ábrelo en otro
    celular: arma un pedido a domicilio y envíalo. En el tuyo suena y parpadea **¡Pedido nuevo!**: **Aceptar** (con tiempo
    estimado) o **Rechazar** (con motivo).
 9. **Más → Plancha** (en otro celular o tableta): el pedido aceptado aparece plato por plato; toca cada plato para
@@ -57,15 +57,15 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
 - **Foto y descripción de cada plato** (*Más → Menú*, al editar el plato): la foto se comprime en el celular (~60 KB) y
   va a un bucket **público** de Storage (`platos-fotos`), porque el menú lo ve cualquiera con el enlace. Solo el dueño
   sube, y solo a la carpeta de su restaurante.
-- **Horario de atención** (*Más → Pedidos en línea*): con horario, los pedidos en línea se abren y se cierran solos; el
+- **Horario de atención** (*En línea*): con horario, los pedidos en línea se abren y se cierran solos; el
   cliente ve "cerrado, abre hoy a las 6:00 p. m." y el horario de la semana. Una franja que cierra después de medianoche
   (6 p. m. a 2 a. m.) se escribe tal cual. El interruptor sigue mandando: apagado, no se recibe aunque sea hora.
-- **QR para imprimir** (*Más → Pedidos en línea → Cartel con el QR*): un cartel listo para pegar en el mostrador. Se
+- **QR para imprimir** (*En línea → Cartel con el QR*): un cartel listo para pegar en el mostrador. Se
   imprime (en la hoja sale solo el cartel) o se guarda como imagen para mandarla a una papelería.
 - **"Tiempo real" = consulta cada pocos segundos** (seguimiento 4 s, que se espacia si lleva rato igual; alerta 5 s;
   plancha 4 s). Se detiene sola cuando el pedido termina o la pantalla no está a la vista. Es lo que permite probarlo en
   el modo local sin servicios externos.
-- **El dueño abre o cierra** la recepción desde *Más → Pedidos en línea*. Cerrada, el cliente ve el menú pero no puede
+- **El dueño abre o cierra** la recepción desde *En línea*. Cerrada, el cliente ve el menú pero no puede
   enviar. El enlace sale del nombre del local y cambia si renombras la demo, pero **los enlaces anteriores siguen
   funcionando**: llevan al vigente (los 20 últimos; migración `20261005000013_enlaces_anteriores_y_platos_quitados.sql`).
 - **Avisos push (con la app cerrada):** *Más → Avisos en este celular*. Cada celular elige qué recibir: **dueño** =
@@ -209,7 +209,7 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 - [ ] Instálala como app y ábrela desde el ícono (debe abrir en pantalla completa).
 - [ ] Haz un pedido de punta a punta y toca **Más → Reiniciar demo** para dejarla limpia.
 - [ ] Prueba con mala señal / modo avión: el cascarón debe abrir (los datos nuevos necesitan red).
-- [ ] **Pedidos en línea:** abre *Más → Pedidos en línea*, copia el enlace, ábrelo en otro celular y haz un pedido;
+- [ ] **Pedidos en línea:** abre *En línea*, copia el enlace, ábrelo en otro celular y haz un pedido;
       en el tuyo debe sonar la alerta. Toca una vez la pantalla antes (el navegador no deja sonar sin un toque).
 - [ ] **PIN de reinicio:** si vas a dejarle el celular a alguien, ponle un PIN a la demo (ver *Cómo reiniciar los
       datos de ejemplo*) para que no la reinicien en plena visita.

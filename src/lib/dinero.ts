@@ -116,8 +116,10 @@ export type PagoPlan = {
 /**
  * Arma los pagos del cobro según lo elegido en pantalla:
  *  - efectivo: un pago por todo lo que se cobra, con lo recibido (el vuelto sale de ahí).
- *  - transferencia (Nequi/banco): un pago, con referencia opcional.
+ *  - transferencia (Nequi/banco): un pago, con referencia opcional; o, si paga una parte en efectivo (`pagaAhora`), esa
+ *    parte en efectivo y el resto por transferencia (pago dividido).
  *  - fiado: todo a la cuenta del cliente; o, si paga una parte ahora, esa parte en efectivo y el resto a fiado.
+ * La parte en efectivo de un pago dividido se recibe exacta: no lleva vuelto.
  */
 export function planDePagos(e: {
   medio: MedioPago;
@@ -128,12 +130,12 @@ export function planDePagos(e: {
   pagaAhora: Pesos;
 }): PagoPlan[] {
   if (e.medio === "efectivo") return [{ medio: "efectivo", monto: e.aCobrar, recibido: e.recibido }];
-  if (e.medio === "transferencia") return [{ medio: "transferencia", monto: e.aCobrar, referencia: e.referencia.trim() || undefined }];
 
   const ahora = Math.max(0, e.pagaAhora);
   const resto = e.aCobrar - ahora;
-  const fiado: PagoPlan = { medio: "fiado", monto: resto, clienteId: e.clienteId ?? undefined };
-  return ahora > 0 ? [{ medio: "efectivo", monto: ahora, recibido: ahora }, fiado] : [fiado];
+  const enEfectivo: PagoPlan[] = ahora > 0 ? [{ medio: "efectivo", monto: ahora, recibido: ahora }] : [];
+  if (e.medio === "transferencia") return [...enEfectivo, { medio: "transferencia", monto: resto, referencia: e.referencia.trim() || undefined }];
+  return [...enEfectivo, { medio: "fiado", monto: resto, clienteId: e.clienteId ?? undefined }];
 }
 
 export type ValidacionCobro ={ ok: true; vuelto: Pesos; fiado: Pesos } | { ok: false; error: string };

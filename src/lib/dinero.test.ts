@@ -118,6 +118,17 @@ describe("plan de pagos según lo elegido en pantalla", () => {
     expect(validarCobro(24000, 2500, mixto)).toEqual({ ok: true, vuelto: 0, fiado: 16500 });
   });
 
+  it("pago dividido: una parte en efectivo (exacta, sin vuelto) y el resto por transferencia", () => {
+    const dividido = planDePagos({ ...base, medio: "transferencia", referencia: " NEQ77 ", pagaAhora: 10000 });
+    expect(dividido).toEqual([
+      { medio: "efectivo", monto: 10000, recibido: 10000 },
+      { medio: "transferencia", monto: 16500, referencia: "NEQ77" },
+    ]);
+    expect(validarCobro(24000, 2500, dividido)).toEqual({ ok: true, vuelto: 0, fiado: 0 });
+    // Pagar "una parte" que en realidad es todo no es un pago dividido: no pasa (se cobra en efectivo y ya).
+    expect(validarCobro(24000, 2500, planDePagos({ ...base, medio: "transferencia", pagaAhora: 26500 }))).toMatchObject({ ok: false });
+  });
+
   it("fiado sin cliente, o pagando todo ahora, no pasa la validación", () => {
     expect(validarCobro(24000, 2500, planDePagos({ ...base, medio: "fiado" }))).toMatchObject({ ok: false, error: expect.stringContaining("a quién") });
     expect(validarCobro(24000, 2500, planDePagos({ ...base, medio: "fiado", clienteId: "c1", pagaAhora: 26500 }))).toMatchObject({ ok: false });

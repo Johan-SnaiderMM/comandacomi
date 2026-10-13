@@ -56,10 +56,21 @@ export function Confirmacion({ resultado: r }: { resultado: Resultado }) {
             )}
             <div className="flex justify-between">
               <dt>Pago</dt>
-              <dd className="text-right font-bold">
-                {r.medio === "fiado" && r.pagadoAhora > 0 ? `Efectivo + ${ETIQUETA_MEDIO.fiado}` : ETIQUETA_MEDIO[r.medio]}
-              </dd>
+              <dd className="text-right font-bold">{r.pagadoAhora > 0 ? `Efectivo + ${ETIQUETA_MEDIO[r.medio]}` : ETIQUETA_MEDIO[r.medio]}</dd>
             </div>
+            {/* Pago dividido: cuánto entró por cada lado (para cuadrar la caja y el Nequi de un vistazo). */}
+            {r.medio === "transferencia" && r.pagadoAhora > 0 && (
+              <>
+                <div className="flex justify-between text-base text-tinta-2">
+                  <dt>En efectivo</dt>
+                  <dd className="cifra text-xl">{formatearPesos(r.pagadoAhora)}</dd>
+                </div>
+                <div className="flex justify-between text-base text-tinta-2">
+                  <dt>Por Nequi / transferencia</dt>
+                  <dd className="cifra text-xl">{formatearPesos(r.cobrado - r.pagadoAhora)}</dd>
+                </div>
+              </>
+            )}
           </dl>
           {r.fiado > 0 && r.cliente && (
             <>

@@ -77,7 +77,7 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
         setError(r.error);
         return;
       }
-      setResultado({ ...r.datos, medio, cliente, pagadoAhora: medio === "fiado" ? pagaAhora : 0 });
+      setResultado({ ...r.datos, medio, cliente, pagadoAhora: medio === "efectivo" ? 0 : pagaAhora });
     });
   }
 
@@ -91,7 +91,8 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
   if (medio === "efectivo") {
     etiquetaAccion = recibido === 0 ? "Escribe lo que recibes" : efectivo.alcanza ? `Cobrar · vuelto ${formatearPesos(efectivo.vuelto)}` : `Faltan ${formatearPesos(efectivo.falta)}`;
   } else if (medio === "transferencia") {
-    etiquetaAccion = `Cobrar ${formatearPesos(aCobrar)}`;
+    etiquetaAccion = abonando && pagaAhora === 0 ? "Escribe cuánto paga en efectivo" : `Cobrar ${formatearPesos(aCobrar)}`;
+    puedeCobrar = puedeCobrar && !(abonando && pagaAhora === 0);
   } else {
     etiquetaAccion = cliente ? `Fiar ${formatearPesos(restoFiado)} a ${nombreCorto(cliente.nombre)}` : "Elige a quién se le fía";
     puedeCobrar = puedeCobrar && cliente !== null;
@@ -134,6 +135,9 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
           onCambio={(m) => {
             setMedio(m);
             setError(null);
+            // "Una parte en efectivo" es de cada medio: al cambiar se empieza de cero (no se arrastra a escondidas).
+            setAbonando(false);
+            setPagaAhora(0);
           }}
           opciones={[
             { valor: "efectivo", etiqueta: "Efectivo", icono: <Banknote className="size-5" aria-hidden /> },
@@ -176,14 +180,47 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
         )}
 
         {medio === "transferencia" && (
-          <div className="rounded-xl border-2 border-tinta bg-papel p-3">
-            <p className="text-lg font-bold leading-tight">Nequi, Daviplata o transferencia del banco</p>
-            <p className="mt-1 text-base text-tinta-2">Confirma que el dinero llegó antes de cobrar.</p>
-            <Label htmlFor="referencia" className="mt-3">
-              Referencia (opcional)
-            </Label>
-            <Input id="referencia" value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={60} placeholder="Ej. M1234567" autoCapitalize="characters" />
-          </div>
+          <>
+            <div className="rounded-xl border-2 border-tinta bg-papel p-3">
+              <p className="text-lg font-bold leading-tight">Nequi, Daviplata o transferencia del banco</p>
+              {!abonando && <p className="mt-1 text-base text-tinta-2">Confirma que el dinero llegó antes de cobrar.</p>}
+              <Label htmlFor="referencia" className="mt-3">
+                Referencia (opcional)
+              </Label>
+              <Input id="referencia" value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={60} placeholder="Ej. M1234567" autoCapitalize="characters" />
+            </div>
+            {/* Pago dividido: una parte en efectivo (exacta, sin vuelto) y el resto por transferencia. */}
+            {abonando ? (
+              <>
+                <div className="rounded-xl border-2 border-tinta bg-papel px-3 py-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-tinta-2">Paga en efectivo</p>
+                      <p className="cifra text-4xl">{formatearPesos(pagaAhora)}</p>
+                    </div>
+                    <Button
+                      variante="fantasma"
+                      onClick={() => {
+                        setAbonando(false);
+                        setPagaAhora(0);
+                      }}
+                    >
+                      Quitar
+                    </Button>
+                  </div>
+                  <p className="flex items-baseline justify-between border-t-2 border-dashed border-tinta/30 pt-1 text-base">
+                    <span>El resto, por Nequi</span>
+                    <span className="cifra text-2xl">{formatearPesos(aCobrar - pagaAhora)}</span>
+                  </p>
+                </div>
+                <TecladoNumerico onTecla={(t) => setPagaAhora((v) => Math.min(aplicarTecla(v, t), aCobrar - 1))} />
+              </>
+            ) : (
+              <Button variante="secundario" bloque onClick={() => setAbonando(true)}>
+                Paga una parte en efectivo
+              </Button>
+            )}
+          </>
         )}
 
         {medio === "fiado" && (

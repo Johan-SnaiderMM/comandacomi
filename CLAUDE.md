@@ -33,6 +33,25 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   (`reintentable`, ver `esFalloPasajero` en `lib/errores.ts`: se reintenta solo, con tope). Con la red caída (`sinRed`)
   el `Motor` no hace esperar a nadie: guarda de una vez y sube por detrás.
 - Pedidos hechos sin señal llevan número provisional negativo: mostrar siempre con `numeroVisible()`.
+- "Hoy" es el DÍA DE TRABAJO, no la fecha del calendario: cambia a la hora de corte (`restaurantes.hora_corte`, 4 a. m.)
+  o cuando el dueño cierra el día a mano. En SQL: `jornada_actual()` (a qué día entra lo que se registre ahora; Inicio,
+  cobrados, gastos), `dia_de_trabajo()` (el del reloj; la pantalla de Cierre) y `fn_jornada(restaurante, instante)`;
+  nunca `hoy_bogota()` para algo del negocio. Las columnas `fecha` de pedidos, pagos y movimientos las pone un trigger
+  (no son generadas). En el navegador: `hoyDeTrabajo()` de `lib/fechas.ts`. Las pruebas de fechas usan instantes FIJOS
+  lejos de la última semana (la demo trae cierres de ejemplo de esos días), nunca el reloj.
+- Lo que no se cocina (categoría con `se_prepara = false`, p. ej. Bebidas) no sale en la plancha ni frena el pedido; el
+  dato se copia a `pedido_items.se_prepara` al vender. Toda función que cuente o liste platos "por preparar" filtra por
+  `se_prepara`.
+- Una función SQL que deba RECORDAR un intento fallido (el PIN de reinicio) devuelve `{ok:false}` en vez de lanzar: un
+  `raise` deshace la transacción y con ella el conteo. El PIN se define solo desde el SQL Editor
+  (`fn_definir_pin_reinicio`), nunca desde la app.
+- Fotos: las de gastos son privadas (`/api/foto`, con sesión); las de platos son públicas a propósito (bucket
+  `platos-fotos`) y su dirección la arma el servidor con `urlFotoPlato` (`lib/fotos.ts`), nunca el navegador.
+- Horario de atención: la cuenta "¿a esta hora se atiende?" existe en SQL (`fn_abierto_por_horario`, la que decide) y en
+  TypeScript (`lib/horario.ts`, para explicar); `src/test/carta-del-cliente.test.ts` las compara. Lo que dependa del
+  reloj ("abre hoy a las…") se calcula en el servidor y viaja como texto (no rompe la hidratación).
+- Datos de ejemplo: `fn_cargar_datos_demo` es una función larga. Una migración que les cambie algo la redefine ENTERA y
+  una sola vez (como la 18, que recoge lo de la 14 a la 17), no a pedazos en varias migraciones.
 - Grupos de rutas: `(app)` con barra de navegación, `(tarea)` una sola tarea, ambos en la columna angosta de celular
   (`.columna-app`); `(cocina)` (la plancha) a todo el ancho, para tableta o celular acostado; `(publico)` sin sesión.
 - La pantalla de "no existe" es UNA (`app/not-found.tsx` → `components/no-existe.tsx`) y cambia el texto según a quién
@@ -50,7 +69,8 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   service worker). "Tiempo real" = consulta periódica (GET `no-store`), no websockets. Cambios en esta parte: corre
   `npm run e2e:clientes`.
 - No agregar lo aplazado: facturación electrónica, inventario con recetas, gráficas, WhatsApp automático, impresión
-  térmica, pagos en línea, multi-sede, costo de domicilio por zona. Avisos push (`lib/push/`): la llave privada VAPID
+  térmica, pagos en línea, multi-sede, costo de domicilio por zona. (El cartel del QR sí se imprime, con la impresora
+  normal: `/qr` y las reglas `@media print` de `globals.css`.) Avisos push (`lib/push/`): la llave privada VAPID
   es solo del servidor; los avisos se envían con `after()` y nunca deben hacer fallar la acción que los dispara. Un
   celular deja de recibirlos al salir de la sesión y al reiniciar la demo (salvo el que reinicia): no dejar caminos
   por los que un celular siga suscrito sin que nadie del equipo lo use.

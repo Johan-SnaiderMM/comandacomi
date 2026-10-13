@@ -125,7 +125,7 @@ async function faseDev() {
 
   console.log("\n1b. Con señal: la app normal sigue igual (camino directo, sin cola)");
   await page.goto(BASE + "/pedido/nuevo");
-  if (await page.getByText("ESA PANTALLA NO EXISTE").count()) await page.reload(); // el servidor de desarrollo compila cada ruta la primera vez
+  if (await page.locator("[data-pantalla='no-existe']").count()) await page.reload(); // el servidor de desarrollo compila cada ruta la primera vez
   await page.getByRole("radio", { name: "Llevar" }).click();
   await page.getByRole("button", { name: "Listo" }).click();
   await page.getByRole("button", { name: /Hamburguesa sencilla/ }).first().click();

@@ -1,15 +1,13 @@
-import Link from "next/link";
-import { botonVariantes } from "@/components/ui/button";
+import type { Metadata } from "next";
+import { PantallaNoExiste } from "@/components/no-existe";
 
+export const metadata: Metadata = { title: "No existe" };
+
+/**
+ * La pantalla de "no existe" de toda la app: atiende las direcciones que no llevan a ninguna parte y también los
+ * `notFound()` de las páginas (un enlace de restaurante que ya no está, un pedido que no se encuentra). El texto cambia
+ * según a quién le habla: ver `components/no-existe.tsx`.
+ */
 export default function NoEncontrada() {
-  return (
-    <main className="columna-app flex flex-col items-start justify-center gap-4 px-4">
-      <p className="cifra text-7xl">404</p>
-      <h1 className="font-display text-4xl font-extrabold uppercase leading-none">Esa pantalla no existe</h1>
-      <p className="text-lg text-tinta-2">Puede que el enlace esté mal escrito o ya no exista.</p>
-      <Link href="/" className={botonVariantes({ tamano: "lg" })}>
-        Volver al inicio
-      </Link>
-    </main>
-  );
+  return <PantallaNoExiste />;
 }

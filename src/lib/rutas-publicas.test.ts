@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { esRutaPublica } from "./rutas-publicas";
+import { esRutaPublica, zonaDeRuta } from "./rutas-publicas";
 
 describe("rutas públicas (las que ve un cliente sin cuenta)", () => {
   it("pedir y seguimiento lo son, con y sin subruta", () => {
@@ -12,6 +12,15 @@ describe("rutas públicas (las que ve un cliente sin cuenta)", () => {
   it("las pantallas del personal no lo son (ni las que solo se parecen)", () => {
     for (const ruta of ["/", "/inicio", "/pedidos", "/pedidos-en-linea", "/pedido/nuevo", "/plancha", "/sc", "/pedirx", "/seguimientos"]) {
       expect(esRutaPublica(ruta), ruta).toBe(false);
+    }
+  });
+
+  it("cada ruta sabe a quién le habla (para la pantalla de «no existe»)", () => {
+    expect(zonaDeRuta("/pedir/un-local-que-ya-no-esta")).toBe("pedir");
+    expect(zonaDeRuta("/pedir")).toBe("pedir");
+    expect(zonaDeRuta("/seguimiento/123e4567-e89b-42d3-a456-426614174000")).toBe("seguimiento");
+    for (const ruta of ["/", "/inicio", "/cualquier-cosa", "/pedidos/abc/cobrar", "/pedirx", "/seguimientos", "/plancha/otra"]) {
+      expect(zonaDeRuta(ruta), ruta).toBe("personal");
     }
   });
 

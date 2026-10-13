@@ -23,8 +23,12 @@ export function ProveedorSync() {
     const motor = obtenerMotor();
     if (!motor) return;
 
+    // En la pantalla de "no existe" no se sincroniza: una acción del servidor lanzada desde una dirección que no
+    // existe falla, y el motor lo tomaría por falta de señal (aviso de "Sin conexión" en la pantalla siguiente).
+    const enPantallaQueNoExiste = () => document.querySelector("[data-pantalla='no-existe']") !== null;
+
     const sincronizar = () => {
-      if (!navigator.onLine) return;
+      if (!navigator.onLine || enPantallaQueNoExiste()) return;
       void (motor.porSubir() > 0 ? motor.vaciar() : motor.refrescar());
     };
 

@@ -234,6 +234,7 @@ async function correr() {
   log("el manifiesto propio abre el panel de pedir (no la app del personal)");
   await cliente.pagina.getByRole("button", { name: "Agregar Hamburguesa sencilla" }).click();
   await cliente.pagina.getByRole("button", { name: "Más Hamburguesa sencilla" }).click();
+  await cliente.pagina.getByRole("group", { name: "Categorías" }).getByRole("button", { name: /Perros/ }).click();
   await cliente.pagina.getByRole("button", { name: "Agregar Perro caliente" }).click();
   const barra = cliente.pagina.getByRole("button", { name: /^Ver mi pedido · 3 platos/ });
   await barra.waitFor();
@@ -367,6 +368,7 @@ async function correr() {
   // ------------------------------------------------------------------------------ 7. rechazado
   console.log("\n7. Un pedido que el restaurante rechaza");
   await ir(cliente.pagina, `/pedir/${slug}`);
+  await cliente.pagina.getByRole("group", { name: "Categorías" }).getByRole("button", { name: /Perros/ }).click();
   await cliente.pagina.getByRole("button", { name: "Agregar Perro caliente" }).click();
   await cliente.pagina.getByRole("button", { name: /^Ver mi pedido/ }).click();
   await cliente.pagina.getByLabel("Tu nombre").fill("Camila Prueba");
@@ -390,6 +392,7 @@ async function correr() {
   // ------------------------------------------------------------------------- 8. cancelado por el cliente
   console.log("\n8. El cliente se arrepiente antes de que lo acepten");
   await ir(cliente.pagina, `/pedir/${slug}`);
+  await cliente.pagina.getByRole("group", { name: "Categorías" }).getByRole("button", { name: /Bebidas/ }).click();
   await cliente.pagina.getByRole("button", { name: "Agregar Gaseosa personal" }).click();
   await cliente.pagina.getByRole("button", { name: /^Ver mi pedido/ }).click();
   await cliente.pagina.getByLabel("Tu nombre").fill("Otro Cliente");
@@ -479,6 +482,7 @@ async function correr() {
   // Un cliente pide y se suscribe a SU pedido.
   const antes = avisosFallidos();
   await ir(cliente.pagina, `/pedir/${slug}`);
+  await cliente.pagina.getByRole("group", { name: "Categorías" }).getByRole("button", { name: /Perros/ }).click();
   await cliente.pagina.getByRole("button", { name: "Agregar Perro caliente" }).click();
   await cliente.pagina.getByRole("button", { name: /^Ver mi pedido/ }).click();
   await cliente.pagina.getByLabel("Tu nombre").fill("Camila Prueba");

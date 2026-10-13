@@ -64,6 +64,8 @@ export function PedirEnLinea({
   const despachar = almacen.despachar;
   const [extras, setExtras] = useState<Producto | null>(null);
   const [hoja, setHoja] = useState(false);
+  // La categoría que se está viendo (null = la primera). Las categorías FILTRAN: se ve una sola a la vez.
+  const [categoriaElegida, setCategoriaElegida] = useState<string | null>(null);
   const guardado = useSyncExternalStore(suscribirAlmacenamiento, () => leerPedidoEnCurso(restaurante.slug), () => null);
   const enCurso = useMemo(() => (guardado ? (JSON.parse(guardado) as { token: string; numero: number }) : null), [guardado]);
 
@@ -78,6 +80,9 @@ export function PedirEnLinea({
         .filter((s) => s.productos.length > 0),
     [menu]
   );
+
+  // Si la categoría elegida ya no existe (el restaurante la ocultó), se vuelve a la primera.
+  const visible = secciones.find((s) => s.categoria.id === categoriaElegida) ?? secciones[0];
 
   // Un pedido retomado se pone al día con el menú de ahora: fuera lo agotado, precios vigentes.
   useEffect(() => {
@@ -152,23 +157,37 @@ export function PedirEnLinea({
 
         {secciones.length === 0 && <p className="pt-6 text-lg text-tinta-2">El menú todavía no tiene platos.</p>}
 
+        {/* Las categorías son un FILTRO: se ve una sola a la vez (el menú completo en una sola lista era muy largo
+            para el pulgar). La elegida va rellena; el número dice cuántos platos de esa categoría ya lleva el pedido. */}
         {secciones.length > 1 && (
-          <nav aria-label="Categorías" className="flex flex-wrap gap-2">
-            {secciones.map(({ categoria }) => (
-              <a
-                key={categoria.id}
-                href={`#cat-${categoria.id}`}
-                className="flex min-h-12 items-center gap-1.5 rounded-xl border-2 border-tinta bg-papel px-3 text-base font-bold shadow-sello-chico active:translate-y-[2px]"
-              >
-                <span aria-hidden>{categoria.icono ?? "🍽"}</span>
-                {categoria.nombre}
-              </a>
-            ))}
-          </nav>
+          <div role="group" aria-label="Categorías" className="flex flex-wrap gap-2">
+            {secciones.map(({ categoria, productos }) => {
+              const elegida = categoria.id === visible?.categoria.id;
+              const enPedido = productos.reduce((n, p) => n + cantidadDe(borrador, p.id), 0);
+              return (
+                <button
+                  key={categoria.id}
+                  type="button"
+                  aria-pressed={elegida}
+                  onClick={() => setCategoriaElegida(categoria.id)}
+                  className={`flex min-h-12 items-center gap-1.5 rounded-xl border-2 border-tinta px-3 text-base font-bold active:translate-y-[2px] ${elegida ? "bg-sol shadow-sello-chico" : "bg-papel"}`}
+                >
+                  <span aria-hidden>{categoria.icono ?? "🍽"}</span>
+                  {categoria.nombre}
+                  {enPedido > 0 && (
+                    <span className="cifra flex min-w-6 items-center justify-center rounded-full border-2 border-tinta bg-papel px-1 text-base leading-5">
+                      {enPedido}
+                      <span className="sr-only"> en tu pedido</span>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         )}
 
-        {secciones.map(({ categoria, productos }) => (
-          <section key={categoria.id} id={`cat-${categoria.id}`} aria-label={categoria.nombre} className="scroll-mt-4">
+        {(visible ? [visible] : []).map(({ categoria, productos }) => (
+          <section key={categoria.id} aria-label={categoria.nombre}>
             <h2 className="font-display mb-2 text-3xl font-extrabold uppercase leading-none tracking-tight">
               <span aria-hidden>{categoria.icono ?? "🍽"}</span> {categoria.nombre}
             </h2>

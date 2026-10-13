@@ -6,6 +6,9 @@
 --   · Bebidas no pasa por la cocina (migración 14): sus platos no salen en la plancha.
 --   · "Hoy" es el día de trabajo (migración 16), no la fecha del calendario: una demo abierta de madrugada trae las
 --     ventas de toda la noche, no solo las de después de las 12.
+--   · Cada plato trae una descripción para el menú del cliente (migración 17), y las fotos que se les hayan tomado a
+--     los platos de ejemplo sobreviven al reinicio.
+--   · La demo vuelve a quedar sin horario de atención (migración 17): siempre lista para recibir un pedido de muestra.
 -- =====================================================================
 
 create or replace function public.fn_cargar_datos_demo(p_rest uuid)
@@ -28,7 +31,14 @@ declare
   v_res jsonb; v_adj int[] := array[0, -2000, 0, 5000, -1000, 0];   -- diferencia de caja de hace 6..1 días
   v_dia date; v_abono int; v_cargos int; v_c int;
   v_anular uuid;
+  v_fotos jsonb;
 begin
+  -- Las fotos que alguien les tomó a los platos de ejemplo sobreviven al reinicio (se reconocen por el nombre del
+  -- plato): quien enseña la demo no tiene que volver a fotografiarlos en cada visita.
+  select coalesce(jsonb_object_agg(lower(nombre), foto_path), '{}'::jsonb) into v_fotos
+    from public.productos
+   where restaurante_id = p_rest and activo and foto_path is not null;
+
   -- 1) Limpiar (es la única excepción al "no se borra": solo en la demo y solo aquí).
   perform set_config('app.reiniciando_demo', 'on', true);
   delete from public.movimientos_fiado where restaurante_id = p_rest;
@@ -43,7 +53,9 @@ begin
   delete from public.categorias_producto where restaurante_id = p_rest;
   delete from public.mesas               where restaurante_id = p_rest;
   delete from public.clientes            where restaurante_id = p_rest;
-  update public.restaurantes set consecutivo_pedido = 0 where id = p_rest;
+  -- La demo empieza sin horario de atención (migración 17): si en la visita anterior alguien le puso uno, la siguiente
+  -- podría encontrar los pedidos en línea "cerrados por horario" justo cuando se quiere enseñar.
+  update public.restaurantes set consecutivo_pedido = 0, horario = null where id = p_rest;
 
   -- "Hoy" es el día de trabajo (migración 16): a la 1:44 a. m. sigue siendo el día que empezó ayer por la tarde.
   v_hoy := public.fn_jornada(p_rest, v_ahora);
@@ -56,36 +68,41 @@ begin
     -- Las bebidas se entregan de una vez: no pasan por la cocina ni salen en la plancha.
     (p_rest, 'Bebidas', '🍹', 7, false);
 
-  insert into public.productos (restaurante_id, categoria_id, nombre, precio, orden)
-  select p_rest, c.id, v.nombre, v.precio, v.orden
+  -- Cada plato con su descripción para el menú del cliente (migración 17). Todo inventado.
+  insert into public.productos (restaurante_id, categoria_id, nombre, precio, orden, descripcion)
+  select p_rest, c.id, v.nombre, v.precio, v.orden, v.descripcion
     from (values
-      ('Hamburguesas', 'Hamburguesa sencilla', 14000, 1),
-      ('Hamburguesas', 'Hamburguesa doble carne', 19000, 2),
-      ('Hamburguesas', 'Hamburguesa especial', 22000, 3),
-      ('Perros', 'Perro caliente', 9000, 1),
-      ('Perros', 'Perro americano', 11000, 2),
-      ('Perros', 'Perro especial', 13000, 3),
-      ('Salchipapas', 'Salchipapa sencilla', 12000, 1),
-      ('Salchipapas', 'Salchipapa especial', 18000, 2),
-      ('Salchipapas', 'Salchipapa para dos', 28000, 3),
-      ('A la plancha', 'Carne a la plancha', 24000, 1),
-      ('A la plancha', 'Churrasco', 32000, 2),
-      ('A la plancha', 'Cerdo a la plancha', 22000, 3),
-      ('A la plancha', 'Pechuga a la plancha', 21000, 4),
-      ('Pollo', 'Pollo asado 1/4', 16000, 1),
-      ('Pollo', 'Pollo asado 1/2', 29000, 2),
-      ('Pollo', 'Alitas BBQ x6', 18000, 3),
-      ('Arepas', 'Arepa rellena de carne', 12000, 1),
-      ('Arepas', 'Arepa rellena de pollo', 11000, 2),
-      ('Arepas', 'Arepa con todo', 15000, 3),
-      ('Bebidas', 'Gaseosa personal', 3500, 1),
-      ('Bebidas', 'Gaseosa 1,5 L', 8000, 2),
-      ('Bebidas', 'Jugo en agua', 5500, 3),
-      ('Bebidas', 'Jugo en leche', 7000, 4),
-      ('Bebidas', 'Limonada natural', 5000, 5),
-      ('Bebidas', 'Agua en botella', 2500, 6)
-    ) as v(categoria, nombre, precio, orden)
+      ('Hamburguesas', 'Hamburguesa sencilla', 14000, 1, 'Carne de res a la plancha, queso, lechuga, tomate y salsa de la casa.'),
+      ('Hamburguesas', 'Hamburguesa doble carne', 19000, 2, 'Dos carnes de res, doble queso, tocineta, lechuga y tomate.'),
+      ('Hamburguesas', 'Hamburguesa especial', 22000, 3, 'Carne, pollo desmechado, queso, tocineta, huevo y papas ripio.'),
+      ('Perros', 'Perro caliente', 9000, 1, 'Salchicha, queso rallado, papas ripio y salsas.'),
+      ('Perros', 'Perro americano', 11000, 2, 'Salchicha americana, queso derretido, tocineta y cebolla.'),
+      ('Perros', 'Perro especial', 13000, 3, 'Salchicha, pollo desmechado, queso, tocineta y huevo de codorniz.'),
+      ('Salchipapas', 'Salchipapa sencilla', 12000, 1, 'Papas a la francesa con salchicha y salsas.'),
+      ('Salchipapas', 'Salchipapa especial', 18000, 2, 'Papas, salchicha, pollo, tocineta y queso gratinado.'),
+      ('Salchipapas', 'Salchipapa para dos', 28000, 3, 'Porción grande para compartir: carne, pollo, salchicha y queso.'),
+      ('A la plancha', 'Carne a la plancha', 24000, 1, 'Res a la plancha con papas, arroz y ensalada.'),
+      ('A la plancha', 'Churrasco', 32000, 2, 'Corte grueso de res con chimichurri, papas y ensalada.'),
+      ('A la plancha', 'Cerdo a la plancha', 22000, 3, 'Lomo de cerdo con papas, arroz y ensalada.'),
+      ('A la plancha', 'Pechuga a la plancha', 21000, 4, 'Pechuga de pollo con papas, arroz y ensalada.'),
+      ('Pollo', 'Pollo asado 1/4', 16000, 1, 'Un cuarto de pollo asado con papa salada y arepa.'),
+      ('Pollo', 'Pollo asado 1/2', 29000, 2, 'Medio pollo asado con papa salada y arepa.'),
+      ('Pollo', 'Alitas BBQ x6', 18000, 3, 'Seis alitas en salsa BBQ con papas a la francesa.'),
+      ('Arepas', 'Arepa rellena de carne', 12000, 1, 'Arepa asada con carne desmechada y queso.'),
+      ('Arepas', 'Arepa rellena de pollo', 11000, 2, 'Arepa asada con pollo desmechado y queso.'),
+      ('Arepas', 'Arepa con todo', 15000, 3, 'Carne, pollo, queso, huevo y salsa de la casa.'),
+      ('Bebidas', 'Gaseosa personal', 3500, 1, null),
+      ('Bebidas', 'Gaseosa 1,5 L', 8000, 2, 'Para compartir.'),
+      ('Bebidas', 'Jugo en agua', 5500, 3, 'Mora, mango, lulo o maracuyá.'),
+      ('Bebidas', 'Jugo en leche', 7000, 4, 'Mora, mango, lulo o guanábana.'),
+      ('Bebidas', 'Limonada natural', 5000, 5, 'Recién hecha, con hielo.'),
+      ('Bebidas', 'Agua en botella', 2500, 6, null)
+    ) as v(categoria, nombre, precio, orden, descripcion)
     join public.categorias_producto c on c.restaurante_id = p_rest and c.nombre = v.categoria;
+
+  update public.productos p
+     set foto_path = v_fotos ->> lower(p.nombre)
+   where p.restaurante_id = p_rest and v_fotos ? lower(p.nombre);
 
   insert into public.modificadores (restaurante_id, categoria_id, nombre, precio_extra)
   select p_rest, c.id, v.nombre, v.precio

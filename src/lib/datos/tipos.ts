@@ -19,6 +19,8 @@ export type Contexto = {
     reinicio_con_pin?: boolean;
     /** Hora de Bogotá en que termina el día de trabajo (falta antes de la migración 16: se asume 4). */
     hora_corte?: number;
+    /** Horario de atención de los pedidos en línea (ver lib/horario.ts); null o ausente = sin horario. */
+    horario?: unknown;
   } | null;
   perfil: { nombre: string; rol: "dueno" | "ayudante" } | null;
 };
@@ -287,7 +289,19 @@ export type MenuAdmin = {
     activa: boolean;
     /** false = sus platos no pasan por la cocina (bebidas): no salen en la plancha. Falta antes de la migración 14. */
     se_prepara?: boolean;
-    productos: { id: string; nombre: string; precio: number; disponible: boolean; orden: number }[];
+    productos: {
+      id: string;
+      nombre: string;
+      precio: number;
+      disponible: boolean;
+      orden: number;
+      /** Texto corto para el menú del cliente. Falta antes de la migración 17. */
+      descripcion?: string | null;
+      /** Ruta de la foto en Storage (<restaurante_id>/<archivo>). */
+      foto_path?: string | null;
+      /** Dirección lista para un <img>; la arma el servidor al cargar la pantalla (no viene de la base). */
+      foto_url?: string | null;
+    }[];
   }[];
   modificadores: { id: string; categoria_id: string | null; nombre: string; precio_extra: number }[];
   /** Platos quitados del menú (se pueden volver a poner). Falta si la base todavía no tiene la migración 13. */

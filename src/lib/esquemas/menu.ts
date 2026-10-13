@@ -9,7 +9,14 @@ export const esquemaProducto = z.object({
   disponible: z.boolean().default(true),
   /** false = quitar del menú (se archiva; los pedidos viejos lo conservan). */
   activo: z.boolean().default(true),
+  /** Texto corto para el menú del cliente. Sin enviar (undefined) no cambia; "" lo quita. */
+  descripcion: z.string().trim().max(160, "La descripción es muy larga (máximo 160 caracteres).").optional(),
+  /** Ruta de la foto ya subida (<restaurante_id>/<archivo>). Sin enviar no cambia; "" la quita. */
+  fotoPath: z.string().trim().max(200, "La foto no es válida.").optional(),
 });
+
+/** Foto de un plato: ya llega comprimida del celular (~60 KB); el tope es el del bucket. */
+export const FOTO_PLATO_MAX_BYTES = 500_000;
 
 export const esquemaCategoria = z.object({
   id: z.uuid().nullable().default(null),

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
 import { PGlite } from "@electric-sql/pglite";
-import { RUTA_FOTO, type BaseDatos, type RespuestaBD } from "@/lib/supabase/servidor";
+import { BUCKET_FOTOS, BUCKET_PLATOS, RUTA_FOTO, type BaseDatos, type RespuestaBD } from "@/lib/supabase/servidor";
 import { huellaMigraciones, leerMigraciones, reclamosJwt, SUPABASE_MINIMO } from "./esquema-supabase";
 
 /**
@@ -19,6 +19,7 @@ const COOKIE = "bd_local_uid";
 const DIR = path.resolve(process.cwd(), process.env.DEMO_BD_DIR || ".local");
 const DIR_BD = path.join(DIR, "pglite");
 const DIR_FOTOS = path.join(DIR, "fotos");
+const DIR_FOTOS_PLATOS = path.join(DIR, "fotos-platos");
 const ARCHIVO_HUELLA = path.join(DIR, "huella.txt");
 
 declare global {
@@ -98,21 +99,29 @@ export async function crearBdLocal(): Promise<BaseDatos> {
       almacen.delete(COOKIE);
     },
 
-    // Las fotos locales viven en .local/fotos/<restaurante_id>/<archivo> (nunca en el repositorio).
-    async subirArchivo(ruta, datos) {
+    // Las fotos locales viven en .local/fotos/<restaurante_id>/<archivo> (nunca en el repositorio); las de los platos,
+    // en su propia carpeta (.local/fotos-platos).
+    async subirArchivo(ruta, datos, _tipo, bucket = BUCKET_FOTOS) {
       if (!RUTA_FOTO.test(ruta)) return { error: "La ruta de la foto no es válida." };
-      const destino = path.join(DIR_FOTOS, ruta);
+      const destino = path.join(carpetaDe(bucket), ruta);
       fs.mkdirSync(path.dirname(destino), { recursive: true });
       fs.writeFileSync(destino, datos);
       return { error: null };
     },
 
-    async leerArchivo(ruta) {
-      if (!RUTA_FOTO.test(ruta)) return null;
-      const origen = path.join(DIR_FOTOS, ruta);
-      if (!fs.existsSync(origen)) return null;
-      const ext = path.extname(ruta).slice(1);
-      return { datos: new Uint8Array(fs.readFileSync(origen)), tipo: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg" };
+    async leerArchivo(ruta, bucket = BUCKET_FOTOS) {
+      return leerFotoLocal(ruta, bucket);
     },
   };
+}
+
+const carpetaDe = (bucket: string) => (bucket === BUCKET_PLATOS ? DIR_FOTOS_PLATOS : DIR_FOTOS);
+
+/** Lee una foto guardada por el modo local (null si no existe). No mira la sesión: quien llama decide quién puede verla. */
+export function leerFotoLocal(ruta: string, bucket: string): { datos: Uint8Array; tipo: string } | null {
+  if (!RUTA_FOTO.test(ruta)) return null;
+  const origen = path.join(carpetaDe(bucket), ruta);
+  if (!fs.existsSync(origen)) return null;
+  const ext = path.extname(ruta).slice(1);
+  return { datos: new Uint8Array(fs.readFileSync(origen)), tipo: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg" };
 }

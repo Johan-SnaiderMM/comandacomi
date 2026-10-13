@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ClipboardList, Store } from "lucide-react";
+import { ClipboardList, Clock, Store } from "lucide-react";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Aviso } from "@/components/ui/aviso";
 import { Button } from "@/components/ui/button";
 import { Stepper } from "@/components/ui/stepper";
 import { almacenBorrador } from "@/lib/borrador-local";
 import { formatearPesos } from "@/lib/dinero";
+import { DIAS_SEMANA, textoFranja, type Horario } from "@/lib/horario";
 import { cantidadDe, reconciliarConMenu, totalBorrador, totalUnidades, type AdicionElegida } from "@/lib/pedido-borrador";
 import type { MenuPublico } from "@/lib/publico/tipos";
 import { HojaExtras } from "@/app/(tarea)/pedido/nuevo/hoja-extras";
@@ -44,7 +45,17 @@ function suscribirAlmacenamiento(oyente: () => void): () => void {
  * Panel del cliente: ve el menú del restaurante, arma su pedido y lo envía (para recoger o a domicilio). No hay
  * cuenta ni contraseña. Sigue el mismo diseño de la app: botones grandes, una mano, precios claros.
  */
-export function PedirEnLinea({ menu }: { menu: MenuPublico }) {
+export function PedirEnLinea({
+  menu,
+  horario = null,
+  apertura = null,
+}: {
+  menu: MenuPublico;
+  /** Horario de atención ya revisado (null = el restaurante no usa horario). */
+  horario?: Horario | null;
+  /** Está cerrado POR HORARIO: cuándo vuelve a abrir ("Abre hoy a las 6:00 p. m."; "" si no se sabe). null = no es por horario. */
+  apertura?: string | null;
+}) {
   const { restaurante } = menu;
   // El pedido que el cliente va armando se guarda en su celular (lib/borrador-local.ts): si recarga, cambia de app para
   // preguntar algo o el celular cierra la pestaña, al volver sigue ahí. Se borra al enviarlo.
@@ -110,8 +121,33 @@ export function PedirEnLinea({ menu }: { menu: MenuPublico }) {
           </Link>
         )}
 
-        {!abierto && (
-          <Aviso tipo="error">Hoy {restaurante.nombre} no está recibiendo pedidos en línea. Puedes ver el menú, pero no enviar el pedido.</Aviso>
+        {!abierto &&
+          (apertura !== null ? (
+            <Aviso tipo="error">
+              A esta hora {restaurante.nombre} está cerrado. {apertura} Puedes ver el menú, pero no enviar el pedido.
+            </Aviso>
+          ) : (
+            <Aviso tipo="error">Hoy {restaurante.nombre} no está recibiendo pedidos en línea. Puedes ver el menú, pero no enviar el pedido.</Aviso>
+          ))}
+
+        {horario && (
+          <details className="rounded-xl border-2 border-tinta bg-papel">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-3 text-base font-bold">
+              <span className="flex items-center gap-2">
+                <Clock className="size-5 shrink-0" aria-hidden /> Horario de atención
+              </span>
+              <span className="text-tinta-2 underline">Ver</span>
+            </summary>
+            <dl className="divide-y-2 divide-dashed divide-tinta/25 border-t-2 border-tinta px-3 text-base">
+              {/* De lunes a domingo, como se lee un horario en la puerta del local. */}
+              {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                <div key={d} className="flex items-baseline justify-between gap-3 py-1.5">
+                  <dt className="font-bold">{DIAS_SEMANA[d]}</dt>
+                  <dd className={horario[d] ? "" : "text-tinta-2"}>{textoFranja(horario[d])}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
         )}
 
         {secciones.length === 0 && <p className="pt-6 text-lg text-tinta-2">El menú todavía no tiene platos.</p>}
@@ -141,35 +177,51 @@ export function PedirEnLinea({ menu }: { menu: MenuPublico }) {
                 const cantidad = cantidadDe(borrador, p.id);
                 return (
                   <li key={p.id} className="rounded-xl border-2 border-tinta bg-papel p-3 shadow-sello-chico">
+                    {/* Qué es: nombre, qué trae y precio; la foto (si el restaurante la puso) a la derecha. */}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-lg font-bold leading-tight">{p.nombre}</p>
+                        {p.descripcion && <p className="mt-0.5 text-base leading-snug text-tinta-2">{p.descripcion}</p>}
                         <p className="cifra mt-1 text-2xl">{p.disponible ? formatearPesos(p.precio) : "Agotado"}</p>
                       </div>
-                      {abierto && p.disponible && (
-                        cantidad > 0 ? (
+                      {p.foto_url && (
+                        // eslint-disable-next-line @next/next/no-img-element -- foto del plato desde Storage público; ya viene comprimida (~60 KB)
+                        <img
+                          src={p.foto_url}
+                          alt={`Foto de ${p.nombre}`}
+                          width={88}
+                          height={88}
+                          loading="lazy"
+                          decoding="async"
+                          className={`size-[5.5rem] shrink-0 rounded-lg border-2 border-tinta bg-fondo object-cover ${p.disponible ? "" : "opacity-50 grayscale"}`}
+                        />
+                      )}
+                    </div>
+                    {/* Qué hacer: una sola fila, con "Agregar" (o la cantidad) al alcance del pulgar. */}
+                    {abierto && p.disponible && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExtras(p)}
+                          className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-lg border-2 border-dashed border-tinta/50 px-2 text-base font-bold active:bg-tinta/10"
+                        >
+                          Extras y nota
+                        </button>
+                        {cantidad > 0 ? (
                           <Stepper
                             valor={cantidad}
                             minimo={0}
                             maximo={20}
                             etiqueta={p.nombre}
+                            className="shrink-0"
                             onCambio={(n) => (n > cantidad ? despachar({ tipo: "agregar", producto: p }) : quitarUno(p.id))}
                           />
                         ) : (
-                          <Button tamano="md" onClick={() => despachar({ tipo: "agregar", producto: p })} aria-label={`Agregar ${p.nombre}`}>
+                          <Button tamano="md" className="shrink-0" onClick={() => despachar({ tipo: "agregar", producto: p })} aria-label={`Agregar ${p.nombre}`}>
                             Agregar
                           </Button>
-                        )
-                      )}
-                    </div>
-                    {abierto && p.disponible && (
-                      <button
-                        type="button"
-                        onClick={() => setExtras(p)}
-                        className="mt-2 flex min-h-12 w-full items-center justify-center rounded-lg border-2 border-dashed border-tinta/50 text-base font-bold active:bg-tinta/10"
-                      >
-                        Extras y nota
-                      </button>
+                        )}
+                      </div>
                     )}
                   </li>
                 );

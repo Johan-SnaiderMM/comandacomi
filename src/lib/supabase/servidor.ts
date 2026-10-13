@@ -19,14 +19,19 @@ export interface BaseDatos {
   /** Inicia sesión con el usuario de la demo (credenciales del servidor: DEMO_EMAIL / DEMO_PASSWORD). */
   entrarDemo(): Promise<{ error: string | null }>;
   salir(): Promise<void>;
-  /** Sube una foto (comprobante de gasto) al bucket privado. La ruta debe empezar por el id del restaurante. */
-  subirArchivo(ruta: string, datos: Uint8Array, tipo: string): Promise<{ error: string | null }>;
+  /**
+   * Sube una foto a Storage. La ruta debe empezar por el id del restaurante. Sin `bucket` va al privado de los
+   * comprobantes de gastos; las fotos de los platos van a `BUCKET_PLATOS` (público).
+   */
+  subirArchivo(ruta: string, datos: Uint8Array, tipo: string, bucket?: string): Promise<{ error: string | null }>;
   /** Descarga una foto con los permisos del usuario (null si no existe o no es suya). */
-  leerArchivo(ruta: string): Promise<{ datos: Uint8Array; tipo: string } | null>;
+  leerArchivo(ruta: string, bucket?: string): Promise<{ datos: Uint8Array; tipo: string } | null>;
 }
 
 /** Bucket privado de Storage con los comprobantes de los gastos (ver migración 0007). */
 export const BUCKET_FOTOS = "gastos-fotos";
+/** Bucket PÚBLICO con las fotos de los platos (migración 17): las ve cualquiera que tenga el enlace del menú. */
+export const BUCKET_PLATOS = "platos-fotos";
 /** <restaurante_id>/<archivo>.<ext>: la única forma de ruta válida. */
 export const RUTA_FOTO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
@@ -91,14 +96,14 @@ async function crearBdSupabase(): Promise<BaseDatos> {
       await supabase.auth.signOut();
     },
 
-    async subirArchivo(ruta, datos, tipo) {
-      const { error } = await supabase.storage.from(BUCKET_FOTOS).upload(ruta, datos, { contentType: tipo, upsert: false });
-      if (error) console.error(`[bd] subir ${ruta} falló: ${error.message}`);
+    async subirArchivo(ruta, datos, tipo, bucket = BUCKET_FOTOS) {
+      const { error } = await supabase.storage.from(bucket).upload(ruta, datos, { contentType: tipo, upsert: false });
+      if (error) console.error(`[bd] subir ${ruta} a ${bucket} falló: ${error.message}`);
       return { error: error ? "No se pudo subir la foto." : null };
     },
 
-    async leerArchivo(ruta) {
-      const { data, error } = await supabase.storage.from(BUCKET_FOTOS).download(ruta);
+    async leerArchivo(ruta, bucket = BUCKET_FOTOS) {
+      const { data, error } = await supabase.storage.from(bucket).download(ruta);
       if (error || !data) return null;
       return { datos: new Uint8Array(await data.arrayBuffer()), tipo: data.type || "image/jpeg" };
     },

@@ -151,10 +151,11 @@ describe("permisos: lo anónimo se limita a publico_*", () => {
 describe("publico_menu", () => {
   it("devuelve lo que el cliente necesita y nada más", async () => {
     const m = await publico<Record<string, unknown> & { restaurante: Record<string, unknown>; productos: Record<string, unknown>[] }>("publico_menu", { p_slug: slugA });
-    expect(m.restaurante).toEqual({ nombre: "Picnic Delicias", slug: "picnic-delicias", es_demo: true, abierto: true });
+    // `abierto` = se puede pedir ahora; `recibe` es el interruptor y `horario` el horario (la demo no tiene: null).
+    expect(m.restaurante).toEqual({ nombre: "Picnic Delicias", slug: "picnic-delicias", es_demo: true, abierto: true, recibe: true, horario: null });
     expect(Object.keys(m).sort()).toEqual(["categorias", "modificadores", "productos", "restaurante"]);
     expect(m.productos).toHaveLength(25);
-    expect(Object.keys(m.productos[0]).sort()).toEqual(["categoria_id", "disponible", "id", "nombre", "precio"]);
+    expect(Object.keys(m.productos[0]).sort()).toEqual(["categoria_id", "descripcion", "disponible", "foto", "id", "nombre", "precio"]);
   });
 
   it("enlace que no existe devuelve null; mayúsculas y espacios se toleran", async () => {

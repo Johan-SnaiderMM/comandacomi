@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
-import { Check, Copy, ExternalLink, MessageCircle, QrCode, Radio } from "lucide-react";
+import Link from "next/link";
+import { Check, Copy, ExternalLink, MessageCircle, Printer, QrCode, Radio } from "lucide-react";
 import { configurarPedidosEnLinea } from "@/app/acciones/clientes";
+import { CodigoQr } from "@/components/clientes/codigo-qr";
 import { Aviso } from "@/components/ui/aviso";
 import { botonVariantes, Button } from "@/components/ui/button";
 import { HojaInferior } from "@/components/ui/hoja-inferior";
 import { MENSAJE_GENERICO } from "@/lib/errores";
+import type { Horario } from "@/lib/horario";
 import { enlaceWhatsapp, mensajeInvitacionPedidos } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
+import { HorarioAtencion } from "./horario-atencion";
 
 const sinSuscripcion = () => () => {};
 const origenDelNavegador = () => window.location.origin;
@@ -24,13 +28,25 @@ export function PanelPedidosEnLinea({
   activo,
   esDueno,
   esDemo,
+  horario = null,
+  enHorario = true,
+  apertura = "",
 }: {
   slug: string;
   nombre: string;
+  /** El interruptor: el dueño quiere recibir pedidos en línea. */
   activo: boolean;
   esDueno: boolean;
   esDemo: boolean;
+  /** Horario de atención (null = sin horario: manda solo el interruptor). */
+  horario?: Horario | null;
+  /** Ahora mismo es hora de atención (lo calcula el servidor al cargar la pantalla). */
+  enHorario?: boolean;
+  /** Si está fuera de horario: "Abre hoy a las 6:00 p. m.". */
+  apertura?: string;
 }) {
+  // Tres estados: recibiendo, cerrado por el horario (se abre solo) o cerrado a mano.
+  const estado = !activo ? "cerrado" : enHorario ? "recibiendo" : "fuera-de-horario";
   const origen = useSyncExternalStore(sinSuscripcion, origenDelNavegador, origenDelServidor);
   const ruta = `/pedir/${slug}`;
   const enlace = `${origen}${ruta}`;
@@ -83,18 +99,20 @@ export function PanelPedidosEnLinea({
 
       <section
         aria-label="Estado de los pedidos en línea"
-        className={cn("rounded-2xl border-2 border-tinta p-4 shadow-sello", activo ? "bg-listo-suave" : "bg-aji-suave")}
+        className={cn("rounded-2xl border-2 border-tinta p-4 shadow-sello", estado === "recibiendo" ? "bg-listo-suave" : estado === "cerrado" ? "bg-aji-suave" : "bg-sol-suave")}
       >
         <p className="flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-tinta-2">
           <Radio className="size-4 shrink-0" aria-hidden /> Estado
         </p>
         <h2 className="font-display mt-1 text-4xl font-extrabold uppercase leading-none tracking-tight">
-          {activo ? "Recibiendo pedidos" : "Pedidos cerrados"}
+          {estado === "recibiendo" ? "Recibiendo pedidos" : estado === "cerrado" ? "Pedidos cerrados" : "Cerrado por horario"}
         </h2>
         <p className="mt-2 text-base leading-snug">
-          {activo
+          {estado === "recibiendo"
             ? "Tus clientes pueden pedir desde su celular. Cada pedido nuevo suena y espera a que lo aceptes."
-            : "Nadie puede enviar pedidos nuevos. Los que ya llegaron siguen su curso."}
+            : estado === "cerrado"
+              ? "Nadie puede enviar pedidos nuevos. Los que ya llegaron siguen su curso."
+              : `A esta hora no se reciben pedidos: se abre solo según tu horario. ${apertura}`}
         </p>
         {esDueno ? (
           <Button variante={activo ? "secundario" : "exito"} tamano="lg" bloque className="mt-3" disabled={cambiando} onClick={cambiar}>
@@ -106,6 +124,8 @@ export function PanelPedidosEnLinea({
       </section>
 
       {error && <Aviso tipo="error">{error}</Aviso>}
+
+      <HorarioAtencion horario={horario} esDueno={esDueno} />
 
       <section aria-label="Enlace para tus clientes" className="rounded-2xl border-2 border-tinta bg-papel p-4 shadow-sello">
         <h2 className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight">Tu enlace</h2>
@@ -137,6 +157,9 @@ export function PanelPedidosEnLinea({
             <ExternalLink className="size-5" aria-hidden /> Verlo como cliente
           </a>
         </div>
+        <Link href="/qr" className={cn(botonVariantes({ variante: "primario", tamano: "lg", bloque: true }), "mt-2")}>
+          <Printer className="size-5" aria-hidden /> Cartel con el QR para imprimir
+        </Link>
       </section>
 
       <section aria-label="Cómo funciona" className="rounded-2xl border-2 border-tinta bg-papel p-4 shadow-sello">
@@ -173,56 +196,5 @@ function Paso({ n, children }: { n: number; children: React.ReactNode }) {
       </span>
       <span className="flex-1">{children}</span>
     </li>
-  );
-}
-
-/**
- * Código QR dibujado con un solo trazo SVG (sin imágenes ni HTML inyectado). La librería se carga solo cuando se abre
- * esta hoja, para no cargar a todas las pantallas con ella.
- */
-function CodigoQr({ texto }: { texto: string }) {
-  const [qr, setQr] = useState<{ lado: number; trazo: string } | null>(null);
-  const [fallo, setFallo] = useState(false);
-
-  useEffect(() => {
-    let cancelado = false;
-    import("qrcode-generator")
-      .then(({ default: qrcode }) => {
-        const codigo = qrcode(0, "M");
-        codigo.addData(texto);
-        codigo.make();
-        const lado = codigo.getModuleCount();
-        let trazo = "";
-        for (let fila = 0; fila < lado; fila++) {
-          for (let col = 0; col < lado; col++) {
-            if (codigo.isDark(fila, col)) trazo += `M${col} ${fila}h1v1h-1z`;
-          }
-        }
-        if (!cancelado) setQr({ lado, trazo });
-      })
-      .catch(() => {
-        if (!cancelado) setFallo(true);
-      });
-    return () => {
-      cancelado = true;
-    };
-  }, [texto]);
-
-  if (fallo) return <p className="py-8 text-center text-base font-bold text-aji">No se pudo generar el código. Usa el enlace.</p>;
-  if (!qr) return <div className="size-64 animate-pulse rounded-xl bg-tinta/10" aria-label="Generando el código" />;
-
-  const margen = 4; // zona en blanco que pide el estándar para que los celulares lo lean
-  const total = qr.lado + margen * 2;
-  return (
-    <svg
-      viewBox={`${-margen} ${-margen} ${total} ${total}`}
-      role="img"
-      aria-label="Código QR para pedir en línea"
-      className="w-full max-w-72 rounded-xl border-2 border-tinta bg-papel"
-      shapeRendering="crispEdges"
-    >
-      <rect x={-margen} y={-margen} width={total} height={total} fill="#ffffff" />
-      <path d={qr.trazo} fill="#16140f" />
-    </svg>
   );
 }

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { Aviso } from "@/components/ui/aviso";
 import { obtenerContexto } from "@/lib/datos/inicio";
+import { abiertoPorHorario, leerHorario, textoProximaApertura } from "@/lib/horario";
 import { PanelPedidosEnLinea } from "./panel-pedidos-en-linea";
 
 export const metadata = { title: "Pedidos en línea" };
@@ -27,6 +28,10 @@ export default async function PaginaPedidosEnLinea() {
       </>
     );
   }
+  // "¿Es hora de atención?" se decide aquí, una vez, con el reloj del servidor (no con el del celular).
+  const horario = leerHorario(contexto.restaurante.horario);
+  const ahora = new Date();
+  const enHorario = abiertoPorHorario(horario, ahora);
   return (
     <>
       <EncabezadoPantalla titulo="Pedidos en línea" atras="/mas" />
@@ -37,6 +42,9 @@ export default async function PaginaPedidosEnLinea() {
           activo={contexto.restaurante.pedidos_en_linea}
           esDueno={contexto.perfil?.rol === "dueno"}
           esDemo={contexto.restaurante.es_demo}
+          horario={horario}
+          enHorario={enHorario}
+          apertura={enHorario ? "" : textoProximaApertura(horario, ahora)}
         />
       </main>
     </>

@@ -4,9 +4,30 @@
  */
 
 export type MenuPublico = {
-  restaurante: { nombre: string; slug: string; es_demo: boolean; abierto: boolean };
+  restaurante: {
+    nombre: string;
+    slug: string;
+    es_demo: boolean;
+    /** Se pueden enviar pedidos AHORA: el interruptor está encendido y es hora de atención. */
+    abierto: boolean;
+    /** Solo el interruptor (falta antes de la migración 17: entonces `abierto` es el interruptor). */
+    recibe?: boolean;
+    /** Horario de atención tal cual viene de la base (ver lib/horario.ts); null = sin horario. */
+    horario?: unknown;
+  };
   categorias: { id: string; nombre: string; icono: string | null }[];
-  productos: { id: string; categoria_id: string; nombre: string; precio: number; disponible: boolean }[];
+  productos: {
+    id: string;
+    categoria_id: string;
+    nombre: string;
+    precio: number;
+    disponible: boolean;
+    descripcion?: string | null;
+    /** Ruta de la foto en Storage, como la guarda la base. */
+    foto?: string | null;
+    /** Dirección lista para un <img>; la arma el servidor al cargar la página. */
+    foto_url?: string | null;
+  }[];
   modificadores: { id: string; categoria_id: string | null; nombre: string; precio_extra: number }[];
 };
 

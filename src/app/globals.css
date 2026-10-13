@@ -236,3 +236,45 @@ textarea {
 ::selection {
   background: var(--color-sol);
 }
+
+/*
+ * Imprimir el cartel del QR (/qr): en la hoja sale SOLO el cartel, centrado y grande. Lo demás de la pantalla (botones,
+ * encabezado, avisos) no se imprime. La regla solo aplica si la página tiene un cartel.
+ */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html:has(.cartel-qr),
+  html:has(.cartel-qr) body,
+  html:has(.cartel-qr) .columna-app {
+    background: #fff !important;
+    max-width: none;
+    min-height: 0;
+  }
+  /* Todo el cartel está medido en rem: agrandar la letra base lo agranda entero para la hoja. */
+  html:has(.cartel-qr) {
+    font-size: 150%;
+  }
+  html:has(.cartel-qr) body * {
+    visibility: hidden;
+  }
+  html:has(.cartel-qr) .no-imprimir {
+    display: none !important;
+  }
+  .cartel-qr,
+  .cartel-qr * {
+    visibility: visible !important;
+  }
+  .cartel-qr {
+    margin: 0 auto !important;
+    width: 100%;
+    max-width: 170mm;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    break-inside: avoid;
+  }
+  .cartel-qr .max-w-64 {
+    max-width: 110mm;
+  }
+}

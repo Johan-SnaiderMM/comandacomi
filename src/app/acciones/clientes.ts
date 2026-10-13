@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { ejecutar } from "@/lib/datos/llamar";
 import type { Resultado } from "@/lib/errores";
+import { esquemaHorario } from "@/lib/esquemas/horario";
 import { esquemaAnulacion } from "@/lib/esquemas/pedido";
 import { alAceptarPedido, alRechazarPedido } from "@/lib/push/eventos";
 
@@ -33,6 +34,19 @@ export async function rechazarPedidoCliente(pedidoId: string, motivo: string): P
   const r = await ejecutar("anular_pedido", { p_pedido_id: parsed.data.id, p_motivo: parsed.data.motivo });
   if (!r.ok) return r;
   after(() => alRechazarPedido(parsed.data.id, parsed.data.motivo)); // al cliente, con el motivo
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Guarda el horario de atención de los pedidos en línea (solo el dueño): se abren y se cierran solos a esas horas.
+ * `null` lo quita y vuelve a mandar solo el interruptor.
+ */
+export async function configurarHorario(horario: unknown): Promise<Resultado> {
+  const parsed = esquemaHorario.safeParse(horario);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa el horario." };
+  const r = await ejecutar("configurar_horario", { p_horario: parsed.data });
+  if (!r.ok) return r;
   revalidatePath("/", "layout");
   return { ok: true };
 }

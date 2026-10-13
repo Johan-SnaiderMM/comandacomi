@@ -14,8 +14,10 @@ grandes solo se centra una columna.
    Toca **Recorrido guiado · 2 minutos** (o **Más → Recorrido guiado**): una hoja por paso, un aro rojo que late sobre
    lo que hay que tocar, y la guía avanza sola al llegar a cada pantalla. La ficha **💡 n/9** del encabezado la reabre.
 2. **Tomar** (botón amarillo): mesa → toca los platos (un toque agrega; "Extras y nota" para adiciones) → **Enviar a cocina**.
-3. **Pendientes**: **Marcar listo** → **Entregado**.
-4. **Cobrar**: efectivo (teclado propio, vuelto), Nequi, o **fiado** (cliente nuevo y pago parcial).
+3. **Pendientes**: **Marcar listo** → **Entregado**. En **⋯** de cada pedido: agregar platos, **quitar un plato** (pide
+   el motivo) o anular el pedido.
+4. **Cobrar**: efectivo (teclado propio, vuelto), Nequi, **una parte en efectivo y el resto por Nequi**, o **fiado**
+   (cliente nuevo y pago parcial).
 5. **Fiado**: quién debe, **Abonar**, **Recordar** por WhatsApp.
 6. **Más → Gastos del día**: registrar un gasto (monto → categoría → guardar, foto opcional).
 7. **Más → Cierre del día**: contar el efectivo, ver la diferencia, cerrar y **Enviar resumen por WhatsApp**.
@@ -24,7 +26,9 @@ grandes solo se centra una columna.
    estimado) o **Rechazar** (con motivo).
 9. **Más → Plancha** (en otro celular o tableta): el pedido aceptado aparece plato por plato; toca cada plato para
    marcarlo **listo** (o **Todo listo**). El cliente lo ve avanzar en su pantalla, en vivo.
-10. **Más → Reiniciar demo**: vuelve todo a los datos de ejemplo.
+10. **Más → Menú** y **Más → Mesas**: platos (con foto y descripción para el cliente), adiciones y mesas, todo desde el
+    celular.
+11. **Más → Reiniciar demo**: vuelve todo a los datos de ejemplo (pide el PIN si la demo tiene uno).
 
 ## Pedidos en línea y plancha
 
@@ -46,6 +50,18 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   pasa solo a "listo". Mantiene la pantalla encendida y suena con cada pedido nuevo, y también cuando a un pedido que
   ya estaba le agregan platos (quedan marcados **Agregado**). *Deshacer* corrige un error de dedo. Usa todo el ancho de
   la pantalla: en tableta o con el celular acostado los pedidos van lado a lado.
+- **Lo que no se cocina no pasa por la plancha.** Cada categoría dice si sus platos *se preparan en la cocina* (en
+  *Más → Menú*, al editar la categoría; Bebidas viene apagada). Una gaseosa no sale en la plancha ni frena el pedido: con
+  la hamburguesa lista, el pedido está listo. Un pedido de solo bebidas nace "listo", y agregarle una bebida a un pedido
+  no lo devuelve a la cocina (migración `20261005000014_cocina_sin_bebidas_y_quitar_plato.sql`).
+- **Foto y descripción de cada plato** (*Más → Menú*, al editar el plato): la foto se comprime en el celular (~60 KB) y
+  va a un bucket **público** de Storage (`platos-fotos`), porque el menú lo ve cualquiera con el enlace. Solo el dueño
+  sube, y solo a la carpeta de su restaurante.
+- **Horario de atención** (*Más → Pedidos en línea*): con horario, los pedidos en línea se abren y se cierran solos; el
+  cliente ve "cerrado, abre hoy a las 6:00 p. m." y el horario de la semana. Una franja que cierra después de medianoche
+  (6 p. m. a 2 a. m.) se escribe tal cual. El interruptor sigue mandando: apagado, no se recibe aunque sea hora.
+- **QR para imprimir** (*Más → Pedidos en línea → Cartel con el QR*): un cartel listo para pegar en el mostrador. Se
+  imprime (en la hoja sale solo el cartel) o se guarda como imagen para mandarla a una papelería.
 - **"Tiempo real" = consulta cada pocos segundos** (seguimiento 4 s, que se espacia si lleva rato igual; alerta 5 s;
   plancha 4 s). Se detiene sola cuando el pedido termina o la pantalla no está a la vista. Es lo que permite probarlo en
   el modo local sin servicios externos.
@@ -99,7 +115,8 @@ La app sigue funcionando cuando se va la señal y sube todo sola cuando vuelve:
 - **Qué se puede hacer sin señal:** tomar pedidos, marcarlos listos/entregados, agregar platos, cobrar (efectivo, Nequi
   o fiado, con cliente nuevo incluido), abonar al fiado y anotar gastos (sin foto). Lo que se hace se ve de inmediato y
   los pedidos nuevos llevan un número provisional ("N1", "N2"…) hasta que el servidor les da el definitivo.
-- **Qué necesita señal:** cierre del día, menú, gastos de días anteriores, fichas de clientes, anular y la foto del gasto.
+- **Qué necesita señal:** cierre del día, menú, mesas, gastos de días anteriores, fichas de clientes, anular (también
+  quitar un plato de un pedido) y la foto del gasto.
   Esas pantallas lo explican en vez de fallar.
 - **Cómo funciona:** el celular guarda una copia (menú, pedidos, clientes) y una cola de lo que se hace. Sin señal el
   service worker abre la **app sin conexión** (`/sc`, una página estática), que usa los mismos componentes con la copia
@@ -112,11 +129,36 @@ La app sigue funcionando cuando se va la señal y sube todo sola cuando vuelve:
 - **Probarlo:** `npm run e2e` abre un Chrome real, corta la red y verifica de punta a punta (necesita Chrome instalado;
   `CHROME_PATH` si está en otra ruta). Para probar a mano: DevTools → Network → *Offline*.
 
+## El día de trabajo (hora de corte)
+
+El día **no cambia a medianoche**: cambia a las **4:00 a. m.** (hora de corte) o **cuando el dueño lo cierra**. Un
+local nocturno ve en Inicio las ventas de toda la noche a la 1:44 a. m., y puede cerrar la caja al terminar el turno.
+
+- Cada venta, pago, abono y gasto pertenece a una **jornada** (su columna `fecha`): el día de Bogotá corrido por la
+  hora de corte del restaurante (`restaurantes.hora_corte`, 4 por defecto; hoy solo se cambia en la base).
+- **Cerrar el día a mano lo termina antes:** lo que se registre después entra al día siguiente y las cifras del cierre
+  ya no se mueven. Inicio pasa a "Día cerrado"; la pantalla de Cierre sigue mostrando el día cerrado hasta las 4 a. m.
+- **Anular el cierre** reabre el día y le devuelve lo que se había pasado al siguiente.
+- Las fechas las pone un trigger (dejaron de ser columnas generadas porque la regla depende de datos). Migración
+  `20261005000016_dia_de_trabajo.sql`.
+
 ## Cómo reiniciar los datos de ejemplo
 
 - **Desde la app:** *Más → Reiniciar demo*. Borra lo creado (pedidos, gastos, cobros, fiado, cambios al menú) y
   recarga el menú de 25 platos, 6 mesas, 8 clientes con fiado y 7 días de ventas, gastos y cierres. Solo lo permite
-  la base en restaurantes de demostración y solo al dueño.
+  la base en restaurantes de demostración y solo al dueño. Las fotos que les hayas tomado a los platos de ejemplo se
+  conservan (se reconocen por el nombre del plato).
+- **PIN de reinicio (opcional):** en la demo todo el mundo entra con el mismo usuario, así que cualquiera con el enlace
+  podría reiniciarla en plena visita. Para evitarlo, ponle un PIN **desde el SQL Editor de Supabase** (nunca desde la
+  app, para que un visitante no pueda ponerlo ni cambiarlo):
+
+  ```sql
+  select public.fn_definir_pin_reinicio('4821');   -- ponerlo o cambiarlo (4 a 8 dígitos; usa el tuyo)
+  select public.fn_definir_pin_reinicio(null);     -- quitarlo
+  ```
+
+  Con PIN, *Reiniciar demo* lo pide; se guarda cifrado en una tabla que nadie lee y cinco intentos fallidos bloquean
+  el reinicio 5 minutos. Reiniciar no quita el PIN.
 - **Modo local:** borra la carpeta `.local/`.
 - **Supabase:** vuelve a ejecutar `supabase/seed.sql` (es idempotente).
 
@@ -154,8 +196,12 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > ejecutar un visitante sin cuenta (y nada más: ninguna tabla se abre).
 >
 > Lo mismo con las migraciones siguientes, en orden y cada una antes de desplegar la versión que la usa:
-> `20261005000011_avisos_push.sql`, `20261005000012_limpieza_avisos.sql` y
-> `20261005000013_enlaces_anteriores_y_platos_quitados.sql`.
+> `20261005000011_avisos_push.sql`, `20261005000012_limpieza_avisos.sql`,
+> `20261005000013_enlaces_anteriores_y_platos_quitados.sql`, `20261005000014_cocina_sin_bebidas_y_quitar_plato.sql`,
+> `20261005000015_mesas_y_pin_de_reinicio.sql`, `20261005000016_dia_de_trabajo.sql`,
+> `20261005000017_carta_del_cliente.sql` y `20261005000018_demo_al_dia.sql`. Las cinco últimas van juntas (la 18
+> redefine los datos de ejemplo con todo lo de las cuatro anteriores); después, **Más → Reiniciar demo** para que la
+> demo tome las descripciones de los platos y Bebidas quede fuera de la plancha.
 
 ### Antes de enseñarla (lista rápida)
 
@@ -165,6 +211,8 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 - [ ] Prueba con mala señal / modo avión: el cascarón debe abrir (los datos nuevos necesitan red).
 - [ ] **Pedidos en línea:** abre *Más → Pedidos en línea*, copia el enlace, ábrelo en otro celular y haz un pedido;
       en el tuyo debe sonar la alerta. Toca una vez la pantalla antes (el navegador no deja sonar sin un toque).
+- [ ] **PIN de reinicio:** si vas a dejarle el celular a alguien, ponle un PIN a la demo (ver *Cómo reiniciar los
+      datos de ejemplo*) para que no la reinicien en plena visita.
 
 ## Scripts
 
@@ -184,8 +232,9 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 ## Estructura
 
 ```
-src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fiado, Más, Gastos, Menú
-src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente, Plancha
+src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fiado, Más, Gastos, Menú, Mesas, Pedidos en línea
+src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente, QR para imprimir
+src/app/(cocina)/     La plancha, a todo el ancho (tableta o celular acostado)
 src/app/(publico)/    Lo que ve el CLIENTE sin cuenta: /pedir/<local> (menú y pedido) y /seguimiento/<código>
 src/app/api/          Consultas de las pantallas "en vivo": seguimiento (público, por código), plancha y por-confirmar (con sesión)
 src/app/acciones/     Acciones del servidor: sync.ts (aplicarOperacion/obtenerSnapshot), clientes.ts, plancha.ts, publico.ts; validan con Zod y llaman funciones SQL
@@ -193,7 +242,7 @@ src/app/sc/           App sin conexión: una página estática con los mismos co
 src/lib/sync/         Trabajo sin conexión: tipos, vista local, motor de la cola, acciones del celular
 src/app/api/foto/     Sirve las fotos de gastos solo con sesión y solo del propio restaurante
 src/components/       ui (botón, hoja inferior, teclado numérico…), layout, fiado, gastos, sesión
-src/lib/              dinero.ts (TODOS los cálculos), fechas, whatsapp, teclado, esquemas/ (Zod), datos/ (lecturas)
+src/lib/              dinero.ts (TODOS los cálculos), fechas (día de trabajo), horario (de atención), whatsapp, teclado, esquemas/ (Zod), datos/ (lecturas)
 src/lib/local/        Modo local de desarrollo (PGlite)
 supabase/migrations/  Tablas, RLS, funciones de lectura/escritura, demo, permisos, almacenamiento
 supabase/seed.sql     Carga de la demo en Supabase (idempotente)
@@ -227,6 +276,12 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
   tabla se puede leer sin sesión. El seguimiento se consulta por un código aleatorio (uuid) imposible de adivinar, que
   devuelve **solo ese pedido** y nunca datos internos (quién lo atendió, cobros, otros pedidos). El enlace no se indexa
   (`noindex`) y no sale en el `Referer` hacia otros sitios.
+- **Fotos:** las de los comprobantes de gastos son privadas (se sirven solo con sesión y solo del propio restaurante).
+  Las de los **platos son públicas a propósito** (bucket `platos-fotos`): el menú lo ve cualquiera con el enlace. Solo
+  el dueño sube, solo a la carpeta de su restaurante, y nadie puede listar el bucket ni editar o borrar.
+- **PIN de reinicio de la demo:** se define únicamente desde el SQL Editor (`fn_definir_pin_reinicio`, que ningún
+  usuario de la app puede ejecutar), se guarda cifrado en una tabla sin lectura para nadie y lo comprueba la base, no
+  la pantalla. Cinco intentos fallidos bloquean el reinicio 5 minutos.
 - **Recordar** (fiado) abre WhatsApp con el teléfono que se guardó al crear el cliente. Los clientes de ejemplo de
   la demo traen teléfonos inventados (bloque +57 300 000 0xxx, podrían ser de alguien real): a esos el enlace no
   les pone número y eliges tú a quién enviarlo. El resumen del cierre tampoco lleva número.
@@ -234,9 +289,9 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 ## Qué NO hace (aplazado a propósito)
 
 Facturación electrónica, recetas/inventario con descuento, gráficas, WhatsApp automático u oficial, impresión
-térmica, pagos en línea y multi-sede. Tampoco: costo de domicilio por zona, seguimiento del repartidor en mapa, fotos de los platos ni
-CAPTCHA (el antiabuso va en la base). (Sin conexión funciona el trabajo del mostrador; el cierre, el menú, las
-anulaciones y los pedidos en línea esperan a tener señal.)
+térmica, pagos en línea y multi-sede. Tampoco: costo de domicilio por zona, seguimiento del repartidor en mapa ni
+CAPTCHA (el antiabuso va en la base). (Sin conexión funciona el trabajo del mostrador; el cierre, el menú, las mesas,
+las anulaciones —incluido quitar un plato— y los pedidos en línea esperan a tener señal.)
 
 ## Problemas frecuentes
 

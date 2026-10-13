@@ -2,9 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
+import { bd } from "@/lib/datos/bd";
+import { obtenerContexto } from "@/lib/datos/inicio";
 import { consultar, ejecutar } from "@/lib/datos/llamar";
 import { ErrorApp, MENSAJE_GENERICO, type Resultado } from "@/lib/errores";
-import { esquemaAdicion, esquemaCategoria, esquemaDisponibilidad, esquemaMesa, esquemaNombreRestaurante, esquemaPin, esquemaProducto } from "@/lib/esquemas/menu";
+import { FOTO_TIPOS } from "@/lib/esquemas/gasto";
+import {
+  esquemaAdicion,
+  esquemaCategoria,
+  esquemaDisponibilidad,
+  esquemaMesa,
+  esquemaNombreRestaurante,
+  esquemaPin,
+  esquemaProducto,
+  FOTO_PLATO_MAX_BYTES,
+} from "@/lib/esquemas/menu";
+import { urlFotoPlato } from "@/lib/fotos";
+import { exigirSesion } from "@/lib/sesion";
+import { BUCKET_PLATOS } from "@/lib/supabase/servidor";
 
 function refrescar() {
   revalidatePath("/", "layout");
@@ -22,10 +37,36 @@ export async function guardarProducto(entrada: unknown): Promise<Resultado<{ id:
     p_precio: v.precio,
     p_disponible: v.disponible,
     p_activo: v.activo,
+    // Solo viajan si la pantalla los cambió: sin enviarlos, la base deja la descripción y la foto como estaban.
+    ...(v.descripcion !== undefined ? { p_descripcion: v.descripcion } : {}),
+    ...(v.fotoPath !== undefined ? { p_foto_path: v.fotoPath } : {}),
   });
   if (!r.ok) return r;
   refrescar();
   return r;
+}
+
+/**
+ * Sube la foto de un plato (ya comprimida en el celular, ~60 KB) a la carpeta del restaurante en el bucket público.
+ * Devuelve la ruta para guardarla con el plato y la dirección para mostrarla de una vez. Solo el dueño: además de
+ * revisarlo aquí, Storage lo exige con su propia regla.
+ */
+export async function subirFotoPlato(formData: FormData): Promise<Resultado<{ ruta: string; url: string }>> {
+  await exigirSesion();
+  const foto = formData.get("foto");
+  if (!(foto instanceof File) || foto.size === 0) return { ok: false, error: "No llegó la foto." };
+  if (foto.size > FOTO_PLATO_MAX_BYTES) return { ok: false, error: "La foto es muy pesada. Toma otra." };
+  if (!(FOTO_TIPOS as readonly string[]).includes(foto.type)) return { ok: false, error: "La foto debe ser JPG, PNG o WebP." };
+
+  const contexto = await obtenerContexto();
+  if (!contexto.restaurante) return { ok: false, error: MENSAJE_GENERICO };
+  if (contexto.perfil?.rol !== "dueno") return { ok: false, error: "Solo el dueño puede cambiar las fotos del menú." };
+
+  const ext = foto.type === "image/png" ? "png" : foto.type === "image/webp" ? "webp" : "jpg";
+  const ruta = `${contexto.restaurante.id}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await (await bd()).subirArchivo(ruta, new Uint8Array(await foto.arrayBuffer()), foto.type, BUCKET_PLATOS);
+  if (error) return { ok: false, error };
+  return { ok: true, datos: { ruta, url: urlFotoPlato(ruta) ?? "" } };
 }
 
 export async function guardarCategoria(entrada: unknown): Promise<Resultado<{ id: string }>> {

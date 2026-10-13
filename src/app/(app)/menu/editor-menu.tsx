@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { ChevronRight, Pencil, Plus, Undo2 } from "lucide-react";
+import { Camera, ChevronRight, Pencil, Plus, Undo2 } from "lucide-react";
 import { cambiarDisponibilidad, guardarProducto } from "@/app/acciones/menu";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Aviso } from "@/components/ui/aviso";
@@ -101,7 +101,11 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
                     onClick={() => setHoja({ tipo: "plato", plato: p, categoriaId: c.id })}
                     className="flex min-h-14 min-w-0 flex-1 items-center justify-between gap-2 rounded-l-xl px-3 text-left active:bg-tinta/10 disabled:active:bg-transparent"
                   >
-                    <span className={`text-base font-bold leading-tight ${p.disponible ? "" : "text-tinta-2 line-through"}`}>{p.nombre}</span>
+                    <span className={`text-base font-bold leading-tight ${p.disponible ? "" : "text-tinta-2 line-through"}`}>
+                      {p.nombre}
+                      {/* En 360 px no cabe una miniatura junto al nombre y el precio: una cámara dice cuáles ya tienen foto. */}
+                      {p.foto_url && <Camera className="ml-1.5 inline size-4 align-[-2px] text-tinta-2" aria-label="con foto" />}
+                    </span>
                     <span className="cifra shrink-0 text-2xl">{formatearPesos(p.precio)}</span>
                   </button>
                   <Interruptor activo={p.disponible} onCambio={(v) => alternar(p.id, v)} etiqueta={`${p.nombre}: hay hoy`} textoActivo="Hay" textoInactivo="Agotado" className="self-center" />

@@ -280,7 +280,7 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
             <p className="text-lg text-tinta-2">No hay nada por preparar. Cuando llegue un pedido aparece aquí solo, con sonido.</p>
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Pedidos por preparar">
+          <ul className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Pedidos por preparar">
             {porPreparar.map((p) => (
               <TarjetaPedido key={p.id} pedido={p} ahora={datos.ahora} nuevo={llegados.has(p.id)} agregados={agregados} onPlato={marcarPlato} onTodo={() => void todoListo(p)} />
             ))}
@@ -296,7 +296,7 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
                   <span className="min-w-0">
                     <span className="cifra mr-2 text-2xl">#{p.numero}</span>
                     <span className="text-base font-bold">{destinoDePedido(p)}</span>
-                    <span className="block text-sm text-tinta-2">{p.items.length === 1 ? "1 plato" : `${p.items.length} platos`} listos</span>
+                    <span className="block text-base text-tinta-2">{p.items.length === 1 ? "1 plato listo" : `${p.items.length} platos listos`}</span>
                   </span>
                   <button
                     type="button"

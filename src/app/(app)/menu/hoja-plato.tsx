@@ -33,6 +33,7 @@ export function HojaPlato({
   const [categoriaId, setCategoriaId] = useState(categoriaInicial);
   const [disponible, setDisponible] = useState(plato?.disponible ?? true);
   const [editandoPrecio, setEditandoPrecio] = useState(false);
+  const [quitando, setQuitando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
 
@@ -101,12 +102,29 @@ export function HojaPlato({
         <Button tamano="lg" bloque disabled={pendiente || nombre.trim().length === 0} onClick={() => guardar(true)}>
           {pendiente ? "Guardando…" : "Guardar plato"}
         </Button>
-        {plato && (
-          <Button variante="fantasma" bloque disabled={pendiente} onClick={() => guardar(false)}>
+        {plato && !quitando && (
+          <Button variante="fantasma" bloque disabled={pendiente} onClick={() => setQuitando(true)}>
             Quitar del menú
           </Button>
         )}
-        {plato && <p className="-mt-2 text-center text-sm text-tinta-2">No se borra: los pedidos de antes lo conservan.</p>}
+        {/* Quitar pide confirmación: antes bastaba un toque (y el botón queda justo debajo de "Guardar"). */}
+        {plato && quitando && (
+          <div role="group" aria-label="Confirmar quitar del menú" className="rounded-xl border-2 border-tinta bg-aji-suave p-3">
+            <p className="text-lg font-bold leading-tight">¿Quitar «{plato.nombre}» del menú?</p>
+            <p className="mt-1 text-base text-tinta-2">
+              Deja de salir al tomar pedidos y en el enlace de tus clientes. No se borra: lo puedes volver a poner desde «Platos
+              quitados», al final del menú.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button variante="peligro" tamano="lg" disabled={pendiente} onClick={() => guardar(false)}>
+                {pendiente ? "Quitando…" : "Sí, quitar"}
+              </Button>
+              <Button variante="secundario" tamano="lg" disabled={pendiente} onClick={() => setQuitando(false)}>
+                No, dejarlo
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {editandoPrecio && (

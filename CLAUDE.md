@@ -33,6 +33,10 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   (`reintentable`, ver `esFalloPasajero` en `lib/errores.ts`: se reintenta solo, con tope). Con la red caída (`sinRed`)
   el `Motor` no hace esperar a nadie: guarda de una vez y sube por detrás.
 - Pedidos hechos sin señal llevan número provisional negativo: mostrar siempre con `numeroVisible()`.
+- Grupos de rutas: `(app)` con barra de navegación, `(tarea)` una sola tarea, ambos en la columna angosta de celular
+  (`.columna-app`); `(cocina)` (la plancha) a todo el ancho, para tableta o celular acostado; `(publico)` sin sesión.
+- La pantalla de "no existe" es UNA (`app/not-found.tsx` → `components/no-existe.tsx`) y cambia el texto según a quién
+  le habla (`zonaDeRuta`): a un cliente nunca se le ofrece ir a la app del personal.
 - El pedido a medio armar (el del personal y el carrito del cliente) NO vive en el estado de la pantalla: vive en
   `src/lib/borrador-local.ts` (memoria + localStorage, se vence solo, se borra al enviar y al salir de la sesión), para
   que salir de la pantalla o recargar no lo borre. Al retomarlo se pone al día con `reconciliarConMenu`.

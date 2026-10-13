@@ -1,14 +1,14 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { Pencil, Plus } from "lucide-react";
-import { cambiarDisponibilidad } from "@/app/acciones/menu";
+import { ChevronRight, Pencil, Plus, Undo2 } from "lucide-react";
+import { cambiarDisponibilidad, guardarProducto } from "@/app/acciones/menu";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Aviso } from "@/components/ui/aviso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Interruptor } from "@/components/ui/interruptor";
-import type { MenuAdmin } from "@/lib/datos/tipos";
+import type { MenuAdmin, PlatoQuitado } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
 import { HojaCategoria } from "./hoja-categoria";
 import { HojaPlato } from "./hoja-plato";
@@ -17,11 +17,17 @@ type Categoria = MenuAdmin["categorias"][number];
 type Plato = Categoria["productos"][number];
 type Hoja = { tipo: "plato"; plato: Plato | null; categoriaId: string } | { tipo: "categoria"; categoria: Categoria | null } | null;
 
-/** Menú: platos por categoría con precio y el interruptor "Hay / Agotado". Crear y editar es solo del dueño. */
+/**
+ * Menú: platos por categoría con precio y el interruptor "Hay / Agotado". Crear y editar es solo del dueño. Al final,
+ * los platos quitados del menú, para volver a ponerlos (quitar no borra: los pedidos de antes los conservan).
+ */
 export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolean }) {
   const [hoja, setHoja] = useState<Hoja>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [, empezar] = useTransition();
+  const [devolviendo, empezarDevolver] = useTransition();
+  const quitados = menu.quitados ?? [];
 
   const [categorias, aplicar] = useOptimistic(menu.categorias, (estado, cambio: { id: string; disponible: boolean }) =>
     estado.map((c) => ({ ...c, productos: c.productos.map((p) => (p.id === cambio.id ? { ...p, disponible: cambio.disponible } : p)) }))
@@ -36,6 +42,16 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
     });
   }
 
+  function volverAPoner(q: PlatoQuitado) {
+    setError(null);
+    setAviso(null);
+    empezarDevolver(async () => {
+      const r = await guardarProducto({ id: q.id, categoriaId: q.categoria_id, nombre: q.nombre, precio: q.precio, disponible: true, activo: true });
+      if (!r.ok) setError(r.error);
+      else setAviso(`«${q.nombre}» volvió al menú, en ${q.categoria}.`);
+    });
+  }
+
   const totalPlatos = categorias.reduce((s, c) => s + c.productos.length, 0);
 
   return (
@@ -47,6 +63,11 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
         {error && (
           <Aviso tipo="error" onCerrar={() => setError(null)}>
             {error}
+          </Aviso>
+        )}
+        {aviso && (
+          <Aviso tipo="ok" onCerrar={() => setAviso(null)}>
+            {aviso}
           </Aviso>
         )}
 
@@ -88,6 +109,29 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
             )}
           </section>
         ))}
+
+        {esDueno && quitados.length > 0 && (
+          <details className="rounded-2xl border-2 border-tinta bg-papel">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-2 px-4 text-lg font-bold">
+              Platos quitados ({quitados.length})
+              <ChevronRight className="size-5 shrink-0" aria-hidden />
+            </summary>
+            <ul className="divide-y-2 divide-dashed divide-tinta/30 border-t-2 border-tinta">
+              {quitados.map((q) => (
+                <li key={q.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="min-w-0">
+                    <span className="block text-base font-bold leading-tight">{q.nombre}</span>
+                    <span className="block text-base text-tinta-2">{q.categoria}</span>
+                    <span className="cifra mt-0.5 block text-xl">{formatearPesos(q.precio)}</span>
+                  </span>
+                  <Button variante="secundario" className="shrink-0" disabled={devolviendo} onClick={() => volverAPoner(q)} aria-label={`Volver a poner ${q.nombre} en el menú`}>
+                    <Undo2 className="size-5" aria-hidden /> Volver a poner
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
 
       {esDueno && (

@@ -43,12 +43,15 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   atienda. Con la app abierta suena sola; con la app cerrada llegan los **avisos push** (ver abajo).
 - **Plancha** (`/plancha`): pedidos por preparar, del más viejo al más nuevo, con la espera en colores (verde/amarillo/rojo),
   tipo (mesa, domicilio, para llevar) y cada plato como un botón grande. Cuando todos los platos están listos, el pedido
-  pasa solo a "listo". Mantiene la pantalla encendida y suena con cada pedido nuevo. *Deshacer* corrige un error de dedo.
+  pasa solo a "listo". Mantiene la pantalla encendida y suena con cada pedido nuevo, y también cuando a un pedido que
+  ya estaba le agregan platos (quedan marcados **Agregado**). *Deshacer* corrige un error de dedo. Usa todo el ancho de
+  la pantalla: en tableta o con el celular acostado los pedidos van lado a lado.
 - **"Tiempo real" = consulta cada pocos segundos** (seguimiento 4 s, que se espacia si lleva rato igual; alerta 5 s;
   plancha 4 s). Se detiene sola cuando el pedido termina o la pantalla no está a la vista. Es lo que permite probarlo en
   el modo local sin servicios externos.
 - **El dueño abre o cierra** la recepción desde *Más → Pedidos en línea*. Cerrada, el cliente ve el menú pero no puede
-  enviar. El enlace es fijo (sale del nombre del local) y se actualiza si renombras la demo.
+  enviar. El enlace sale del nombre del local y cambia si renombras la demo, pero **los enlaces anteriores siguen
+  funcionando**: llevan al vigente (los 20 últimos; migración `20261005000013_enlaces_anteriores_y_platos_quitados.sql`).
 - **Avisos push (con la app cerrada):** *Más → Avisos en este celular*. Cada celular elige qué recibir: **dueño** =
   pedidos nuevos de clientes; **parrilla** = pedidos que entran a la plancha; **mesero** = pedidos listos para entregar.
   El cliente, en su seguimiento, puede tocar **Avísame cuando esté listo** (aceptado, listo, rechazado). Usa Web Push
@@ -151,7 +154,8 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > ejecutar un visitante sin cuenta (y nada más: ninguna tabla se abre).
 >
 > Lo mismo con las migraciones siguientes, en orden y cada una antes de desplegar la versión que la usa:
-> `20261005000011_avisos_push.sql` y `20261005000012_limpieza_avisos.sql`.
+> `20261005000011_avisos_push.sql`, `20261005000012_limpieza_avisos.sql` y
+> `20261005000013_enlaces_anteriores_y_platos_quitados.sql`.
 
 ### Antes de enseñarla (lista rápida)
 

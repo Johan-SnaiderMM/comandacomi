@@ -270,4 +270,8 @@ export type MenuAdmin = {
     productos: { id: string; nombre: string; precio: number; disponible: boolean; orden: number }[];
   }[];
   modificadores: { id: string; categoria_id: string | null; nombre: string; precio_extra: number }[];
+  /** Platos quitados del menú (se pueden volver a poner). Falta si la base todavía no tiene la migración 13. */
+  quitados?: PlatoQuitado[];
 };
+
+export type PlatoQuitado = { id: string; categoria_id: string; categoria: string; nombre: string; precio: number };

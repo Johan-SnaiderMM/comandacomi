@@ -260,7 +260,9 @@ describe("sin sesión o sin restaurante: nada", () => {
     );
     expect(r.rows.length).toBeGreaterThan(30);
     for (const f of r.rows) {
-      expect(f.anon, `${f.nombre} no debe ser ejecutable por anon`).toBe(false);
+      // Lo único que un visitante sin cuenta puede ejecutar es la API pública (publico_*); ver pedidos-clientes.test.ts,
+      // que fija la lista exacta.
+      expect(f.anon, `${f.nombre}: anon solo ejecuta publico_*`).toBe(f.nombre.startsWith("publico_"));
       const interna = f.nombre.startsWith("fn_") || f.nombre.startsWith("requerir_");
       expect(f.auth, `${f.nombre}: ${interna ? "interna, sin acceso" : "pública, con acceso"}`).toBe(!interna);
     }

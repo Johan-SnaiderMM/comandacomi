@@ -9,7 +9,15 @@ export type TipoPedido = "mesa" | "llevar" | "domicilio";
 export type EstadoPedido = "pendiente" | "listo" | "entregado";
 
 export type Contexto = {
-  restaurante: { id: string; nombre: string; es_demo: boolean; slug: string; pedidos_en_linea: boolean } | null;
+  restaurante: {
+    id: string;
+    nombre: string;
+    es_demo: boolean;
+    slug: string;
+    pedidos_en_linea: boolean;
+    /** Reiniciar la demo pide PIN (falta antes de la migración 15: no lo pide). */
+    reinicio_con_pin?: boolean;
+  } | null;
   perfil: { nombre: string; rol: "dueno" | "ayudante" } | null;
 };
 
@@ -280,3 +288,8 @@ export type MenuAdmin = {
 };
 
 export type PlatoQuitado = { id: string; categoria_id: string; categoria: string; nombre: string; precio: number };
+
+export type Adicion = MenuAdmin["modificadores"][number];
+
+/** Una mesa activa. `ocupada` = tiene un pedido sin cobrar (no se puede quitar). */
+export type MesaAdmin = { id: string; nombre: string; orden: number; ocupada: boolean };

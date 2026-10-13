@@ -15,7 +15,7 @@ afterAll(() => db.close());
 describe("migraciones y datos de ejemplo", () => {
   it("las migraciones se aplican de cero sin errores", async () => {
     const r = await db.query<{ n: number }>(`select count(*)::int as n from information_schema.tables where table_schema = 'public'`);
-    expect(r.rows[0].n).toBe(15);
+    expect(r.rows[0].n).toBe(16);
   });
 
   it("el seed trae ~25 platos, 6 mesas, 8 clientes y 7 días de ventas y gastos", async () => {

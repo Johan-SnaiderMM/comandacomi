@@ -13,10 +13,14 @@ import { suscripcionActual } from "@/lib/push/cliente";
  * Reiniciar demo: borra lo creado en la demo (pedidos, gastos, cuentas, cambios al menú), le pone el nombre del local
  * que se va a visitar y vuelve a cargar los datos de ejemplo. Pide confirmación porque no se puede deshacer. La base
  * solo lo permite en restaurantes de demostración.
+ *
+ * `conPin`: la demo tiene PIN (lo pone quien la administra, desde la base) y sin él no se reinicia. Así un visitante con
+ * el enlace no la reinicia en plena visita. El PIN lo comprueba la base, no esta pantalla.
  */
-export function BotonReiniciar({ className, nombreActual }: { className?: string; nombreActual: string }) {
+export function BotonReiniciar({ className, nombreActual, conPin = false }: { className?: string; nombreActual: string; conPin?: boolean }) {
   const [abierta, setAbierta] = useState(false);
   const [nombre, setNombre] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
 
@@ -25,8 +29,11 @@ export function BotonReiniciar({ className, nombreActual }: { className?: string
     empezar(async () => {
       // Reiniciar da de baja los avisos de los celulares de la visita anterior; el de este celular se conserva.
       const esteCelular = await suscripcionActual("personal").catch(() => null);
-      const r = await reiniciarDemo(nombre, esteCelular?.endpoint ?? null); // si sale bien, el servidor redirige a Inicio
-      if (r && !r.ok) setError(r.error);
+      const r = await reiniciarDemo(nombre, esteCelular?.endpoint ?? null, pin); // si sale bien, el servidor redirige a Inicio
+      if (r && !r.ok) {
+        setError(r.error);
+        setPin("");
+      }
     });
   }
 
@@ -52,6 +59,22 @@ export function BotonReiniciar({ className, nombreActual }: { className?: string
             placeholder={nombreActual}
             disabled={pendiente}
           />
+          {conPin && (
+            <div className="mt-3">
+              <Label htmlFor="pin-reinicio">PIN de reinicio</Label>
+              <Input
+                id="pin-reinicio"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                maxLength={8}
+                placeholder="Solo quien enseña la demo lo sabe"
+                disabled={pendiente}
+              />
+            </div>
+          )}
           <p className="mt-3 text-base">Se borra todo lo que creaste (pedidos, gastos, cobros, fiado y cambios al menú) y vuelven los datos de ejemplo de los últimos 7 días.</p>
           <p className="mt-2 text-base">Los demás celulares dejan de recibir avisos de esta demo; el de este celular se conserva.</p>
           <p className="mt-2 text-base font-bold">Esto no se puede deshacer.</p>
@@ -60,7 +83,7 @@ export function BotonReiniciar({ className, nombreActual }: { className?: string
               {error}
             </p>
           )}
-          <Button variante="peligro" tamano="lg" bloque className="mt-4" disabled={pendiente || nombre.trim() === ""} onClick={reiniciar}>
+          <Button variante="peligro" tamano="lg" bloque className="mt-4" disabled={pendiente || nombre.trim() === "" || (conPin && pin.length < 4)} onClick={reiniciar}>
             {pendiente ? "Reiniciando…" : "Sí, reiniciar la demo"}
           </Button>
           <Button variante="fantasma" bloque className="mt-1" disabled={pendiente} onClick={() => setAbierta(false)}>

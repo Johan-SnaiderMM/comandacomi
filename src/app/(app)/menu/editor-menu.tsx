@@ -8,17 +8,23 @@ import { Aviso } from "@/components/ui/aviso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Interruptor } from "@/components/ui/interruptor";
-import type { MenuAdmin, PlatoQuitado } from "@/lib/datos/tipos";
+import type { Adicion, MenuAdmin, PlatoQuitado } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
+import { HojaAdicion } from "./hoja-adicion";
 import { HojaCategoria } from "./hoja-categoria";
 import { HojaPlato } from "./hoja-plato";
 
 type Categoria = MenuAdmin["categorias"][number];
 type Plato = Categoria["productos"][number];
-type Hoja = { tipo: "plato"; plato: Plato | null; categoriaId: string } | { tipo: "categoria"; categoria: Categoria | null } | null;
+type Hoja =
+  | { tipo: "plato"; plato: Plato | null; categoriaId: string }
+  | { tipo: "categoria"; categoria: Categoria | null }
+  | { tipo: "adicion"; adicion: Adicion | null; categoriaId: string | null }
+  | null;
 
 /**
- * Menú: platos por categoría con precio y el interruptor "Hay / Agotado". Crear y editar es solo del dueño. Al final,
+ * Menú: platos por categoría con precio y el interruptor "Hay / Agotado", y debajo de cada categoría sus adiciones
+ * ("Queso extra + $ 2.000"). Crear y editar es solo del dueño. Al final, las adiciones que valen para cualquier plato y
  * los platos quitados del menú, para volver a ponerlos (quitar no borra: los pedidos de antes los conservan).
  */
 export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolean }) {
@@ -58,7 +64,7 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
     <>
       <div className="space-y-5 px-4 pt-3">
         <p className="text-base text-tinta-2">
-          {totalPlatos} platos. Toca un plato para cambiar su nombre o precio; el interruptor dice si hay hoy.
+          {totalPlatos} platos. Toca un plato o una adición para cambiar su nombre o precio; el interruptor dice si hay hoy.
         </p>
         {error && (
           <Aviso tipo="error" onCerrar={() => setError(null)}>
@@ -108,8 +114,28 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
                 <Plus className="size-5" aria-hidden /> Plato en {c.nombre}
               </Button>
             )}
+            <Adiciones
+              titulo={`Adiciones de ${c.nombre}`}
+              adiciones={menu.modificadores.filter((m) => m.categoria_id === c.id)}
+              esDueno={esDueno}
+              onEditar={(a) => setHoja({ tipo: "adicion", adicion: a, categoriaId: c.id })}
+              onNueva={() => setHoja({ tipo: "adicion", adicion: null, categoriaId: c.id })}
+            />
           </section>
         ))}
+
+        {(esDueno || menu.modificadores.some((m) => m.categoria_id === null)) && (
+          <section aria-label="Adiciones para cualquier plato">
+            <h2 className="font-display mb-1 text-2xl font-extrabold uppercase leading-none tracking-tight">Para cualquier plato</h2>
+            <Adiciones
+              titulo="Adiciones que se le pueden poner a todo"
+              adiciones={menu.modificadores.filter((m) => m.categoria_id === null)}
+              esDueno={esDueno}
+              onEditar={(a) => setHoja({ tipo: "adicion", adicion: a, categoriaId: null })}
+              onNueva={() => setHoja({ tipo: "adicion", adicion: null, categoriaId: null })}
+            />
+          </section>
+        )}
 
         {esDueno && quitados.length > 0 && (
           <details className="rounded-2xl border-2 border-tinta bg-papel">
@@ -153,6 +179,68 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
         />
       )}
       {hoja?.tipo === "categoria" && <HojaCategoria key={hoja.categoria?.id ?? "nueva"} categoria={hoja.categoria} onCerrar={() => setHoja(null)} />}
+      {hoja?.tipo === "adicion" && (
+        <HojaAdicion
+          key={hoja.adicion?.id ?? `nueva-${hoja.categoriaId ?? "todas"}`}
+          adicion={hoja.adicion}
+          categoriaInicial={hoja.categoriaId}
+          categorias={menu.categorias.map((c) => ({ id: c.id, nombre: c.nombre, icono: c.icono }))}
+          onHecho={(texto) => {
+            setAviso(texto);
+            setHoja(null);
+          }}
+          onCerrar={() => setHoja(null)}
+        />
+      )}
     </>
+  );
+}
+
+/** Las adiciones de una categoría (o las generales): cada una es un botón que la abre para editarla. */
+function Adiciones({
+  titulo,
+  adiciones,
+  esDueno,
+  onEditar,
+  onNueva,
+}: {
+  titulo: string;
+  adiciones: Adicion[];
+  esDueno: boolean;
+  onEditar: (a: Adicion) => void;
+  onNueva: () => void;
+}) {
+  if (!esDueno && adiciones.length === 0) return null;
+  return (
+    <div className="mt-2 rounded-xl border-2 border-dashed border-tinta/50 p-2">
+      <p className="text-base font-bold text-tinta-2">{titulo}</p>
+      <ul className="mt-1.5 flex flex-wrap gap-2">
+        {adiciones.map((a) => (
+          <li key={a.id}>
+            <button
+              type="button"
+              disabled={!esDueno}
+              onClick={() => onEditar(a)}
+              className="flex min-h-12 items-center gap-2 rounded-xl border-2 border-tinta bg-papel px-3 text-left text-base font-bold leading-tight active:translate-y-[2px] disabled:active:translate-y-0"
+            >
+              {a.nombre}
+              <span className="cifra text-lg text-tinta-2">{a.precio_extra === 0 ? "gratis" : `+ ${formatearPesos(a.precio_extra)}`}</span>
+            </button>
+          </li>
+        ))}
+        {esDueno && (
+          <li>
+            <button
+              type="button"
+              onClick={onNueva}
+              aria-label={`Agregar: ${titulo}`}
+              className="flex min-h-12 items-center gap-1.5 rounded-xl border-2 border-dashed border-tinta bg-fondo px-3 text-base font-bold active:translate-y-[2px]"
+            >
+              <Plus className="size-5" aria-hidden /> Adición
+            </button>
+          </li>
+        )}
+      </ul>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChefHat, ChevronRight, Lightbulb, MessageCircle, ReceiptText, Smartphone, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { Armchair, ChefHat, ChevronRight, Lightbulb, MessageCircle, ReceiptText, Smartphone, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { AvisosDelCelular } from "@/components/avisos/avisos-del-celular";
 import { BotonGuia } from "@/components/guia/boton-guia";
@@ -51,7 +51,8 @@ export default async function Mas() {
         <AvisosDelCelular />
         <Enlace href="/gastos" Icono={Wallet} titulo="Gastos del día" detalle="Carne, pan, gas, domiciliario…" />
         <Enlace href="/cierre" Icono={ReceiptText} titulo="Cierre del día" detalle="Ventas, gastos y efectivo de la caja" />
-        <Enlace href="/menu" Icono={UtensilsCrossed} titulo="Menú" detalle="Platos, precios y disponibilidad" />
+        <Enlace href="/menu" Icono={UtensilsCrossed} titulo="Menú" detalle="Platos, precios, adiciones y disponibilidad" />
+        <Enlace href="/mesas" Icono={Armchair} titulo="Mesas" detalle="Agregar, cambiar el nombre o quitar" />
         {MARCA.contactoWhatsapp && (
           <a
             href={`https://wa.me/${MARCA.contactoWhatsapp}?text=${textoContacto}`}
@@ -68,7 +69,9 @@ export default async function Mas() {
           </a>
         )}
         <div className="space-y-3 pt-3">
-          {contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} />}
+          {contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && (
+            <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} conPin={contexto.restaurante.reinicio_con_pin === true} />
+          )}
           <BotonSalir className={`${fila} text-tinta-2`} />
         </div>
       </main>

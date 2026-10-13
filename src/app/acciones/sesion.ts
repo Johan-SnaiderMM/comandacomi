@@ -1,9 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { bd } from "@/lib/datos/bd";
 import { ejecutar } from "@/lib/datos/llamar";
-import { destinoDeEntrada } from "@/lib/destinos";
+import { destinoDeEntrada, destinoDesdeDireccion } from "@/lib/destinos";
 
 export type EstadoEntrada = { error: string | null };
 
@@ -21,7 +22,11 @@ export async function entrarDemo(_anterior: EstadoEntrada, formulario?: FormData
     error = "La demo todavía no está configurada. Avisa a quien te la compartió.";
   }
   if (error) return { error };
-  redirect(destinoDeEntrada(formulario?.get("ir")?.toString()) ?? "/inicio");
+  // El campo `ir` lo pone el navegador al leer la dirección. Si tocaron "Entrar" antes de eso, el formulario llega sin
+  // él: la dirección de la portada (cabecera Referer) trae el mismo dato.
+  const destino =
+    destinoDeEntrada(formulario?.get("ir")?.toString()) ?? destinoDesdeDireccion((await headers()).get("referer"));
+  redirect(destino ?? "/inicio");
 }
 
 /**

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { destinoDeEntrada } from "@/lib/destinos";
+import { destinoDeEntrada, destinoDesdeDireccion } from "@/lib/destinos";
 import { esquemaCanales, esquemaSuscripcion } from "@/lib/esquemas/push";
 import {
   avisoALaPlancha,
@@ -81,6 +81,27 @@ describe("destinos de entrada (enlaces por rol)", () => {
     expect(destinoDeEntrada("/pedidos")).toBe("/pedidos");
     for (const malo of ["https://malo.example", "//malo.example", "/admin", "/plancha/../x", "", null, undefined, "constructor", "__proto__"]) {
       expect(destinoDeEntrada(malo as string | null)).toBeNull();
+    }
+  });
+
+  it("recupera el destino de la dirección de la portada (toque antes de que cargue la página)", () => {
+    expect(destinoDesdeDireccion("https://comanda.example/?ir=/plancha")).toBe("/plancha");
+    expect(destinoDesdeDireccion("https://comanda.example/?ir=%2Fpedidos&x=1")).toBe("/pedidos");
+  });
+
+  it("de la dirección tampoco sale nada fuera de la lista, ni de otra pantalla", () => {
+    for (const mala of [
+      "https://comanda.example/",
+      "https://comanda.example/?ir=/admin",
+      "https://comanda.example/?ir=https://malo.example",
+      "https://comanda.example/mas?ir=/plancha",
+      "/?ir=/plancha",
+      "no es una dirección",
+      "",
+      null,
+      undefined,
+    ]) {
+      expect(destinoDesdeDireccion(mala)).toBeNull();
     }
   });
 });

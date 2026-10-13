@@ -51,6 +51,14 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // El del cliente (solo avisos de su pedido) se registra con alcance /seguimiento/.
+        source: "/sw-cliente.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/seguimiento/" },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           { key: "Content-Security-Policy", value: csp },

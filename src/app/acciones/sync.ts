@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { listarClientes } from "@/lib/datos/fiado";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { ejecutar } from "@/lib/datos/llamar";
 import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerMenuParaPedido } from "@/lib/datos/pedidos";
 import { ErrorApp } from "@/lib/errores";
+import { alEntrarACocina, alQuedarListo } from "@/lib/push/eventos";
 import { argumentosDeOperacion, esquemaSobreOperacion } from "@/lib/esquemas/operacion";
 import { obtenerUsuario } from "@/lib/sesion";
 import type { RespuestaOperacion, Snapshot } from "@/lib/sync/tipos";
@@ -26,6 +28,11 @@ export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOpera
 
   const r = await ejecutar<unknown>("aplicar_operacion", { p_clave: clave, p_tipo: tipo, p_args: construido.args, p_ocurrido_en: ocurridoEn });
   if (!r.ok) return r;
+  // Avisos push con la app cerrada. Un reintento de la misma operación repite el aviso, pero lleva la misma etiqueta:
+  // en el celular reemplaza al anterior en vez de apilarse.
+  const args = construido.args;
+  if (tipo === "crear_pedido" && typeof args.p_id === "string") after(() => alEntrarACocina(args.p_id as string));
+  if (tipo === "cambiar_estado" && args.p_estado === "listo" && typeof args.p_pedido_id === "string") after(() => alQuedarListo(args.p_pedido_id as string));
   revalidatePath("/", "layout");
   return { ok: true, datos: r.datos };
 }

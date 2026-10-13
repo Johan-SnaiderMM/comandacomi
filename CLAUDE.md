@@ -40,6 +40,7 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   service worker). "Tiempo real" = consulta periódica (GET `no-store`), no websockets. Cambios en esta parte: corre
   `npm run e2e:clientes`.
 - No agregar lo aplazado: facturación electrónica, inventario con recetas, gráficas, WhatsApp automático, impresión
-  térmica, pagos en línea, multi-sede, notificaciones push, costo de domicilio por zona.
+  térmica, pagos en línea, multi-sede, costo de domicilio por zona. Avisos push (`lib/push/`): la llave privada VAPID
+  es solo del servidor; los avisos se envían con `after()` y nunca deben hacer fallar la acción que los dispara.
 - No hacer push ni despliegues, ni tocar servicios externos, sin avisar antes. Commits pequeños están bien.
 - Referencia de patrones (NO copiar módulos de taller ni su auto-deploy): `C:\Users\johan\Desktop\Polo Air Cool`.

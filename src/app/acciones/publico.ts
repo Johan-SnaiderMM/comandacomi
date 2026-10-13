@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { ejecutarPublico } from "@/lib/datos/llamar";
 import type { Resultado } from "@/lib/errores";
 import { esquemaPedidoCliente, esquemaTokenSeguimiento } from "@/lib/esquemas/publico";
+import { alLlegarPedidoCliente } from "@/lib/push/eventos";
 
 // Acciones del cliente SIN cuenta. No piden sesión: lo único que pueden tocar son las funciones publico_* de la base,
 // que validan todo, leen los precios de la base y filtran por el restaurante del enlace.
@@ -17,7 +19,7 @@ export async function enviarPedidoCliente(entrada: unknown): Promise<Resultado<P
   // Campo trampa lleno = programa, no persona: se responde como un error cualquiera.
   if (v.sitio) return { ok: false, error: "No se pudo enviar el pedido. Intenta de nuevo." };
 
-  return ejecutarPublico<PedidoEnviado>("publico_crear_pedido", {
+  const r = await ejecutarPublico<PedidoEnviado>("publico_crear_pedido", {
     p_slug: v.slug,
     p_tipo: v.tipo,
     p_nombre: v.nombre,
@@ -26,6 +28,9 @@ export async function enviarPedidoCliente(entrada: unknown): Promise<Resultado<P
     p_notas: v.notas || null,
     p_items: v.items.map((i) => ({ producto_id: i.productoId, cantidad: i.cantidad, adiciones: i.adiciones, notas: i.notas || null })),
   });
+  // Aviso push al dueño (con la app cerrada). Sale DESPUÉS de responderle al cliente y nunca lo hace esperar.
+  if (r.ok) after(() => alLlegarPedidoCliente(r.datos.token));
+  return r;
 }
 
 /** El cliente cancela su pedido mientras el restaurante no lo ha aceptado. */

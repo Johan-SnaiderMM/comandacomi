@@ -128,13 +128,13 @@ describe("slug del restaurante", () => {
 });
 
 describe("permisos: lo anónimo se limita a publico_*", () => {
-  it("anon ejecuta exactamente estas cuatro funciones y ninguna otra", async () => {
+  it("anon ejecuta exactamente estas funciones publico_* y ninguna otra", async () => {
     const r = await db.query<{ nombre: string }>(
       `select p.proname as nombre from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public' and p.prokind = 'f' and has_function_privilege('anon', p.oid, 'execute')
         order by 1`
     );
-    expect(r.rows.map((x) => x.nombre)).toEqual(["publico_cancelar_pedido", "publico_crear_pedido", "publico_menu", "publico_ver_pedido"]);
+    expect(r.rows.map((x) => x.nombre)).toEqual(["publico_cancelar_pedido", "publico_crear_pedido", "publico_destinos_push", "publico_guardar_push_cliente", "publico_menu", "publico_ver_pedido"]);
   });
 
   it("sin sesión no se puede leer ninguna tabla ni usar funciones del personal", async () => {

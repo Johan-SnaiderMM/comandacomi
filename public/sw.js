@@ -159,3 +159,50 @@ self.addEventListener("fetch", (event) => {
   // de Next (RSC) y las precargas se dejan pasar: si fallan, Next hace una navegación completa y esa sí llega aquí.
   if (request.mode === "navigate") event.respondWith(navegar(request));
 });
+
+/*
+ * Avisos push (pedidos nuevos, a la plancha, listos). El servidor manda un JSON { titulo, cuerpo, url, etiqueta,
+ * urgente }; aquí solo se muestra y, al tocarlo, se abre/enfoca la app en esa ruta. Siempre se muestra algo: el
+ * navegador lo exige (userVisibleOnly).
+ */
+self.addEventListener("push", (event) => {
+  let datos = {};
+  try {
+    datos = event.data ? event.data.json() : {};
+  } catch {
+    datos = { titulo: "Comanda", cuerpo: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(datos.titulo || "Comanda", {
+      body: datos.cuerpo || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: datos.etiqueta || undefined,
+      renotify: Boolean(datos.etiqueta),
+      requireInteraction: Boolean(datos.urgente),
+      data: { url: datos.url || "/" },
+      vibrate: datos.urgente ? [350, 150, 350, 150, 700] : [150, 80, 150],
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const ventanas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const v of ventanas) {
+        if (new URL(v.url).origin !== self.location.origin) continue;
+        await v.focus();
+        try {
+          if (v.url !== url && "navigate" in v) await v.navigate(url);
+        } catch {
+          // si no se puede navegar, igual queda enfocada
+        }
+        return;
+      }
+      await self.clients.openWindow(url);
+    })()
+  );
+});

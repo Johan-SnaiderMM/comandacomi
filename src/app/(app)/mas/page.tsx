@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChefHat, ChevronRight, Lightbulb, MessageCircle, ReceiptText, Smartphone, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { AvisosDelCelular } from "@/components/avisos/avisos-del-celular";
 import { BotonGuia } from "@/components/guia/boton-guia";
 import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
@@ -47,6 +48,7 @@ export default async function Mas() {
         )}
         <Enlace href="/plancha" Icono={ChefHat} titulo="Plancha" detalle="Lo que hay que cocinar, plato por plato" />
         <Enlace href="/pedidos-en-linea" Icono={Smartphone} titulo="Pedidos en línea" detalle="Enlace y QR para que tus clientes pidan" />
+        <AvisosDelCelular />
         <Enlace href="/gastos" Icono={Wallet} titulo="Gastos del día" detalle="Carne, pan, gas, domiciliario…" />
         <Enlace href="/cierre" Icono={ReceiptText} titulo="Cierre del día" detalle="Ventas, gastos y efectivo de la caja" />
         <Enlace href="/menu" Icono={UtensilsCrossed} titulo="Menú" detalle="Platos, precios y disponibilidad" />

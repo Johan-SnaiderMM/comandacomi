@@ -21,6 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
+import webpush from "web-push";
 
 const CAPTURAS = path.resolve("e2e-capturas");
 const CHROME =
@@ -32,6 +33,9 @@ if (!CHROME) {
   process.exit(2);
 }
 fs.mkdirSync(CAPTURAS, { recursive: true });
+
+// Llaves de avisos solo para esta prueba (generadas al vuelo; no son las de producción).
+const VAPID = webpush.generateVAPIDKeys();
 
 const PUERTO = Number(process.env.E2E_PUERTO ?? 3202);
 const BASE = `http://localhost:${PUERTO}`;
@@ -148,7 +152,13 @@ async function auditarPantalla(page, nombre, { estricto = true } = {}) {
 async function correr() {
   console.log("\n══ Pedidos en línea y plancha · desarrollo con base local ══");
   fs.rmSync(path.resolve(".local-e2e/clientes"), { recursive: true, force: true });
-  servidor = levantar("node_modules/next/dist/bin/next", ["dev", "-p", String(PUERTO)], { DEMO_BD: "local", DEMO_BD_DIR: ".local-e2e/clientes" });
+  servidor = levantar("node_modules/next/dist/bin/next", ["dev", "-p", String(PUERTO)], {
+    DEMO_BD: "local",
+    DEMO_BD_DIR: ".local-e2e/clientes",
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: VAPID.publicKey,
+    VAPID_PRIVATE_KEY: VAPID.privateKey,
+    VAPID_SUBJECT: "https://comandacomi.com",
+  });
   await esperarServidor(servidor);
   console.log("Servidor listo.");
 
@@ -417,6 +427,87 @@ async function correr() {
   const registros = await cliente.pagina.evaluate(async () => (await navigator.serviceWorker?.getRegistrations?.())?.length ?? 0);
   assert.equal(registros, 0, "el cliente no debe tener service worker");
   log("sin copia local, cola ni service worker del personal en el celular del cliente");
+
+  // ---------------------------------------------------------------------------------- 11. avisos push
+  console.log("\n11. Avisos push: los celulares se suscriben y el servidor intenta avisarles");
+  // El servicio de avisos del navegador (FCM) no se puede usar en una prueba: se simula la suscripción con un
+  // destino que no existe (.invalid). Lo que se comprueba es TODO lo nuestro: guardar, leer, y que el servidor intente enviar.
+  const falsoPush = (tipo) => {
+    const clave = "e2e-push";
+    const crear = () => ({
+      endpoint: `https://push.invalid/e2e/${tipo}`,
+      toJSON() {
+        return {
+          endpoint: this.endpoint,
+          keys: { p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM", auth: "tBHItJI5svbpez7KI4CCXg" },
+        };
+      },
+      async unsubscribe() {
+        sessionStorage.removeItem(clave);
+        return true;
+      },
+    });
+    PushManager.prototype.subscribe = async () => {
+      sessionStorage.setItem(clave, "1");
+      return crear();
+    };
+    PushManager.prototype.getSubscription = async () => (sessionStorage.getItem(clave) ? crear() : null);
+  };
+  await dueno.contexto.grantPermissions(["notifications"], { origin: BASE });
+  await cliente.contexto.grantPermissions(["notifications"], { origin: BASE });
+  await dueno.contexto.addInitScript(falsoPush, "personal");
+  await cliente.contexto.addInitScript(falsoPush, "cliente");
+  const avisosFallidos = () => (servidor.registro().match(/\[avisos\] no se pudo avisar/g) ?? []).length;
+
+  await ir(dueno.pagina, "/mas");
+  const seccion = dueno.pagina.getByRole("region", { name: "Avisos en este celular" });
+  await seccion.waitFor({ timeout: 60000 });
+  for (const t of ["Pedidos nuevos de clientes", "Pedidos a la plancha", "Pedidos listos"]) await seccion.getByText(t).waitFor();
+  await captura(dueno.pagina, "dueno-avisos");
+  await auditarPantalla(dueno.pagina, "Más con avisos 390×844", { estricto: false });
+  await seccion.getByRole("button", { name: "Activar avisos" }).click();
+  await seccion.getByText("Avisos activados en este celular.").waitFor({ timeout: 150000 });
+  log("el dueño activa los avisos (pedidos nuevos y listos) y quedan guardados");
+
+  await ir(dueno.pagina, "/mas");
+  await seccion.getByRole("button", { name: "Probar aviso" }).waitFor({ timeout: 60000 });
+  log("al volver a entrar, la base recuerda los avisos de ese celular");
+  await seccion.getByRole("button", { name: "Probar aviso" }).click();
+  await seccion.getByText(/No se pudo mandar el aviso de prueba/).waitFor({ timeout: 40000 });
+  log("«Probar aviso»: el servidor intenta enviarlo con las llaves y, como el destino es falso, lo informa");
+
+  // Un cliente pide y se suscribe a SU pedido.
+  const antes = avisosFallidos();
+  await ir(cliente.pagina, `/pedir/${slug}`);
+  await cliente.pagina.getByRole("button", { name: "Agregar Perro caliente" }).click();
+  await cliente.pagina.getByRole("button", { name: /^Ver mi pedido/ }).click();
+  await cliente.pagina.getByLabel("Tu nombre").fill("Camila Prueba");
+  await cliente.pagina.getByLabel(/Tu celular/).fill("301 555 0101");
+  await cliente.pagina.getByRole("button", { name: /^Enviar pedido/ }).click();
+  await cliente.pagina.waitForURL(/\/seguimiento\//, { timeout: 60000 });
+  await esperar(async () => avisosFallidos() > antes, 40000);
+  log("un pedido nuevo hace que el servidor intente avisar al dueño (aunque tenga la app cerrada)");
+
+  await cliente.pagina.getByRole("button", { name: "Avísame cuando esté listo" }).click();
+  await cliente.pagina.getByText(/te avisamos en este celular/).waitFor({ timeout: 60000 });
+  log("el cliente activa «Avísame cuando esté listo» con su pedido");
+
+  const numero3 = /Pedido #(\d+)/i.exec(await cliente.pagina.locator("header").innerText())[1];
+  const antesAceptar = avisosFallidos();
+  await ir(dueno.pagina, "/pedidos");
+  const tarjeta3 = dueno.pagina.locator("li", { hasText: "Cliente en línea" }).filter({ hasText: `#${numero3}` });
+  await tarjeta3.waitFor({ timeout: 40000 });
+  await tarjeta3.getByRole("button", { name: "Aceptar" }).click();
+  await dueno.pagina.getByRole("button", { name: "10 min" }).click();
+  await dueno.pagina.getByText(new RegExp(`Pedido #${numero3} aceptado`)).waitFor({ timeout: 30000 });
+  await esperar(async () => avisosFallidos() > antesAceptar, 40000);
+  log("al aceptar, el servidor intenta avisar al cliente de ESE pedido");
+
+  // Quitar los avisos desde el celular del dueño.
+  await ir(dueno.pagina, "/mas");
+  await seccion.getByRole("button", { name: "Desactivar en este celular" }).click();
+  await seccion.getByRole("button", { name: "Activar avisos" }).waitFor({ timeout: 30000 });
+  log("el dueño desactiva los avisos de su celular");
 
   for (const c of todos) assert.deepEqual(c.errores, [], "sin errores de JavaScript en la página");
   log("sin errores de JavaScript durante toda la prueba");

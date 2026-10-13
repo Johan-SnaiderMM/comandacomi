@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { ejecutar } from "@/lib/datos/llamar";
 import type { Resultado } from "@/lib/errores";
 import { esquemaAnulacion } from "@/lib/esquemas/pedido";
+import { alAceptarPedido, alRechazarPedido } from "@/lib/push/eventos";
 
 // Acciones del PERSONAL sobre los pedidos que hacen los clientes en línea (piden sesión, como todo lo del personal).
 
@@ -19,6 +21,7 @@ export async function aceptarPedidoCliente(pedidoId: string, minutos: number | n
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   const r = await ejecutar("confirmar_pedido_cliente", { p_pedido_id: parsed.data.pedidoId, p_minutos: parsed.data.minutos });
   if (!r.ok) return r;
+  after(() => alAceptarPedido(parsed.data.pedidoId, parsed.data.minutos)); // a la parrilla y al cliente
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -29,6 +32,7 @@ export async function rechazarPedidoCliente(pedidoId: string, motivo: string): P
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   const r = await ejecutar("anular_pedido", { p_pedido_id: parsed.data.id, p_motivo: parsed.data.motivo });
   if (!r.ok) return r;
+  after(() => alRechazarPedido(parsed.data.id, parsed.data.motivo)); // al cliente, con el motivo
   revalidatePath("/", "layout");
   return { ok: true };
 }

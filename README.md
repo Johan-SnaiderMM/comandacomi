@@ -40,7 +40,7 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   ni a la plancha ni se puede cobrar) hasta que alguien lo acepta; si lo rechaza, el cliente ve el motivo.
 - **Alerta para que no pase desapercibido:** franja grande que parpadea rojo/amarillo, sonido y vibración repetidos y el
   título de la pestaña titila, en cualquier pantalla con sesión. *Silenciar* la deja como una franja pequeña hasta que se
-  atienda. **Funciona con la app abierta**; con la app cerrada hace falta una notificación push (aplazada).
+  atienda. Con la app abierta suena sola; con la app cerrada llegan los **avisos push** (ver abajo).
 - **Plancha** (`/plancha`): pedidos por preparar, del más viejo al más nuevo, con la espera en colores (verde/amarillo/rojo),
   tipo (mesa, domicilio, para llevar) y cada plato como un botón grande. Cuando todos los platos están listos, el pedido
   pasa solo a "listo". Mantiene la pantalla encendida y suena con cada pedido nuevo. *Deshacer* corrige un error de dedo.
@@ -49,6 +49,14 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   el modo local sin servicios externos.
 - **El dueño abre o cierra** la recepción desde *Más → Pedidos en línea*. Cerrada, el cliente ve el menú pero no puede
   enviar. El enlace es fijo (sale del nombre del local) y se actualiza si renombras la demo.
+- **Avisos push (con la app cerrada):** *Más → Avisos en este celular*. Cada celular elige qué recibir: **dueño** =
+  pedidos nuevos de clientes; **parrilla** = pedidos que entran a la plancha; **mesero** = pedidos listos para entregar.
+  El cliente, en su seguimiento, puede tocar **Avísame cuando esté listo** (aceptado, listo, rechazado). Usa Web Push
+  (llaves VAPID: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` solo servidor, `VAPID_SUBJECT`); sin ellas la app
+  funciona igual con la alerta en pantalla. En iPhone solo con la app agregada a la pantalla de inicio. Hay un botón
+  **Probar aviso** para verificar que llega. Migración: `20261005000011_avisos_push.sql`.
+- **Enlaces por rol** (entran con un toque a la demo y abren esa pantalla): `/?ir=/plancha` (parrilla),
+  `/?ir=/pedidos` (mesero), y `/pedir/<local>` (cliente, sin cuenta).
 - **Pagos:** el cliente paga al recibir (efectivo o Nequi); el cobro se hace en la app como cualquier pedido.
 - **Antiabuso (sin servicios externos, en la base):** como máximo 25 pedidos sin confirmar por restaurante, 3 por
   teléfono cada 30 min y 10 por minuto; 30 platos y 20 unidades por plato; campo trampa para programas. El cliente no puede
@@ -204,8 +212,8 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 - **Aislamiento entre restaurantes demostrado con pruebas** (`src/test/aislamiento.test.ts`, Postgres real): un
   usuario del restaurante A no puede leer, insertar, modificar, anular ni subir fotos en el B, por ninguna tabla ni
   función; sin sesión no se ejecuta ninguna función ni se lee ninguna tabla.
-- **Lo que puede hacer alguien SIN cuenta** se limita a cuatro funciones SQL (`publico_menu`, `publico_crear_pedido`,
-  `publico_ver_pedido`, `publico_cancelar_pedido`); una prueba falla si aparece otra ejecutable por `anon` y ninguna
+- **Lo que puede hacer alguien SIN cuenta** se limita a las funciones SQL `publico_*` (`publico_menu`, `publico_crear_pedido`,
+  `publico_ver_pedido`, `publico_cancelar_pedido` y las dos de avisos push); una prueba falla si aparece otra ejecutable por `anon` y ninguna
   tabla se puede leer sin sesión. El seguimiento se consulta por un código aleatorio (uuid) imposible de adivinar, que
   devuelve **solo ese pedido** y nunca datos internos (quién lo atendió, cobros, otros pedidos). El enlace no se indexa
   (`noindex`) y no sale en el `Referer` hacia otros sitios.
@@ -216,8 +224,7 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 ## Qué NO hace (aplazado a propósito)
 
 Facturación electrónica, recetas/inventario con descuento, gráficas, WhatsApp automático u oficial, impresión
-térmica, pagos en línea y multi-sede. Tampoco: notificaciones push con la app cerrada (la alerta de pedidos en línea
-necesita la app abierta), costo de domicilio por zona, seguimiento del repartidor en mapa, fotos de los platos ni
+térmica, pagos en línea y multi-sede. Tampoco: costo de domicilio por zona, seguimiento del repartidor en mapa, fotos de los platos ni
 CAPTCHA (el antiabuso va en la base). (Sin conexión funciona el trabajo del mostrador; el cierre, el menú, las
 anulaciones y los pedidos en línea esperan a tener señal.)
 

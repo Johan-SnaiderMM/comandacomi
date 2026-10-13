@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import { Flame } from "lucide-react";
 import { BarraAccion } from "@/components/layout/barra-accion";
-import { FormularioEntrar } from "@/components/sesion/formulario-entrar";
+import { EntrarConDestino, FormularioEntrar } from "@/components/sesion/formulario-entrar";
 import { MARCA } from "@/lib/marca";
 
 /** Portada de la demo (estática: carga al instante). La tesis: tu día entero cabe en un tiquete. */
@@ -44,7 +45,9 @@ export default function Portada() {
       </section>
 
       <BarraAccion>
-        <FormularioEntrar />
+        <Suspense fallback={<FormularioEntrar />}>
+          <EntrarConDestino />
+        </Suspense>
       </BarraAccion>
     </div>
   );

@@ -1,9 +1,11 @@
 "use server";
 
+import { after } from "next/server";
 import { z } from "zod";
 import { ejecutar } from "@/lib/datos/llamar";
 import type { EstadoPedido } from "@/lib/datos/tipos";
 import type { Resultado } from "@/lib/errores";
+import { alQuedarListo } from "@/lib/push/eventos";
 
 // Acciones de la plancha. No revalidan toda la app: el panel se actualiza solo (consulta cada pocos segundos) y los
 // demás dispositivos se enteran en su próxima consulta.
@@ -17,7 +19,10 @@ const esquemaPedido = z.object({ pedidoId: z.uuid("El pedido no es válido.") })
 export async function marcarItemListo(itemId: string, listo: boolean): Promise<Resultado<ProgresoPedido>> {
   const parsed = esquemaItem.safeParse({ itemId, listo });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
-  return ejecutar<ProgresoPedido>("marcar_item_listo", { p_item_id: parsed.data.itemId, p_listo: parsed.data.listo });
+  const r = await ejecutar<ProgresoPedido>("marcar_item_listo", { p_item_id: parsed.data.itemId, p_listo: parsed.data.listo });
+  // Con el último plato el pedido queda listo: aviso al mesero (y al cliente si pidió por la app).
+  if (r.ok && parsed.data.listo && r.datos.estado === "listo") after(() => alQuedarListo(r.datos.pedido_id));
+  return r;
 }
 
 /** "Todo listo": marca de una vez todos los platos del pedido. */
@@ -25,6 +30,7 @@ export async function marcarPedidoListo(pedidoId: string): Promise<Resultado> {
   const parsed = esquemaPedido.safeParse({ pedidoId });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   const r = await ejecutar("cambiar_estado_pedido", { p_pedido_id: parsed.data.pedidoId, p_estado: "listo" });
+  if (r.ok) after(() => alQuedarListo(parsed.data.pedidoId));
   return r.ok ? { ok: true } : r;
 }
 

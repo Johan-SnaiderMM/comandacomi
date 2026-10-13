@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { Aviso } from "@/components/ui/aviso";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { PanelPedidosEnLinea } from "./panel-pedidos-en-linea";
 
@@ -12,6 +13,20 @@ export const metadata = { title: "Pedidos en línea" };
 export default async function PaginaPedidosEnLinea() {
   const contexto = await obtenerContexto();
   if (!contexto.restaurante) redirect("/");
+  // La base aún no trae la actualización de pedidos en línea (migración 10): se explica en vez de armar un enlace roto.
+  if (!contexto.restaurante.slug) {
+    return (
+      <>
+        <EncabezadoPantalla titulo="Pedidos en línea" atras="/mas" />
+        <main className="pb-nav px-4 pt-4">
+          <Aviso tipo="error">
+            Falta aplicar la actualización de la base de datos para recibir pedidos en línea. Pega el archivo{" "}
+            <strong>20261005000010_pedidos_clientes.sql</strong> en el SQL Editor de Supabase.
+          </Aviso>
+        </main>
+      </>
+    );
+  }
   return (
     <>
       <EncabezadoPantalla titulo="Pedidos en línea" atras="/mas" />

@@ -16,7 +16,8 @@ export default async function Pendientes({ searchParams }: PageProps<"/pedidos">
   const [pendientes, cobrados, porConfirmar, contexto] = await Promise.all([
     listarPedidosPendientes(),
     listarPedidosCobradosHoy(),
-    listarPedidosPorConfirmar(),
+    // Si la base todavía no tiene la actualización de pedidos en línea, Pendientes sigue funcionando como siempre.
+    listarPedidosPorConfirmar().catch(() => []),
     obtenerContexto(),
   ]);
   const ahora = new Date().toISOString();

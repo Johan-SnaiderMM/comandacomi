@@ -21,6 +21,7 @@ import {
 } from "@/lib/seguimiento";
 import { vibrar } from "@/lib/sonido";
 import { cn } from "@/lib/utils";
+import { AvisarPedido } from "./avisar-pedido";
 
 /**
  * Seguimiento del pedido en vivo: la pantalla pregunta al servidor cada pocos segundos (más espaciado si lleva rato
@@ -236,6 +237,7 @@ export function SeguimientoPedido({ token, inicial }: { token: string; inicial: 
         )}
 
         <div className="space-y-2">
+          {!seguimientoTerminado(p.etapa) && <AvisarPedido token={token} />}
           {p.etapa === "por_confirmar" && (
             <Button variante="secundario" tamano="lg" bloque onClick={() => setConfirmando(true)}>
               Cancelar pedido

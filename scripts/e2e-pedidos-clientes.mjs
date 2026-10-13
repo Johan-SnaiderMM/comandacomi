@@ -509,6 +509,53 @@ async function correr() {
   await seccion.getByRole("button", { name: "Activar avisos" }).waitFor({ timeout: 30000 });
   log("el dueño desactiva los avisos de su celular");
 
+  // ------------------------------------------------------------------- 12. los avisos no se quedan para siempre
+  console.log("\n12. Avisos push: reiniciar la demo y salir dan de baja los celulares");
+  await cocina.contexto.grantPermissions(["notifications"], { origin: BASE });
+  await cocina.contexto.addInitScript(falsoPush, "cocina");
+  const seccionDe = (pagina) => pagina.getByRole("region", { name: "Avisos en este celular" });
+  const activarAvisosEn = async (c) => {
+    await ir(c.pagina, "/mas");
+    await seccionDe(c.pagina).getByRole("button", { name: "Activar avisos" }).click();
+    await seccionDe(c.pagina).getByText("Avisos activados en este celular.").waitFor({ timeout: 150000 });
+  };
+  /**
+   * ¿La base todavía tiene los avisos de ese celular? Se finge que el navegador sigue suscrito (misma dirección) y se
+   * mira qué dice "Más": con los avisos guardados ofrece "Probar aviso"; sin ellos, "Activar avisos".
+   */
+  const sigueEnLaBase = async (c) => {
+    await c.pagina.evaluate(() => sessionStorage.setItem("e2e-push", "1"));
+    await ir(c.pagina, "/mas");
+    const s = seccionDe(c.pagina);
+    const probar = s.getByRole("button", { name: "Probar aviso" });
+    const activar = s.getByRole("button", { name: "Activar avisos" });
+    await esperar(async () => (await probar.count()) > 0 || ((await activar.count()) > 0 && (await activar.isEnabled())), 60000);
+    return (await probar.count()) > 0;
+  };
+
+  await activarAvisosEn(dueno);
+  await activarAvisosEn(cocina);
+  assert.equal(await sigueEnLaBase(dueno), true);
+  assert.equal(await sigueEnLaBase(cocina), true);
+  log("dos celulares (dueño y cocina) tienen avisos activos");
+
+  // El dueño reinicia la demo desde SU celular (con el mismo nombre, para no cambiar el enlace).
+  await dueno.pagina.getByRole("button", { name: /Reiniciar demo/ }).click();
+  await dueno.pagina.getByLabel("Nombre del restaurante que vas a visitar").fill("Picnic Delicias");
+  await dueno.pagina.getByRole("button", { name: "Sí, reiniciar la demo" }).click();
+  await dueno.pagina.waitForURL(/\/inicio\?reiniciada=1/, { timeout: 150000 });
+  assert.equal(await sigueEnLaBase(dueno), true, "quien reinicia conserva sus avisos");
+  assert.equal(await sigueEnLaBase(cocina), false, "los demás celulares quedan dados de baja");
+  log("reiniciar la demo da de baja los celulares de la visita anterior y conserva el de quien reinicia");
+
+  // Salir de la sesión: ese celular deja de recibir avisos.
+  await dueno.pagina.getByRole("button", { name: "Salir de la demo" }).click();
+  await dueno.pagina.getByRole("button", { name: "Entrar a la demo" }).waitFor({ timeout: 60000 });
+  await dueno.pagina.getByRole("button", { name: "Entrar a la demo" }).click();
+  await dueno.pagina.waitForURL("**/inicio", { timeout: 120000 });
+  assert.equal(await sigueEnLaBase(dueno), false, "al salir, la base ya no tiene los avisos de ese celular");
+  log("salir de la sesión da de baja los avisos de ese celular");
+
   for (const c of todos) assert.deepEqual(c.errores, [], "sin errores de JavaScript en la página");
   log("sin errores de JavaScript durante toda la prueba");
   void urlSeguimiento;

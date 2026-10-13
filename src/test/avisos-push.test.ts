@@ -215,21 +215,93 @@ describe("avisos del cliente sobre su pedido", () => {
     expect((await rpc<{ canales: string[] }>(db, A.userId, "estado_suscripcion_push", { p_endpoint: personal })).canales).toEqual(["pedidos"]);
   });
 
-  it("al reiniciar la demo se van los avisos de los pedidos de clientes, no los del personal", async () => {
-    const C = await crearRestauranteDemo(db, "Local Para Reiniciar");
+});
+
+describe("limpieza: los celulares de visitas anteriores no se quedan para siempre (migración 12)", () => {
+  const deRestaurante = async (restauranteId: string) =>
+    (await db.query<{ endpoint: string }>(`select endpoint from public.suscripciones_push where restaurante_id = $1 order by endpoint`, [restauranteId])).rows.map((x) => x.endpoint);
+
+  async function localConPedidoDeCliente(nombre: string) {
+    const C = await crearRestauranteDemo(db, nombre);
     const slugC = (await db.query<{ slug: string }>(`select slug from public.restaurantes where id = $1`, [C.restauranteId])).rows[0].slug;
     const menuC = await rpc<Menu>(db, C.userId, "obtener_menu_para_pedido");
-    const personal = endpoint("c-personal");
-    await guardar(C.userId, personal, ["pedidos"]);
     const r = await publico<{ token: string }>("publico_crear_pedido", {
       p_slug: slugC, p_tipo: "llevar", p_nombre: "Ana", p_telefono: "3135550000", p_direccion: null, p_notas: null,
       p_items: [{ producto_id: menuC.productos.find((p) => p.nombre === "Perro caliente")!.id, cantidad: 1 }],
     });
-    const cliente = endpoint("c-cliente");
+    const cliente = endpoint("cliente");
     await publico("publico_guardar_push_cliente", { p_token: r.token, p_endpoint: cliente, p_p256dh: p256dh, p_auth: auth });
+    return C;
+  }
+
+  it("al reiniciar la demo se van los avisos de los clientes Y los de los celulares del personal", async () => {
+    const C = await localConPedidoDeCliente("Local Para Reiniciar");
+    await guardar(C.userId, endpoint("visita-anterior-1"), ["pedidos"]);
+    await guardar(C.userId, endpoint("visita-anterior-2"), ["cocina", "listos"]);
+    expect(await deRestaurante(C.restauranteId)).toHaveLength(3);
 
     await rpc(db, C.userId, "reiniciar_demo", { p_nombre: null });
-    const quedan = await db.query<{ endpoint: string }>(`select endpoint from public.suscripciones_push where restaurante_id = $1`, [C.restauranteId]);
-    expect(quedan.rows.map((x) => x.endpoint)).toEqual([personal]);
+    expect(await deRestaurante(C.restauranteId)).toEqual([]);
+  });
+
+  it("se conserva solo el celular desde el que se reinicia (quien enseña la demo)", async () => {
+    const C = await localConPedidoDeCliente("Local Que Conserva");
+    const mio = endpoint("el-que-reinicia");
+    await guardar(C.userId, endpoint("otro"), ["pedidos"]);
+    await guardar(C.userId, mio, ["pedidos", "listos"]);
+
+    await rpc(db, C.userId, "reiniciar_demo", { p_nombre: "Fonda La Nueva", p_conservar_endpoint: mio });
+    expect(await deRestaurante(C.restauranteId)).toEqual([mio]);
+    expect(await rpc(db, C.userId, "estado_suscripcion_push", { p_endpoint: mio })).toEqual({ activa: true, canales: ["listos", "pedidos"] });
+  });
+
+  it("reiniciar un local no toca los celulares de otro, ni conserva uno ajeno", async () => {
+    const C = await localConPedidoDeCliente("Local Vecino");
+    const ajeno = endpoint("de-a");
+    await guardar(A.userId, ajeno, ["pedidos"]);
+    const antes = await deRestaurante(A.restauranteId);
+
+    await rpc(db, C.userId, "reiniciar_demo", { p_nombre: null, p_conservar_endpoint: ajeno });
+    expect(await deRestaurante(C.restauranteId)).toEqual([]);
+    expect(await deRestaurante(A.restauranteId)).toEqual(antes);
+  });
+
+  it("con el tope lleno, un celular nuevo entra y sale el que lleva más tiempo sin activar sus avisos", async () => {
+    const D = await crearRestauranteDemo(db, "Local Con Muchos Celulares");
+    const eps: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      const ep = endpoint(`cel-${String(i).padStart(2, "0")}`);
+      eps.push(ep);
+      await guardar(D.userId, ep, ["pedidos"]);
+      // cada uno se activó un minuto después del anterior: el 0 es el más viejo
+      await db.query(`update public.suscripciones_push set actualizada_at = now() - make_interval(mins => $2) where endpoint = $1`, [ep, 60 - i]);
+    }
+    expect(await deRestaurante(D.restauranteId)).toHaveLength(30);
+
+    // Volver a guardar uno que ya estaba no saca a nadie (y lo deja como el más reciente).
+    await guardar(D.userId, eps[0], ["pedidos", "cocina"]);
+    expect(await deRestaurante(D.restauranteId)).toHaveLength(30);
+
+    const nuevo = endpoint("cel-nuevo");
+    await guardar(D.userId, nuevo, ["listos"]); // antes: "Ya hay demasiados celulares…"
+    const quedan = await deRestaurante(D.restauranteId);
+    expect(quedan).toHaveLength(30);
+    expect(quedan).toContain(nuevo);
+    expect(quedan).toContain(eps[0]); // se acababa de guardar: es de los recientes
+    expect(quedan).not.toContain(eps[1]); // el más viejo de los que quedaban
+  });
+
+  it("el tope no cuenta ni saca los avisos de los clientes, ni los celulares de otro restaurante", async () => {
+    const E = await localConPedidoDeCliente("Local Con Cliente Y Tope");
+    for (let i = 0; i < 30; i++) await guardar(E.userId, endpoint("e"), ["pedidos"]);
+    const deAAntes = await deRestaurante(A.restauranteId);
+    await guardar(E.userId, endpoint("e-extra"), ["pedidos"]);
+
+    const filas = await db.query<{ cliente: boolean; n: number }>(
+      `select (pedido_id is not null) as cliente, count(*)::int as n from public.suscripciones_push where restaurante_id = $1 group by 1 order by 1`,
+      [E.restauranteId]
+    );
+    expect(filas.rows).toEqual([{ cliente: false, n: 30 }, { cliente: true, n: 1 }]);
+    expect(await deRestaurante(A.restauranteId)).toEqual(deAAntes);
   });
 });

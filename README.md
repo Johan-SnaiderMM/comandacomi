@@ -55,6 +55,9 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   (llaves VAPID: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` solo servidor, `VAPID_SUBJECT`); sin ellas la app
   funciona igual con la alerta en pantalla. En iPhone solo con la app agregada a la pantalla de inicio. Hay un botón
   **Probar aviso** para verificar que llega. Migración: `20261005000011_avisos_push.sql`.
+  Los avisos no se quedan para siempre en celulares de visitas anteriores (migración `20261005000012_limpieza_avisos.sql`):
+  **salir de la sesión** da de baja ese celular, **reiniciar la demo** da de baja todos menos el celular desde el que
+  se reinicia, y con el tope de 30 celulares lleno entra el nuevo y sale el más antiguo.
 - **Enlaces por rol** (entran con un toque a la demo y abren esa pantalla): `/?ir=/plancha` (parrilla),
   `/?ir=/pedidos` (mesero), y `/pedir/<local>` (cliente, sin cuenta).
 - **Pagos:** el cliente paga al recibir (efectivo o Nequi); el cobro se hace en la app como cualquier pedido.
@@ -146,6 +149,9 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > `supabase/migrations/20261005000010_pedidos_clientes.sql` ANTES de desplegar la versión nueva. Agrega el enlace
 > público de cada restaurante, el estado "por confirmar", el marcado de platos y las funciones `publico_*` que puede
 > ejecutar un visitante sin cuenta (y nada más: ninguna tabla se abre).
+>
+> Lo mismo con las migraciones siguientes, en orden y cada una antes de desplegar la versión que la usa:
+> `20261005000011_avisos_push.sql` y `20261005000012_limpieza_avisos.sql`.
 
 ### Antes de enseñarla (lista rápida)
 

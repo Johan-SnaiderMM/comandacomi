@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { ejecutar } from "@/lib/datos/llamar";
-import type { Resultado } from "@/lib/errores";
+import { redirect, unstable_rethrow } from "next/navigation";
+import { consultar, ejecutar } from "@/lib/datos/llamar";
+import { ErrorApp, MENSAJE_GENERICO, type Resultado } from "@/lib/errores";
 import { esquemaCategoria, esquemaDisponibilidad, esquemaNombreRestaurante, esquemaProducto } from "@/lib/esquemas/menu";
 
 function refrescar() {
@@ -55,13 +55,23 @@ export async function cambiarDisponibilidad(productoId: string, disponible: bool
 
 /**
  * Borra lo creado en la demo, vuelve a cargar los datos de ejemplo y le pone el nombre del local que se va a visitar.
- * Solo restaurantes de demostración.
+ * Solo restaurantes de demostración. También da de baja los avisos de los celulares que los activaron en la visita
+ * anterior; `endpointDeEsteCelular` (si tiene avisos) es el único que se conserva: el de quien enseña la demo.
  */
-export async function reiniciarDemo(nombre: string): Promise<Resultado> {
+export async function reiniciarDemo(nombre: string, endpointDeEsteCelular: string | null = null): Promise<Resultado> {
   const parsed = esquemaNombreRestaurante.safeParse(nombre);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa el nombre." };
-  const r = await ejecutar("reiniciar_demo", { p_nombre: parsed.data });
-  if (!r.ok) return r;
+  const conservar = typeof endpointDeEsteCelular === "string" && endpointDeEsteCelular.length <= 800 ? endpointDeEsteCelular : null;
+  try {
+    await consultar("reiniciar_demo", { p_nombre: parsed.data, p_conservar_endpoint: conservar });
+  } catch (e) {
+    unstable_rethrow(e);
+    // La base todavía no tiene la migración 12 (no conoce el parámetro nuevo): se reinicia como antes, sin tocar avisos.
+    const sinMigracion = e instanceof ErrorApp && (e.codigo === "PGRST202" || e.codigo === "42883");
+    if (!sinMigracion) return { ok: false, error: e instanceof ErrorApp ? e.message : MENSAJE_GENERICO };
+    const r = await ejecutar("reiniciar_demo", { p_nombre: parsed.data });
+    if (!r.ok) return r;
+  }
   refrescar();
   redirect("/inicio?reiniciada=1");
 }

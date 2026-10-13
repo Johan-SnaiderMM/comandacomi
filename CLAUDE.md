@@ -29,7 +29,13 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   ni `useRouter` directos) para que sirvan también en `/sc`. Un tipo de operación nuevo toca: `lib/sync/tipos.ts`, `vista.ts`,
   `describir.ts`, `lib/esquemas/operacion.ts`, el `case` de `aplicar_operacion` (migración nueva) y la prueba
   `src/test/contrato-operaciones.test.ts`. Antes de dar por buena una de esas piezas corre `npm run e2e`.
+  `aplicarOperacion` distingue el rechazo de la base (definitivo: queda "con problema") del fallo pasajero
+  (`reintentable`, ver `esFalloPasajero` en `lib/errores.ts`: se reintenta solo, con tope). Con la red caída (`sinRed`)
+  el `Motor` no hace esperar a nadie: guarda de una vez y sube por detrás.
 - Pedidos hechos sin señal llevan número provisional negativo: mostrar siempre con `numeroVisible()`.
+- El pedido a medio armar (el del personal y el carrito del cliente) NO vive en el estado de la pantalla: vive en
+  `src/lib/borrador-local.ts` (memoria + localStorage, se vence solo, se borra al enviar y al salir de la sesión), para
+  que salir de la pantalla o recargar no lo borre. Al retomarlo se pone al día con `reconciliarConMenu`.
 - Pedidos en línea y plancha (lo que ve el cliente sin cuenta): los visitantes SOLO ejecutan funciones SQL `publico_*`
   (la única familia abierta a `anon`; `fn_aplicar_permisos` las concede por el prefijo y una prueba fija la lista).
   Se llaman desde el servidor con `consultarPublico`/`ejecutarPublico` (`lib/datos/llamar.ts`), nunca con tablas ni
@@ -41,6 +47,8 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   `npm run e2e:clientes`.
 - No agregar lo aplazado: facturación electrónica, inventario con recetas, gráficas, WhatsApp automático, impresión
   térmica, pagos en línea, multi-sede, costo de domicilio por zona. Avisos push (`lib/push/`): la llave privada VAPID
-  es solo del servidor; los avisos se envían con `after()` y nunca deben hacer fallar la acción que los dispara.
+  es solo del servidor; los avisos se envían con `after()` y nunca deben hacer fallar la acción que los dispara. Un
+  celular deja de recibirlos al salir de la sesión y al reiniciar la demo (salvo el que reinicia): no dejar caminos
+  por los que un celular siga suscrito sin que nadie del equipo lo use.
 - No hacer push ni despliegues, ni tocar servicios externos, sin avisar antes. Commits pequeños están bien.
 - Referencia de patrones (NO copiar módulos de taller ni su auto-deploy): `C:\Users\johan\Desktop\Polo Air Cool`.

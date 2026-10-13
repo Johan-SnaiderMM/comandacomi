@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { HojaInferior } from "@/components/ui/hoja-inferior";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { suscripcionActual } from "@/lib/push/cliente";
 
 /**
  * Reiniciar demo: borra lo creado en la demo (pedidos, gastos, cuentas, cambios al menú), le pone el nombre del local
@@ -22,7 +23,9 @@ export function BotonReiniciar({ className, nombreActual }: { className?: string
   function reiniciar() {
     setError(null);
     empezar(async () => {
-      const r = await reiniciarDemo(nombre); // si sale bien, el servidor redirige a Inicio
+      // Reiniciar da de baja los avisos de los celulares de la visita anterior; el de este celular se conserva.
+      const esteCelular = await suscripcionActual("personal").catch(() => null);
+      const r = await reiniciarDemo(nombre, esteCelular?.endpoint ?? null); // si sale bien, el servidor redirige a Inicio
       if (r && !r.ok) setError(r.error);
     });
   }
@@ -50,6 +53,7 @@ export function BotonReiniciar({ className, nombreActual }: { className?: string
             disabled={pendiente}
           />
           <p className="mt-3 text-base">Se borra todo lo que creaste (pedidos, gastos, cobros, fiado y cambios al menú) y vuelven los datos de ejemplo de los últimos 7 días.</p>
+          <p className="mt-2 text-base">Los demás celulares dejan de recibir avisos de esta demo; el de este celular se conserva.</p>
           <p className="mt-2 text-base font-bold">Esto no se puede deshacer.</p>
           {error && (
             <p role="alert" className="mt-2 text-base font-bold text-aji">

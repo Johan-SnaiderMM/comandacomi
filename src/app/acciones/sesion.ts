@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { bd } from "@/lib/datos/bd";
+import { ejecutar } from "@/lib/datos/llamar";
 import { destinoDeEntrada } from "@/lib/destinos";
 
 export type EstadoEntrada = { error: string | null };
@@ -23,7 +24,15 @@ export async function entrarDemo(_anterior: EstadoEntrada, formulario?: FormData
   redirect(destinoDeEntrada(formulario?.get("ir")?.toString()) ?? "/inicio");
 }
 
-export async function salirDemo(): Promise<void> {
+/**
+ * Salir. Si el celular tenía avisos activos (campo `endpoint` del formulario) se dan de baja primero: al salir, ese
+ * celular ya no es de nadie del equipo y no debe seguir recibiendo pedidos con nombres de clientes.
+ */
+export async function salirDemo(formulario?: FormData): Promise<void> {
+  const endpoint = formulario?.get("endpoint");
+  if (typeof endpoint === "string" && endpoint.length > 0 && endpoint.length <= 800) {
+    await ejecutar("quitar_suscripcion_push", { p_endpoint: endpoint }); // si falla, salir sigue igual
+  }
   await (await bd()).salir();
   redirect("/");
 }

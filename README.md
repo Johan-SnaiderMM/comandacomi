@@ -19,7 +19,42 @@ grandes solo se centra una columna.
 5. **Fiado**: quién debe, **Abonar**, **Recordar** por WhatsApp.
 6. **Más → Gastos del día**: registrar un gasto (monto → categoría → guardar, foto opcional).
 7. **Más → Cierre del día**: contar el efectivo, ver la diferencia, cerrar y **Enviar resumen por WhatsApp**.
-8. **Más → Reiniciar demo**: vuelve todo a los datos de ejemplo.
+8. **Más → Pedidos en línea**: el enlace (y el QR) para que los clientes pidan solos desde su celular. Ábrelo en otro
+   celular: arma un pedido a domicilio y envíalo. En el tuyo suena y parpadea **¡Pedido nuevo!**: **Aceptar** (con tiempo
+   estimado) o **Rechazar** (con motivo).
+9. **Más → Plancha** (en otro celular o tableta): el pedido aceptado aparece plato por plato; toca cada plato para
+   marcarlo **listo** (o **Todo listo**). El cliente lo ve avanzar en su pantalla, en vivo.
+10. **Más → Reiniciar demo**: vuelve todo a los datos de ejemplo.
+
+## Pedidos en línea y plancha
+
+El cliente **no necesita cuenta ni app**: abre el enlace del restaurante (`/pedir/<nombre-del-local>`), arma su pedido,
+elige **recoger** o **domicilio** y pone su nombre, celular y dirección. Después sigue su pedido en `/seguimiento/<código>`.
+
+```
+Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos) ──▶ Plancha ──▶ listo ──▶ entregado
+   (público)        alerta sonora          o RECHAZA con motivo          plato por plato     (el cliente lo ve)
+```
+
+- **Nada llega a la cocina sin que el dueño lo acepte.** Un pedido en línea queda "por confirmar" (no entra a Pendientes
+  ni a la plancha ni se puede cobrar) hasta que alguien lo acepta; si lo rechaza, el cliente ve el motivo.
+- **Alerta para que no pase desapercibido:** franja grande que parpadea rojo/amarillo, sonido y vibración repetidos y el
+  título de la pestaña titila, en cualquier pantalla con sesión. *Silenciar* la deja como una franja pequeña hasta que se
+  atienda. **Funciona con la app abierta**; con la app cerrada hace falta una notificación push (aplazada).
+- **Plancha** (`/plancha`): pedidos por preparar, del más viejo al más nuevo, con la espera en colores (verde/amarillo/rojo),
+  tipo (mesa, domicilio, para llevar) y cada plato como un botón grande. Cuando todos los platos están listos, el pedido
+  pasa solo a "listo". Mantiene la pantalla encendida y suena con cada pedido nuevo. *Deshacer* corrige un error de dedo.
+- **"Tiempo real" = consulta cada pocos segundos** (seguimiento 4 s, que se espacia si lleva rato igual; alerta 5 s;
+  plancha 4 s). Se detiene sola cuando el pedido termina o la pantalla no está a la vista. Es lo que permite probarlo en
+  el modo local sin servicios externos.
+- **El dueño abre o cierra** la recepción desde *Más → Pedidos en línea*. Cerrada, el cliente ve el menú pero no puede
+  enviar. El enlace es fijo (sale del nombre del local) y se actualiza si renombras la demo.
+- **Pagos:** el cliente paga al recibir (efectivo o Nequi); el cobro se hace en la app como cualquier pedido.
+- **Antiabuso (sin servicios externos, en la base):** como máximo 25 pedidos sin confirmar por restaurante, 3 por
+  teléfono cada 30 min y 10 por minuto; 30 platos y 20 unidades por plato; campo trampa para programas. El cliente no puede
+  poner precios: la base los toma del menú.
+- **Probarlo:** `npm run e2e:clientes` abre tres celulares simulados en Chrome (cliente, dueño y plancha) y recorre
+  pedir → alerta → aceptar → marcar platos → entregado, más rechazo, cancelación, cerrado y permisos.
 
 ## Cómo correrla en tu computador (sin cuenta de Supabase)
 
@@ -99,12 +134,19 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
    **No** definas `DEMO_BD` en Vercel (el modo local está bloqueado en producción de todos modos).
 8. Despliega, abre la URL en el celular, **Chrome → menú → Instalar aplicación**.
 
+> **Si la demo ya estaba en Supabase** (de antes de los pedidos en línea): en el *SQL Editor* ejecuta solo
+> `supabase/migrations/20261005000010_pedidos_clientes.sql` ANTES de desplegar la versión nueva. Agrega el enlace
+> público de cada restaurante, el estado "por confirmar", el marcado de platos y las funciones `publico_*` que puede
+> ejecutar un visitante sin cuenta (y nada más: ninguna tabla se abre).
+
 ### Antes de enseñarla (lista rápida)
 
 - [ ] Abre la URL en tu celular y toca **Entrar a la demo**: debe llegar a Inicio con números.
 - [ ] Instálala como app y ábrela desde el ícono (debe abrir en pantalla completa).
 - [ ] Haz un pedido de punta a punta y toca **Más → Reiniciar demo** para dejarla limpia.
 - [ ] Prueba con mala señal / modo avión: el cascarón debe abrir (los datos nuevos necesitan red).
+- [ ] **Pedidos en línea:** abre *Más → Pedidos en línea*, copia el enlace, ábrelo en otro celular y haz un pedido;
+      en el tuyo debe sonar la alerta. Toca una vez la pantalla antes (el navegador no deja sonar sin un toque).
 
 ## Scripts
 
@@ -119,13 +161,16 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 | `npm run esquema` | Regenera `supabase/esquema-completo.sql` desde las migraciones |
 | `npm run iconos` | Regenera los íconos de la PWA (`public/icons`) |
 | `npm run e2e` | Prueba de punta a punta del trabajo sin conexión (Chrome real; ~3 min) |
+| `npm run e2e:clientes` | Prueba de punta a punta de pedidos en línea y plancha (3 celulares simulados; ~3 min) |
 
 ## Estructura
 
 ```
 src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fiado, Más, Gastos, Menú
-src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente
-src/app/acciones/     Acciones del servidor: sync.ts (aplicarOperacion/obtenerSnapshot) y anulaciones; validan con Zod y llaman funciones SQL
+src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente, Plancha
+src/app/(publico)/    Lo que ve el CLIENTE sin cuenta: /pedir/<local> (menú y pedido) y /seguimiento/<código>
+src/app/api/          Consultas de las pantallas "en vivo": seguimiento (público, por código), plancha y por-confirmar (con sesión)
+src/app/acciones/     Acciones del servidor: sync.ts (aplicarOperacion/obtenerSnapshot), clientes.ts, plancha.ts, publico.ts; validan con Zod y llaman funciones SQL
 src/app/sc/           App sin conexión: una página estática con los mismos componentes y la copia local
 src/lib/sync/         Trabajo sin conexión: tipos, vista local, motor de la cola, acciones del celular
 src/app/api/foto/     Sirve las fotos de gastos solo con sesión y solo del propio restaurante
@@ -159,15 +204,22 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 - **Aislamiento entre restaurantes demostrado con pruebas** (`src/test/aislamiento.test.ts`, Postgres real): un
   usuario del restaurante A no puede leer, insertar, modificar, anular ni subir fotos en el B, por ninguna tabla ni
   función; sin sesión no se ejecuta ninguna función ni se lee ninguna tabla.
+- **Lo que puede hacer alguien SIN cuenta** se limita a cuatro funciones SQL (`publico_menu`, `publico_crear_pedido`,
+  `publico_ver_pedido`, `publico_cancelar_pedido`); una prueba falla si aparece otra ejecutable por `anon` y ninguna
+  tabla se puede leer sin sesión. El seguimiento se consulta por un código aleatorio (uuid) imposible de adivinar, que
+  devuelve **solo ese pedido** y nunca datos internos (quién lo atendió, cobros, otros pedidos). El enlace no se indexa
+  (`noindex`) y no sale en el `Referer` hacia otros sitios.
 - **Recordar** (fiado) abre WhatsApp con el teléfono que se guardó al crear el cliente. Los clientes de ejemplo de
   la demo traen teléfonos inventados (bloque +57 300 000 0xxx, podrían ser de alguien real): a esos el enlace no
   les pone número y eliges tú a quién enviarlo. El resumen del cierre tampoco lleva número.
 
 ## Qué NO hace (aplazado a propósito)
 
-Facturación electrónica, pantalla de cocina en tiempo real, recetas/inventario con descuento, gráficas, WhatsApp
-automático u oficial, impresión térmica, pagos en línea y multi-sede. (Sin conexión funciona el trabajo del mostrador;
-el cierre, el menú y las anulaciones esperan a tener señal.)
+Facturación electrónica, recetas/inventario con descuento, gráficas, WhatsApp automático u oficial, impresión
+térmica, pagos en línea y multi-sede. Tampoco: notificaciones push con la app cerrada (la alerta de pedidos en línea
+necesita la app abierta), costo de domicilio por zona, seguimiento del repartidor en mapa, fotos de los platos ni
+CAPTCHA (el antiabuso va en la base). (Sin conexión funciona el trabajo del mostrador; el cierre, el menú, las
+anulaciones y los pedidos en línea esperan a tener señal.)
 
 ## Problemas frecuentes
 

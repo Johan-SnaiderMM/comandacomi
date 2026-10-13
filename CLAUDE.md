@@ -30,7 +30,16 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   `describir.ts`, `lib/esquemas/operacion.ts`, el `case` de `aplicar_operacion` (migración nueva) y la prueba
   `src/test/contrato-operaciones.test.ts`. Antes de dar por buena una de esas piezas corre `npm run e2e`.
 - Pedidos hechos sin señal llevan número provisional negativo: mostrar siempre con `numeroVisible()`.
-- No agregar lo aplazado: facturación electrónica, cocina en tiempo real, inventario con recetas, gráficas,
-  WhatsApp automático, impresión térmica, pagos en línea, multi-sede.
+- Pedidos en línea y plancha (lo que ve el cliente sin cuenta): los visitantes SOLO ejecutan funciones SQL `publico_*`
+  (la única familia abierta a `anon`; `fn_aplicar_permisos` las concede por el prefijo y una prueba fija la lista).
+  Se llaman desde el servidor con `consultarPublico`/`ejecutarPublico` (`lib/datos/llamar.ts`), nunca con tablas ni
+  `service_role`. Un pedido con `origen = 'cliente'` NO está en cocina (`en_cocina`) hasta que el personal lo acepta
+  (`confirmar_pedido_cliente`): toda función nueva que liste o cuente pedidos de cocina debe filtrar por `en_cocina`.
+  El seguimiento va por `token_seguimiento` (uuid) y devuelve solo ese pedido y solo lo que el cliente puede ver. Las
+  páginas públicas viven en `src/app/(publico)/` (ver `lib/rutas-publicas.ts`: ahí no corren ProveedorSync ni el
+  service worker). "Tiempo real" = consulta periódica (GET `no-store`), no websockets. Cambios en esta parte: corre
+  `npm run e2e:clientes`.
+- No agregar lo aplazado: facturación electrónica, inventario con recetas, gráficas, WhatsApp automático, impresión
+  térmica, pagos en línea, multi-sede, notificaciones push, costo de domicilio por zona.
 - No hacer push ni despliegues, ni tocar servicios externos, sin avisar antes. Commits pequeños están bien.
 - Referencia de patrones (NO copiar módulos de taller ni su auto-deploy): `C:\Users\johan\Desktop\Polo Air Cool`.

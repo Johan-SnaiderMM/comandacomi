@@ -58,6 +58,13 @@ export function fechaRelativa(fecha: string, hoy: string = hoyBogota()): string 
   return fechaCorta(fecha);
 }
 
+/** '2026-10-13' + (-1) -> '2026-10-12'. Cruza meses y años. */
+export function sumarDias(fecha: string, dias: number): string {
+  const f = fechaUtc(fecha);
+  f.setUTCDate(f.getUTCDate() + dias);
+  return f.toISOString().slice(0, 10);
+}
+
 /** Días completos entre dos fechas 'YYYY-MM-DD' (hasta - desde). */
 export function diasEntre(desde: string, hasta: string): number {
   return Math.round((fechaUtc(hasta).getTime() - fechaUtc(desde).getTime()) / 86_400_000);

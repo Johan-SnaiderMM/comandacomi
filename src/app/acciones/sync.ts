@@ -43,8 +43,11 @@ export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOpera
   // Avisos push con la app cerrada. Un reintento de la misma operación repite el aviso, pero lleva la misma etiqueta:
   // en el celular reemplaza al anterior en vez de apilarse.
   const args = construido.args;
-  if (tipo === "crear_pedido" && typeof args.p_id === "string") after(() => alEntrarACocina(args.p_id as string));
-  if (tipo === "agregar_items" && typeof args.p_pedido_id === "string") after(() => alAgregarPlatos(args.p_pedido_id as string));
+  // `para_cocina` (migración 14): cuántas de las líneas nuevas hay que cocinar. Solo bebidas = no se avisa a la parrilla.
+  const paraCocina = (resultado as { para_cocina?: unknown } | null)?.para_cocina;
+  const vaACocina = typeof paraCocina !== "number" || paraCocina > 0;
+  if (tipo === "crear_pedido" && vaACocina && typeof args.p_id === "string") after(() => alEntrarACocina(args.p_id as string));
+  if (tipo === "agregar_items" && vaACocina && typeof args.p_pedido_id === "string") after(() => alAgregarPlatos(args.p_pedido_id as string));
   if (tipo === "cambiar_estado" && args.p_estado === "listo" && typeof args.p_pedido_id === "string") after(() => alQuedarListo(args.p_pedido_id as string));
   revalidatePath("/", "layout");
   return { ok: true, datos: resultado };

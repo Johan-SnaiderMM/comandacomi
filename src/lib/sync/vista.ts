@@ -23,10 +23,15 @@ export function itemsDeEnvio(s: Snapshot, items: ItemEnvio[], prefijoId: string)
       .filter((m) => it.adiciones.includes(m.id))
       .map((m) => ({ id: m.id, nombre: m.nombre, precio: m.precio_extra }))
       .sort((a, b) => a.precio - b.precio || a.nombre.localeCompare(b.nombre));
-    filas.push({ id: `${prefijoId}:${i}`, nombre: producto.nombre, cantidad: it.cantidad, notas: it.notas.trim() || null, adiciones });
+    // Una categoría puede decir que sus platos no pasan por la cocina (bebidas); si la copia no lo trae, se asume que sí.
+    const sePrepara = s.menu.categorias.find((c) => c.id === producto.categoria_id)?.se_prepara !== false;
+    filas.push({ id: `${prefijoId}:${i}`, nombre: producto.nombre, cantidad: it.cantidad, notas: it.notas.trim() || null, adiciones, ...(sePrepara ? {} : { se_prepara: false }) });
   });
   return filas;
 }
+
+/** ¿Alguna de estas líneas hay que cocinarla? (igual que `para_cocina` en la base). */
+const hayQueCocinar = (items: ItemPedidoResumen[]) => items.some((i) => i.se_prepara !== false);
 
 /** Total de unas líneas con los precios de la copia del menú. */
 export function totalDeItems(s: Snapshot, items: ItemEnvio[]): number {
@@ -61,7 +66,7 @@ export function aplicarOperacion(s: Snapshot, op: Operacion): Snapshot {
         id: d.id,
         numero: -(op.numeroLocal ?? 1),
         tipo: d.tipo,
-        estado: "pendiente",
+        estado: hayQueCocinar(items) ? "pendiente" : "listo", // solo bebidas: no hay nada que cocinar
         created_at: op.ocurridoEn,
         total: totalDeItems(s, d.items),
         cobrado: false,
@@ -87,7 +92,9 @@ export function aplicarOperacion(s: Snapshot, op: Operacion): Snapshot {
       if (mas.length === 0) return s;
       const actualizado: PedidoPendiente = {
         ...previo,
-        estado: "pendiente", // lo nuevo hay que prepararlo
+        // Lo nuevo hay que prepararlo; si no se cocina (una bebida), el pedido no vuelve a la cocina: a lo sumo, si ya
+        // estaba entregado, queda listo para entregar eso.
+        estado: hayQueCocinar(mas) ? "pendiente" : previo.estado === "entregado" ? "listo" : previo.estado,
         total: previo.total + totalDeItems(s, d.items),
         items: [...previo.items, ...mas],
       };

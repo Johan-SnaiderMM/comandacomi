@@ -438,7 +438,7 @@ describe("plancha: plato por plato", () => {
     const p = await pedidoAceptado([
       { producto_id: plato(menuA, "Salchipapa sencilla").id, cantidad: 1 },
       { producto_id: plato(menuA, "Perro caliente").id, cantidad: 2 },
-      { producto_id: plato(menuA, "Gaseosa personal").id, cantidad: 1 },
+      { producto_id: plato(menuA, "Arepa con todo").id, cantidad: 1 },
     ]);
     const a = await rpc<{ estado: string; items_listos: number; items_total: number }>(db, A.userId, "marcar_item_listo", { p_item_id: p.itemIds[0] });
     expect(a).toMatchObject({ estado: "pendiente", items_listos: 1, items_total: 3 });
@@ -492,10 +492,10 @@ describe("plancha: plato por plato", () => {
   it("agregar platos a un pedido listo: vuelve a pendiente y solo lo nuevo queda por preparar", async () => {
     const p = await pedidoAceptado(unPerroCaliente(menuA));
     await rpc(db, A.userId, "marcar_item_listo", { p_item_id: p.itemIds[0] });
-    await rpc(db, A.userId, "agregar_items_pedido", { p_pedido_id: p.id, p_items: [{ producto_id: plato(menuA, "Gaseosa personal").id, cantidad: 1 }] });
+    await rpc(db, A.userId, "agregar_items_pedido", { p_pedido_id: p.id, p_items: [{ producto_id: plato(menuA, "Arepa con todo").id, cantidad: 1 }] });
     const s = await seguir(p.token);
     expect(s?.pedido.etapa).toBe("preparando");
-    expect(s?.items.map((i) => [i.nombre, i.listo])).toEqual([["Perro caliente", true], ["Gaseosa personal", false]]);
+    expect(s?.items.map((i) => [i.nombre, i.listo])).toEqual([["Perro caliente", true], ["Arepa con todo", false]]);
   });
 
   it("un pedido entregado ya no está en la plancha ni se puede marcar", async () => {
@@ -525,10 +525,10 @@ describe("plancha: plato por plato", () => {
   it("un plato anulado no cuenta para saber si el pedido está completo", async () => {
     const p = await pedidoAceptado([
       { producto_id: plato(menuA, "Perro caliente").id, cantidad: 1 },
-      { producto_id: plato(menuA, "Gaseosa personal").id, cantidad: 1 },
+      { producto_id: plato(menuA, "Arepa con todo").id, cantidad: 1 },
     ]);
     await rpc(db, A.userId, "marcar_item_listo", { p_item_id: p.itemIds[0] });
-    expect((await estadoDe(p.id)).estado).toBe("pendiente"); // falta la gaseosa
+    expect((await estadoDe(p.id)).estado).toBe("pendiente"); // falta la arepa
     await rpc(db, A.userId, "anular_item_pedido", { p_item_id: p.itemIds[1], p_motivo: "Se acabó" });
     expect((await estadoDe(p.id)).estado).toBe("listo"); // ya no queda nada por preparar
     const r = await rpc<{ estado: string; items_total: number }>(db, A.userId, "marcar_item_listo", { p_item_id: p.itemIds[0] });

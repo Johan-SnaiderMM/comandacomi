@@ -13,18 +13,19 @@ import { cn } from "@/lib/utils";
 
 type Categoria = MenuAdmin["categorias"][number];
 
-/** Crear o editar una categoría (nombre, emoji y si se muestra al tomar pedidos). */
+/** Crear o editar una categoría: nombre, emoji, si se muestra al tomar pedidos y si sus platos pasan por la cocina. */
 export function HojaCategoria({ categoria, onCerrar }: { categoria: Categoria | null; onCerrar: () => void }) {
   const [nombre, setNombre] = useState(categoria?.nombre ?? "");
   const [icono, setIcono] = useState(categoria?.icono ?? ICONOS_CATEGORIA[0]);
   const [activa, setActiva] = useState(categoria?.activa ?? true);
+  const [sePrepara, setSePrepara] = useState(categoria?.se_prepara ?? true);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
 
   function guardar() {
     setError(null);
     empezar(async () => {
-      const r = await guardarCategoria({ id: categoria?.id ?? null, nombre, icono, activa });
+      const r = await guardarCategoria({ id: categoria?.id ?? null, nombre, icono, activa, sePrepara });
       if (!r.ok) {
         setError(r.error);
         return;
@@ -62,6 +63,16 @@ export function HojaCategoria({ categoria, onCerrar }: { categoria: Categoria | 
         <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-tinta px-3 py-1">
           <span className="text-base font-bold">¿Se muestra al tomar pedidos?</span>
           <Interruptor activo={activa} onCambio={setActiva} etiqueta="Mostrar la categoría" textoActivo="Sí" textoInactivo="Oculta" />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-tinta px-3 py-1">
+          <span className="text-base font-bold leading-tight">
+            ¿Se prepara en la cocina?
+            <span className="block text-base font-normal text-tinta-2">
+              {sePrepara ? "Sí: sus platos salen en la plancha." : "No (bebidas, empacados): se entregan de una vez y no salen en la plancha."}
+            </span>
+          </span>
+          <Interruptor activo={sePrepara} onCambio={setSePrepara} etiqueta="Se prepara en la cocina" textoActivo="Sí" textoInactivo="No" />
         </div>
 
         {error && (

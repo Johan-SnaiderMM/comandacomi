@@ -89,8 +89,8 @@ describe("estado, agregar platos y pendientes", () => {
     await rpc(db, U, "cambiar_estado_pedido", { p_pedido_id: p.id, p_estado: "entregado" });
     expect((await enLista())?.estado).toBe("entregado"); // sigue en la lista porque falta cobrar
 
-    const mas = await rpc<{ total: number }>(db, U, "agregar_items_pedido", { p_pedido_id: p.id, p_items: [{ producto_id: plato("Gaseosa personal").id }] });
-    expect(mas.total).toBe(12000 + 3500);
+    const mas = await rpc<{ total: number }>(db, U, "agregar_items_pedido", { p_pedido_id: p.id, p_items: [{ producto_id: plato("Perro caliente").id }] });
+    expect(mas.total).toBe(12000 + 9000);
     expect((await enLista())?.estado).toBe("pendiente");
     await expect(rpc(db, U, "cambiar_estado_pedido", { p_pedido_id: p.id, p_estado: "volando" })).rejects.toThrow(/estado no es válido/);
   });

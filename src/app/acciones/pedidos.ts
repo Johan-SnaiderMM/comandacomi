@@ -17,6 +17,19 @@ export async function anularPedido(id: string, motivo: string): Promise<Resultad
   return { ok: true };
 }
 
+/**
+ * Quita UN plato de un pedido que todavía no se cobra (queda anulado con su motivo; el total se recalcula en la base).
+ * El último plato no se quita: para eso se anula el pedido completo.
+ */
+export async function quitarPlato(itemId: string, motivo: string): Promise<Resultado<{ total: number }>> {
+  const parsed = esquemaAnulacion.safeParse({ id: itemId, motivo });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  const r = await ejecutar<{ total: number }>("anular_item_pedido", { p_item_id: parsed.data.id, p_motivo: parsed.data.motivo });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return r;
+}
+
 export async function anularCobro(id: string, motivo: string): Promise<Resultado> {
   const parsed = esquemaAnulacion.safeParse({ id, motivo });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };

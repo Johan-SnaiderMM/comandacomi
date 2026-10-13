@@ -12,7 +12,7 @@ import type { EstadoPedido, TipoPedido } from "@/lib/datos/tipos";
 import { validarCobro, type MedioAbono, type PagoPlan } from "@/lib/dinero";
 import { MENSAJE_GENERICO, type Resultado } from "@/lib/errores";
 import { normalizarTelefono } from "@/lib/telefono";
-import { anularCobro as anularCobroEnServidor, anularPedido as anularPedidoEnServidor } from "@/app/acciones/pedidos";
+import { anularCobro as anularCobroEnServidor, anularPedido as anularPedidoEnServidor, quitarPlato as quitarPlatoEnServidor } from "@/app/acciones/pedidos";
 import { obtenerMotor } from "./cliente";
 import type { DatosOperacion, ItemEnvio, TipoOperacion } from "./tipos";
 
@@ -166,3 +166,9 @@ async function soloConSenal(accion: () => Promise<Resultado>): Promise<Resultado
 
 export const anularPedido = (id: string, motivo: string) => soloConSenal(() => anularPedidoEnServidor(id, motivo));
 export const anularCobro = (id: string, motivo: string) => soloConSenal(() => anularCobroEnServidor(id, motivo));
+/** Quitar un plato de un pedido sin cobrar (anular esa línea). También necesita señal. */
+export const quitarPlato = (itemId: string, motivo: string) =>
+  soloConSenal(async () => {
+    const r = await quitarPlatoEnServidor(itemId, motivo);
+    return r.ok ? { ok: true } : r;
+  });

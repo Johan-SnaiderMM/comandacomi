@@ -82,6 +82,34 @@ describe("agregar_items y cambiar_estado", () => {
     expect(p.items).toHaveLength(3);
   });
 
+  describe("lo que no pasa por la cocina (categoría con se_prepara: false)", () => {
+    /** La copia del menú con Bebidas marcada como "no se prepara". */
+    const conBebidasSinCocina = () => {
+      const s = snapshotDeEjemplo();
+      return { ...s, menu: { ...s.menu, categorias: s.menu.categorias.map((c) => (c.id === ID.catBebida ? { ...c, se_prepara: false } : c)) } };
+    };
+    const unJugo = [{ productoId: ID.jugo, cantidad: 1, adiciones: [], notas: "" }];
+    const agregarJugo: Operacion<"agregar_items"> = { clave: "a2", tipo: "agregar_items", ocurridoEn: AHORA, datos: { pedidoId: ID.pedidoViejo, items: unJugo } };
+
+    it("un pedido de solo bebidas nace listo; con un plato de cocina, pendiente", () => {
+      const soloBebida = aplicarOperacion(conBebidasSinCocina(), crear({ items: unJugo }));
+      const p = soloBebida.pendientes.find((x) => x.id === NUEVO)!;
+      expect(p.estado).toBe("listo");
+      expect(p.items[0].se_prepara).toBe(false);
+
+      const mixto = aplicarOperacion(conBebidasSinCocina(), crear({ items: [...unJugo, { productoId: ID.perro, cantidad: 1, adiciones: [], notas: "" }] }));
+      expect(mixto.pendientes.find((x) => x.id === NUEVO)!.estado).toBe("pendiente");
+    });
+
+    it("agregar solo una bebida no devuelve el pedido a la cocina; si ya estaba entregado, queda listo para entregarla", () => {
+      const listo = aplicarOperacion(conBebidasSinCocina(), agregarJugo);
+      expect(listo.pendientes[0]).toMatchObject({ estado: "listo", total: 23000 + 5000 });
+
+      const entregado = aplicarOperacion(conBebidasSinCocina(), { clave: "e0", tipo: "cambiar_estado", ocurridoEn: AHORA, datos: { pedidoId: ID.pedidoViejo, estado: "entregado" } });
+      expect(aplicarOperacion(entregado, agregarJugo).pendientes[0].estado).toBe("listo");
+    });
+  });
+
   it("entregado y cobrado sale de la lista; entregado sin cobrar se queda", () => {
     const entregar: Operacion<"cambiar_estado"> = { clave: "e1", tipo: "cambiar_estado", ocurridoEn: AHORA, datos: { pedidoId: ID.pedidoViejo, estado: "entregado" } };
     const v = aplicarOperacion(snapshotDeEjemplo(), entregar);

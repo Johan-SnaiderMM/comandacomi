@@ -12,7 +12,7 @@ import type { EstadoPedido, PedidoCobrado, PedidoPendiente, TipoPedido } from "@
 import { ETIQUETA_MEDIO, formatearPesos } from "@/lib/dinero";
 import { horaCorta } from "@/lib/fechas";
 import { Enlace, useIr } from "@/lib/navegacion";
-import { anularCobro, anularPedido, cambiarEstado } from "@/lib/sync/acciones";
+import { anularCobro, anularPedido, cambiarEstado, quitarPlato } from "@/lib/sync/acciones";
 import { useEstadoSync } from "@/lib/sync/cliente";
 import { numeroVisible } from "@/lib/sync/numero";
 import { pendientesConCola } from "@/lib/sync/vista";
@@ -64,6 +64,9 @@ export function ListaPendientes({
   const [avisoEnviado, setAvisoEnviado] = useState(enviado);
   const [menuDe, setMenuDe] = useState<PedidoPendiente | null>(null);
   const [anulando, setAnulando] = useState<{ tipo: "pedido" | "cobro"; id: string; numero: number } | null>(null);
+  // Quitar un plato: primero se elige cuál (de la lista del pedido) y después se pide el motivo.
+  const [quitarDe, setQuitarDe] = useState<PedidoPendiente | null>(null);
+  const [platoAQuitar, setPlatoAQuitar] = useState<{ id: string; nombre: string; cantidad: number; numero: number } | null>(null);
   const [, empezar] = useTransition();
 
   const { ops } = useEstadoSync();
@@ -181,11 +184,16 @@ export function ListaPendientes({
                   )}
                   {p.notas && <p className="mt-2 text-base font-bold">“{p.notas}”</p>}
 
-                  {p.estado === "pendiente" && p.items.some((i) => i.listo) && !p.items.every((i) => i.listo) && (
-                    <p className="mt-2 text-base font-bold text-listo">
-                      {p.items.filter((i) => i.listo).length} de {p.items.length} platos listos
-                    </p>
-                  )}
+                  {/* El avance cuenta solo lo que se cocina: una gaseosa no tiene nada que prepararle. */}
+                  {(() => {
+                    const deCocina = p.items.filter((i) => i.se_prepara !== false);
+                    const listos = deCocina.filter((i) => i.listo).length;
+                    return p.estado === "pendiente" && listos > 0 && listos < deCocina.length ? (
+                      <p className="mt-2 text-base font-bold text-listo">
+                        {listos} de {deCocina.length} platos listos
+                      </p>
+                    ) : null;
+                  })()}
 
                   <ul className="mt-3 space-y-1.5 border-t-2 border-dashed border-tinta/30 pt-3">
                     {p.items.map((i) => (
@@ -282,8 +290,22 @@ export function ListaPendientes({
                 {ANTERIOR[menuDe.estado]!.etiqueta}
               </Button>
             )}
+            {/* Con un solo plato no hay qué quitar: se anula el pedido completo. */}
+            {!menuDe.cobrado && menuDe.items.length > 1 && !enCola.has(menuDe.id) && (
+              <Button
+                variante="secundario"
+                tamano="lg"
+                bloque
+                onClick={() => {
+                  setQuitarDe(menuDe);
+                  setMenuDe(null);
+                }}
+              >
+                Quitar un plato
+              </Button>
+            )}
             {enCola.has(menuDe.id) ? (
-              <p className="text-base text-tinta-2">Este pedido tiene cambios por subir: cuando se suban podrás anularlo.</p>
+              <p className="text-base text-tinta-2">Este pedido tiene cambios por subir: cuando se suban podrás anularlo o quitarle platos.</p>
             ) : (
               <Button
                 variante="peligro"
@@ -299,6 +321,48 @@ export function ListaPendientes({
             )}
           </div>
         </HojaInferior>
+      )}
+
+      {quitarDe && (
+        <HojaInferior titulo={`¿Qué plato quitas del ${numeroVisible(quitarDe.numero)}?`} onCerrar={() => setQuitarDe(null)}>
+          <p className="text-base text-tinta-2">Sale de la cuenta y de la cocina. No se borra: queda registrado con el motivo.</p>
+          <ul className="mt-3 space-y-2">
+            {quitarDe.items.map((i) => (
+              <li key={i.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlatoAQuitar({ id: i.id, nombre: i.nombre, cantidad: i.cantidad, numero: quitarDe.numero });
+                    setQuitarDe(null);
+                  }}
+                  className="flex min-h-14 w-full items-center gap-2 rounded-xl border-2 border-tinta bg-papel px-3 py-2 text-left text-lg leading-tight shadow-sello-chico active:translate-y-[2px] active:shadow-none"
+                >
+                  <span className="cifra text-2xl">{i.cantidad}×</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">{i.nombre}</span>
+                    {i.adiciones.length > 0 && <span className="block text-base text-tinta-2">+ {i.adiciones.map((a) => a.nombre).join(", ")}</span>}
+                    {i.notas && <span className="block text-base font-bold">“{i.notas}”</span>}
+                  </span>
+                  <span className="shrink-0 text-base font-bold text-aji underline">Quitar</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </HojaInferior>
+      )}
+
+      {platoAQuitar && (
+        <HojaMotivo
+          titulo={`Quitar ${platoAQuitar.cantidad}× ${platoAQuitar.nombre}`}
+          descripcion={`Se quita del pedido ${numeroVisible(platoAQuitar.numero)} y el total se vuelve a calcular. Queda registrado con el motivo y quién lo quitó.`}
+          confirmar="Quitar el plato"
+          motivosRapidos={["El cliente ya no lo quiso", "Se acabó", "Error al tomarlo"]}
+          onConfirmar={async (motivo) => {
+            const r = await quitarPlato(platoAQuitar.id, motivo);
+            return r.ok ? null : r.error;
+          }}
+          onCerrar={() => setPlatoAQuitar(null)}
+        />
       )}
 
       {anulando && (

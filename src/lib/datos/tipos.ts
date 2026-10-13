@@ -38,6 +38,8 @@ export type ItemPedidoResumen = {
   adiciones: { id: string; nombre: string; precio: number }[];
   /** La plancha ya lo preparó (opcional: copias locales viejas no lo traen). */
   listo?: boolean;
+  /** false = no pasa por la cocina (una gaseosa): no sale en la plancha ni cuenta para "N de M platos listos". */
+  se_prepara?: boolean;
 };
 
 /** De dónde vino el pedido: lo tomó el personal (mostrador) o lo hizo el cliente en línea. */
@@ -129,7 +131,8 @@ export type PedidoCobrado = {
 };
 
 export type MenuParaPedido = {
-  categorias: { id: string; nombre: string; icono: string | null }[];
+  /** `se_prepara: false` = sus platos no pasan por la cocina (falta en copias locales viejas: se asume que sí). */
+  categorias: { id: string; nombre: string; icono: string | null; se_prepara?: boolean }[];
   productos: { id: string; categoria_id: string; nombre: string; precio: number; disponible: boolean }[];
   modificadores: { id: string; categoria_id: string | null; nombre: string; precio_extra: number }[];
   mesas: { id: string; nombre: string; pedido_abierto: string | null }[];
@@ -267,6 +270,8 @@ export type MenuAdmin = {
     icono: string | null;
     orden: number;
     activa: boolean;
+    /** false = sus platos no pasan por la cocina (bebidas): no salen en la plancha. Falta antes de la migración 14. */
+    se_prepara?: boolean;
     productos: { id: string; nombre: string; precio: number; disponible: boolean; orden: number }[];
   }[];
   modificadores: { id: string; categoria_id: string | null; nombre: string; precio_extra: number }[];

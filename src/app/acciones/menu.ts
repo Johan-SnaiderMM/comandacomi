@@ -37,6 +37,7 @@ export async function guardarCategoria(entrada: unknown): Promise<Resultado<{ id
     p_nombre: v.nombre,
     p_icono: v.icono || null,
     p_activa: v.activa,
+    p_se_prepara: v.sePrepara,
   });
   if (!r.ok) return r;
   refrescar();

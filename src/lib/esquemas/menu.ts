@@ -16,6 +16,8 @@ export const esquemaCategoria = z.object({
   nombre: z.string().trim().min(1, "Escribe el nombre de la categoría.").max(40, "El nombre es muy largo (máximo 40 caracteres)."),
   icono: z.string().trim().max(8).default(""),
   activa: z.boolean().default(true),
+  /** false = sus platos no pasan por la cocina (bebidas): no salen en la plancha. */
+  sePrepara: z.boolean().default(true),
 });
 
 /** Nombre del restaurante al reiniciar la demo. */

@@ -78,6 +78,7 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
                 <span aria-hidden>{c.icono}</span>
                 {c.nombre}
                 {!c.activa && <Badge>Oculta</Badge>}
+                {c.se_prepara === false && <Badge>Sin cocina</Badge>}
               </h2>
               {esDueno && (
                 <Button variante="fantasma" tamano="icono" aria-label={`Editar la categoría ${c.nombre}`} onClick={() => setHoja({ tipo: "categoria", categoria: c })}>

@@ -4208,3 +4208,860 @@ as $$
 $$;
 
 select public.fn_aplicar_permisos();
+
+-- >>>>>>>>>> 20261005000014_cocina_sin_bebidas_y_quitar_plato.sql >>>>>>>>>>
+-- =====================================================================
+-- 14 · La plancha solo ve lo que se cocina, y quitar un plato de un pedido
+--
+--   1. Las bebidas salían en la plancha como platos por preparar, y un pedido de "una hamburguesa y una gaseosa" no
+--      quedaba listo hasta que alguien marcara la gaseosa. Ahora cada categoría dice si sus platos SE PREPARAN en la
+--      cocina (por defecto sí). Lo que no se prepara:
+--        · no aparece en la plancha ni cuenta para saber si el pedido ya está listo;
+--        · un pedido que solo trae cosas así nace "listo" (no hay nada que cocinar);
+--        · agregarle solo eso a un pedido no lo devuelve a la cocina.
+--      El dato se copia a cada línea del pedido al venderla (igual que el nombre y el precio): cambiar la categoría
+--      después no altera los pedidos que ya están andando.
+--   2. Quitar un plato de un pedido (anular_item_pedido) ya existía; faltaba la pantalla. Aquí solo se agrega una
+--      regla: el último plato no se quita, se anula el pedido completo (un pedido sin platos no se puede cobrar).
+-- =====================================================================
+
+alter table public.categorias_producto add column if not exists se_prepara boolean not null default true;
+comment on column public.categorias_producto.se_prepara is 'false = sus platos no pasan por la cocina (bebidas, empacados): no salen en la plancha.';
+
+alter table public.pedido_items add column if not exists se_prepara boolean not null default true;
+comment on column public.pedido_items.se_prepara is 'Copia de categorias_producto.se_prepara al momento de vender.';
+
+-- ---------------------------------------------------------------------
+-- Agregar ítems: ahora devuelve CUÁNTAS de las líneas agregadas hay que preparar
+-- ---------------------------------------------------------------------
+drop function if exists public.fn_agregar_items(uuid, uuid, jsonb);
+
+create function public.fn_agregar_items(p_rest uuid, p_pedido uuid, p_items jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_it jsonb;
+  v_prod public.productos%rowtype;
+  v_cant int;
+  v_ids uuid[];
+  v_pedidas int;
+  v_encontradas int;
+  v_adic jsonb;
+  v_adic_total int;
+  v_notas text;
+  v_prepara boolean;
+  v_para_cocina int := 0;
+begin
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Agrega al menos un plato.';
+  end if;
+  if jsonb_array_length(p_items) > 60 then
+    raise exception 'El pedido tiene demasiados platos.';
+  end if;
+
+  for v_it in select value from jsonb_array_elements(p_items) loop
+    v_cant := coalesce((v_it ->> 'cantidad')::int, 1);
+    if v_cant < 1 or v_cant > 99 then
+      raise exception 'La cantidad debe estar entre 1 y 99.';
+    end if;
+
+    select * into v_prod
+      from public.productos
+     where id = (v_it ->> 'producto_id')::uuid and restaurante_id = p_rest and activo;
+    if not found then
+      raise exception 'Uno de los platos ya no existe.' using errcode = 'P0002';
+    end if;
+    if not v_prod.disponible then
+      raise exception '% no está disponible hoy.', v_prod.nombre;
+    end if;
+
+    select c.se_prepara into v_prepara
+      from public.categorias_producto c
+     where c.id = v_prod.categoria_id and c.restaurante_id = p_rest;
+    v_prepara := coalesce(v_prepara, true);
+
+    select coalesce(array_agg(distinct value::uuid), '{}')
+      into v_ids
+      from jsonb_array_elements_text(coalesce(v_it -> 'adiciones', '[]'::jsonb));
+    v_pedidas := coalesce(array_length(v_ids, 1), 0);
+
+    select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'nombre', m.nombre, 'precio', m.precio_extra)
+                              order by m.precio_extra, m.nombre), '[]'::jsonb),
+           coalesce(sum(m.precio_extra), 0)::int,
+           count(*)
+      into v_adic, v_adic_total, v_encontradas
+      from public.modificadores m
+     where m.restaurante_id = p_rest and m.activo and m.id = any (v_ids)
+       and (m.categoria_id is null or m.categoria_id = v_prod.categoria_id);
+    if v_encontradas <> v_pedidas then
+      raise exception 'Una adición de % ya no está disponible.', v_prod.nombre;
+    end if;
+
+    v_notas := nullif(left(btrim(coalesce(v_it ->> 'notas', '')), 120), '');
+
+    insert into public.pedido_items
+      (restaurante_id, pedido_id, producto_id, nombre, precio_unitario, cantidad, adiciones, adiciones_total, notas,
+       subtotal, se_prepara)
+    values
+      (p_rest, p_pedido, v_prod.id, v_prod.nombre, v_prod.precio, v_cant, v_adic, v_adic_total, v_notas,
+       (v_prod.precio + v_adic_total) * v_cant, v_prepara);
+    if v_prepara then
+      v_para_cocina := v_para_cocina + 1;
+    end if;
+  end loop;
+
+  update public.pedidos
+     set total = (select coalesce(sum(subtotal), 0) from public.pedido_items where pedido_id = p_pedido and not anulado)
+   where id = p_pedido and restaurante_id = p_rest;
+
+  return v_para_cocina;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Pedidos del mostrador
+-- ---------------------------------------------------------------------
+-- Igual que antes; si nada de lo pedido se cocina, el pedido nace "listo". Devuelve además `para_cocina`.
+create or replace function public.crear_pedido(
+  p_tipo text,
+  p_mesa_id uuid,
+  p_items jsonb,
+  p_contacto_nombre text default null,
+  p_contacto_telefono text default null,
+  p_direccion text default null,
+  p_notas text default null,
+  p_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_rest uuid := public.requerir_restaurante();
+  v_id uuid := coalesce(p_id, gen_random_uuid());
+  v_num int;
+  v_tel text;
+  v_total int;
+  v_para_cocina int;
+begin
+  if p_tipo is null or p_tipo not in ('mesa', 'llevar', 'domicilio') then
+    raise exception 'El tipo de pedido no es válido.';
+  end if;
+
+  if p_tipo = 'mesa' then
+    if p_mesa_id is null then
+      raise exception 'Elige una mesa.';
+    end if;
+    perform 1 from public.mesas where id = p_mesa_id and restaurante_id = v_rest and activa;
+    if not found then
+      raise exception 'La mesa no existe.' using errcode = 'P0002';
+    end if;
+  else
+    p_mesa_id := null;
+  end if;
+
+  if p_tipo = 'domicilio' and length(btrim(coalesce(p_direccion, ''))) = 0 then
+    raise exception 'Escribe la dirección del domicilio.';
+  end if;
+
+  v_tel := null;
+  if length(btrim(coalesce(p_contacto_telefono, ''))) > 0 then
+    v_tel := public.fn_normalizar_telefono(p_contacto_telefono);
+    if v_tel is null then
+      raise exception 'El teléfono no es válido. Escríbelo con 10 dígitos, por ejemplo 300 123 4567.';
+    end if;
+  end if;
+
+  update public.restaurantes
+     set consecutivo_pedido = consecutivo_pedido + 1
+   where id = v_rest
+  returning consecutivo_pedido into v_num;
+
+  insert into public.pedidos
+    (id, restaurante_id, numero, tipo, mesa_id, contacto_nombre, contacto_telefono, direccion, notas)
+  values
+    (v_id, v_rest, v_num, p_tipo, p_mesa_id,
+     nullif(left(btrim(coalesce(p_contacto_nombre, '')), 60), ''), v_tel,
+     nullif(left(btrim(coalesce(p_direccion, '')), 120), ''),
+     nullif(left(btrim(coalesce(p_notas, '')), 200), ''));
+
+  v_para_cocina := public.fn_agregar_items(v_rest, v_id, p_items);
+  if v_para_cocina = 0 then
+    update public.pedidos set estado = 'listo', listo_at = now() where id = v_id and restaurante_id = v_rest;
+  end if;
+
+  select total into v_total from public.pedidos where id = v_id;
+  return jsonb_build_object('id', v_id, 'numero', v_num, 'total', v_total, 'para_cocina', v_para_cocina);
+end $$;
+
+-- Agregar platos: vuelve a la cocina solo si lo nuevo se cocina. Si era un pedido ya entregado y le agregan una bebida,
+-- queda "listo" (hay que entregarla), no "pendiente".
+create or replace function public.agregar_items_pedido(p_pedido_id uuid, p_items jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_rest uuid := public.requerir_restaurante();
+  v_ped public.pedidos%rowtype;
+  v_total int;
+  v_para_cocina int;
+begin
+  select * into v_ped from public.pedidos where id = p_pedido_id and restaurante_id = v_rest for update;
+  if not found or v_ped.anulado then
+    raise exception 'El pedido no existe o está anulado.' using errcode = 'P0002';
+  end if;
+  if v_ped.cobrado_at is not null then
+    raise exception 'Este pedido ya está cobrado: crea uno nuevo.';
+  end if;
+
+  v_para_cocina := public.fn_agregar_items(v_rest, p_pedido_id, p_items);
+
+  if v_para_cocina > 0 then
+    update public.pedidos
+       set estado = 'pendiente', listo_at = null, entregado_at = null
+     where id = p_pedido_id and restaurante_id = v_rest;
+  elsif v_ped.estado = 'entregado' then
+    update public.pedidos
+       set estado = 'listo', listo_at = coalesce(listo_at, now()), entregado_at = null
+     where id = p_pedido_id and restaurante_id = v_rest;
+  end if;
+
+  select total into v_total from public.pedidos where id = p_pedido_id;
+  return jsonb_build_object('id', p_pedido_id, 'numero', v_ped.numero, 'total', v_total, 'para_cocina', v_para_cocina);
+end $$;
+
+-- Aceptar el pedido de un cliente: si no trae nada que cocinar, pasa directo a "listo".
+create or replace function public.confirmar_pedido_cliente(p_pedido_id uuid, p_minutos integer default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_rest uuid := public.requerir_restaurante();
+  v_p public.pedidos%rowtype;
+  v_para_cocina int;
+begin
+  if p_minutos is not null and (p_minutos < 1 or p_minutos > 240) then
+    raise exception 'El tiempo estimado debe estar entre 1 y 240 minutos.';
+  end if;
+
+  select * into v_p from public.pedidos where id = p_pedido_id and restaurante_id = v_rest for update;
+  if not found or v_p.anulado then
+    raise exception 'El pedido no existe o el cliente ya lo canceló.' using errcode = 'P0002';
+  end if;
+  if v_p.origen <> 'cliente' then
+    raise exception 'Este pedido no es de un cliente en línea.';
+  end if;
+  if v_p.confirmado_at is not null then
+    return jsonb_build_object('id', v_p.id, 'numero', v_p.numero, 'ya_aceptado', true);
+  end if;
+
+  update public.pedidos
+     set confirmado_at = now(), confirmado_por = auth.uid(), tiempo_estimado_min = p_minutos
+   where id = v_p.id and restaurante_id = v_rest;
+
+  select count(*) into v_para_cocina
+    from public.pedido_items
+   where pedido_id = v_p.id and restaurante_id = v_rest and not anulado and se_prepara;
+  if v_para_cocina = 0 then
+    update public.pedidos set estado = 'listo', listo_at = now() where id = v_p.id and restaurante_id = v_rest;
+  end if;
+
+  return jsonb_build_object('id', v_p.id, 'numero', v_p.numero, 'para_cocina', v_para_cocina);
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Plancha
+-- ---------------------------------------------------------------------
+-- Solo los pedidos que tienen algo que cocinar, y de ellos solo esas líneas.
+create or replace function public.listar_plancha()
+returns jsonb
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select jsonb_build_object(
+    'ahora', now(),
+    'pedidos', coalesce((
+      select jsonb_agg(x.fila order by x.created_at, x.numero)
+        from (
+          select p.created_at, p.numero,
+                 jsonb_build_object(
+                   'id', p.id, 'numero', p.numero, 'tipo', p.tipo, 'estado', p.estado, 'origen', p.origen,
+                   'created_at', p.created_at, 'confirmado_at', p.confirmado_at, 'listo_at', p.listo_at,
+                   'mesa', m.nombre, 'contacto_nombre', p.contacto_nombre, 'notas', p.notas,
+                   'tiempo_estimado_min', p.tiempo_estimado_min,
+                   'items', coalesce((
+                     select jsonb_agg(jsonb_build_object('id', i.id, 'nombre', i.nombre, 'cantidad', i.cantidad,
+                                                         'notas', i.notas, 'adiciones', i.adiciones,
+                                                         'listo', i.listo_at is not null)
+                                      order by i.created_at, i.seq)
+                       from public.pedido_items i
+                      where i.pedido_id = p.id and not i.anulado and i.se_prepara), '[]'::jsonb)
+                 ) as fila
+            from public.pedidos p
+            left join public.mesas m on m.id = p.mesa_id
+           where not p.anulado and p.en_cocina and p.estado <> 'entregado'
+             and (p.estado = 'pendiente' or p.listo_at > now() - interval '15 minutes')
+             and exists (select 1 from public.pedido_items i
+                          where i.pedido_id = p.id and not i.anulado and i.se_prepara)
+        ) x), '[]'::jsonb)
+  )
+$$;
+
+-- Marca (o desmarca) UN plato. El pedido pasa a "listo" cuando no queda nada POR COCINAR.
+create or replace function public.marcar_item_listo(p_item_id uuid, p_listo boolean default true)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_rest uuid := public.requerir_restaurante();
+  v_item public.pedido_items%rowtype;
+  v_ped public.pedidos%rowtype;
+  v_total int;
+  v_pend int;
+  v_estado text;
+begin
+  select * into v_item from public.pedido_items
+   where id = p_item_id and restaurante_id = v_rest and not anulado for update;
+  if not found then
+    raise exception 'El plato no existe o fue anulado.' using errcode = 'P0002';
+  end if;
+
+  select * into v_ped from public.pedidos where id = v_item.pedido_id and restaurante_id = v_rest for update;
+  if not found or v_ped.anulado then
+    raise exception 'El pedido no existe o está anulado.' using errcode = 'P0002';
+  end if;
+  if not v_ped.en_cocina then
+    raise exception 'Primero acepta el pedido del cliente.';
+  end if;
+  if v_ped.estado = 'entregado' then
+    raise exception 'Este pedido ya se entregó.';
+  end if;
+
+  update public.pedido_items
+     set listo_at = case when coalesce(p_listo, true) then coalesce(listo_at, now()) end,
+         listo_por = case when coalesce(p_listo, true) then coalesce(listo_por, auth.uid()) end
+   where id = p_item_id and restaurante_id = v_rest;
+
+  select count(*) filter (where se_prepara), count(*) filter (where se_prepara and listo_at is null)
+    into v_total, v_pend
+    from public.pedido_items
+   where pedido_id = v_ped.id and restaurante_id = v_rest and not anulado;
+
+  v_estado := v_ped.estado;
+  if v_pend = 0 and v_ped.estado = 'pendiente' then
+    v_estado := 'listo';
+    update public.pedidos set estado = 'listo', listo_at = coalesce(listo_at, now())
+     where id = v_ped.id and restaurante_id = v_rest;
+  elsif v_pend > 0 and v_ped.estado = 'listo' then
+    v_estado := 'pendiente';
+    update public.pedidos set estado = 'pendiente', listo_at = null, entregado_at = null
+     where id = v_ped.id and restaurante_id = v_rest;
+  end if;
+
+  return jsonb_build_object('pedido_id', v_ped.id, 'estado', v_estado,
+                            'items_listos', v_total - v_pend, 'items_total', v_total);
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Quitar un plato
+-- ---------------------------------------------------------------------
+create or replace function public.anular_item_pedido(p_item_id uuid, p_motivo text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_rest uuid := public.requerir_restaurante();
+  v_motivo text := public.fn_motivo(p_motivo);
+  v_item public.pedido_items%rowtype;
+  v_ped public.pedidos%rowtype;
+  v_total int;
+begin
+  select * into v_item from public.pedido_items where id = p_item_id and restaurante_id = v_rest for update;
+  if not found or v_item.anulado then
+    raise exception 'El plato no existe o ya está anulado.' using errcode = 'P0002';
+  end if;
+
+  select * into v_ped from public.pedidos where id = v_item.pedido_id and restaurante_id = v_rest for update;
+  if v_ped.anulado or v_ped.cobrado_at is not null then
+    raise exception 'El pedido ya está cobrado o anulado: anula el cobro primero.';
+  end if;
+  if not exists (select 1 from public.pedido_items
+                  where pedido_id = v_ped.id and restaurante_id = v_rest and not anulado and id <> p_item_id) then
+    raise exception 'Es el único plato del pedido: anula el pedido completo.';
+  end if;
+
+  update public.pedido_items
+     set anulado = true, anulado_motivo = v_motivo, anulado_por = auth.uid(), anulado_at = now()
+   where id = p_item_id and restaurante_id = v_rest;
+
+  update public.pedidos
+     set total = (select coalesce(sum(subtotal), 0) from public.pedido_items where pedido_id = v_ped.id and not anulado)
+   where id = v_ped.id and restaurante_id = v_rest
+  returning total into v_total;
+
+  -- Si con eso ya no queda nada por cocinar, el pedido pasa a listo.
+  if v_ped.en_cocina and v_ped.estado = 'pendiente'
+     and not exists (select 1 from public.pedido_items
+                      where pedido_id = v_ped.id and restaurante_id = v_rest and not anulado
+                        and se_prepara and listo_at is null) then
+    update public.pedidos set estado = 'listo', listo_at = coalesce(listo_at, now())
+     where id = v_ped.id and restaurante_id = v_rest;
+  end if;
+
+  return jsonb_build_object('id', p_item_id, 'pedido_id', v_ped.id, 'numero', v_ped.numero, 'total', v_total);
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Lecturas: cada línea dice si se prepara. Lo que no se prepara figura "listo" cuando el pedido lo está.
+-- ---------------------------------------------------------------------
+create or replace function public.listar_pedidos_pendientes()
+returns jsonb
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select coalesce(jsonb_agg(x.fila order by x.created_at, x.numero), '[]'::jsonb)
+    from (
+      select p.created_at, p.numero,
+             jsonb_build_object(
+               'id', p.id, 'numero', p.numero, 'tipo', p.tipo, 'estado', p.estado,
+               'created_at', p.created_at, 'total', p.total, 'cobrado', p.cobrado_at is not null,
+               'mesa', m.nombre, 'contacto_nombre', p.contacto_nombre,
+               'contacto_telefono', p.contacto_telefono, 'direccion', p.direccion, 'notas', p.notas,
+               'origen', p.origen, 'token', p.token_seguimiento, 'tiempo_estimado_min', p.tiempo_estimado_min,
+               'items', coalesce((
+                 select jsonb_agg(jsonb_build_object('id', i.id, 'nombre', i.nombre, 'cantidad', i.cantidad,
+                                                     'notas', i.notas, 'adiciones', i.adiciones,
+                                                     'se_prepara', i.se_prepara,
+                                                     'listo', i.listo_at is not null
+                                                              or (not i.se_prepara and p.estado <> 'pendiente'))
+                                  order by i.created_at, i.seq)
+                   from public.pedido_items i where i.pedido_id = p.id and not i.anulado), '[]'::jsonb)
+             ) as fila
+        from public.pedidos p
+        left join public.mesas m on m.id = p.mesa_id
+       where not p.anulado and p.en_cocina and (p.cobrado_at is null or p.estado <> 'entregado')
+    ) x
+$$;
+
+create or replace function public.publico_ver_pedido(p_token uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_p public.pedidos%rowtype;
+  v_r public.restaurantes%rowtype;
+  v_etapa text;
+begin
+  if p_token is null then
+    return null;
+  end if;
+  select * into v_p from public.pedidos where token_seguimiento = p_token;
+  if not found then
+    return null;
+  end if;
+  select * into v_r from public.restaurantes where id = v_p.restaurante_id;
+
+  v_etapa := case
+    when v_p.anulado then 'cancelado'
+    when v_p.origen = 'cliente' and v_p.confirmado_at is null then 'por_confirmar'
+    when v_p.estado = 'entregado' then 'entregado'
+    when v_p.estado = 'listo' then 'listo'
+    else 'preparando'
+  end;
+
+  return jsonb_build_object(
+    'ahora', now(),
+    'restaurante', jsonb_build_object('nombre', v_r.nombre, 'slug', v_r.slug),
+    'pedido', jsonb_build_object(
+      'numero', v_p.numero, 'tipo', v_p.tipo, 'origen', v_p.origen, 'etapa', v_etapa,
+      'created_at', v_p.created_at, 'confirmado_at', v_p.confirmado_at, 'listo_at', v_p.listo_at,
+      'entregado_at', v_p.entregado_at, 'tiempo_estimado_min', v_p.tiempo_estimado_min,
+      'total', v_p.total, 'contacto_nombre', v_p.contacto_nombre, 'direccion', v_p.direccion,
+      -- El motivo solo se muestra si el restaurante RECHAZÓ el pedido (antes de aceptarlo).
+      'motivo', case when v_p.anulado and v_p.confirmado_at is null then v_p.anulado_motivo end),
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'nombre', i.nombre, 'cantidad', i.cantidad, 'notas', i.notas,
+               'adiciones', (select coalesce(jsonb_agg(a ->> 'nombre'), '[]'::jsonb) from jsonb_array_elements(i.adiciones) a),
+               -- Lo que no se cocina (una gaseosa) figura listo cuando el pedido lo está.
+               'listo', i.listo_at is not null
+                        or (not i.se_prepara and v_etapa in ('listo', 'entregado'))) order by i.created_at, i.seq)
+        from public.pedido_items i where i.pedido_id = v_p.id and not i.anulado), '[]'::jsonb)
+  );
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Menú: la categoría dice si sus platos se preparan
+-- ---------------------------------------------------------------------
+drop function if exists public.guardar_categoria(uuid, text, text, integer, boolean);
+
+create or replace function public.guardar_categoria(
+  p_id uuid,
+  p_nombre text,
+  p_icono text default null,
+  p_orden integer default null,
+  p_activa boolean default true,
+  p_se_prepara boolean default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_rest uuid := public.requerir_dueno();
+  v_nombre text := left(btrim(coalesce(p_nombre, '')), 40);
+  v_id uuid := coalesce(p_id, gen_random_uuid());
+begin
+  if length(v_nombre) = 0 then
+    raise exception 'Escribe el nombre de la categoría.';
+  end if;
+
+  begin
+    if p_id is null then
+      insert into public.categorias_producto (id, restaurante_id, nombre, icono, orden, activa, se_prepara)
+      values (v_id, v_rest, v_nombre, nullif(left(btrim(coalesce(p_icono, '')), 8), ''),
+              coalesce(p_orden, (select coalesce(max(orden), 0) + 1 from public.categorias_producto where restaurante_id = v_rest)),
+              coalesce(p_activa, true), coalesce(p_se_prepara, true));
+    else
+      update public.categorias_producto
+         set nombre = v_nombre, icono = nullif(left(btrim(coalesce(p_icono, '')), 8), ''),
+             orden = coalesce(p_orden, orden), activa = coalesce(p_activa, activa),
+             se_prepara = coalesce(p_se_prepara, se_prepara)
+       where id = p_id and restaurante_id = v_rest;
+      if not found then
+        raise exception 'La categoría no existe.' using errcode = 'P0002';
+      end if;
+    end if;
+  exception when unique_violation then
+    raise exception 'Ya hay una categoría con ese nombre.';
+  end;
+
+  return jsonb_build_object('id', v_id);
+end $$;
+
+create or replace function public.listar_menu_admin()
+returns jsonb
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select jsonb_build_object(
+    'categorias', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'id', c.id, 'nombre', c.nombre, 'icono', c.icono, 'orden', c.orden, 'activa', c.activa,
+               'se_prepara', c.se_prepara,
+               'productos', coalesce((
+                 select jsonb_agg(jsonb_build_object('id', p.id, 'nombre', p.nombre, 'precio', p.precio,
+                                                     'disponible', p.disponible, 'orden', p.orden)
+                                  order by p.orden, p.nombre)
+                   from public.productos p where p.categoria_id = c.id and p.activo), '[]'::jsonb)
+             ) order by c.orden, c.nombre)
+        from public.categorias_producto c), '[]'::jsonb),
+    'modificadores', coalesce((
+      select jsonb_agg(jsonb_build_object('id', m.id, 'categoria_id', m.categoria_id, 'nombre', m.nombre,
+                                          'precio_extra', m.precio_extra) order by m.categoria_id nulls first, m.nombre)
+        from public.modificadores m where m.activo), '[]'::jsonb),
+    -- Platos que se quitaron del menú (no se borran: los pedidos de antes los conservan).
+    'quitados', coalesce((
+      select jsonb_agg(jsonb_build_object('id', p.id, 'categoria_id', p.categoria_id, 'categoria', c.nombre,
+                                          'nombre', p.nombre, 'precio', p.precio)
+                       order by lower(p.nombre), p.id)
+        from public.productos p
+        join public.categorias_producto c on c.id = p.categoria_id
+       where not p.activo), '[]'::jsonb)
+  )
+$$;
+
+-- El menú para tomar pedidos también lo trae: sin señal, el celular sabe si un pedido nuevo va a la cocina.
+create or replace function public.obtener_menu_para_pedido()
+returns jsonb
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select jsonb_build_object(
+    'categorias', coalesce((
+      select jsonb_agg(jsonb_build_object('id', c.id, 'nombre', c.nombre, 'icono', c.icono, 'se_prepara', c.se_prepara)
+                       order by c.orden, c.nombre)
+        from public.categorias_producto c where c.activa), '[]'::jsonb),
+    'productos', coalesce((
+      select jsonb_agg(jsonb_build_object('id', p.id, 'categoria_id', p.categoria_id, 'nombre', p.nombre,
+                                          'precio', p.precio, 'disponible', p.disponible) order by p.orden, p.nombre)
+        from public.productos p where p.activo), '[]'::jsonb),
+    'modificadores', coalesce((
+      select jsonb_agg(jsonb_build_object('id', m.id, 'categoria_id', m.categoria_id, 'nombre', m.nombre,
+                                          'precio_extra', m.precio_extra) order by m.precio_extra, m.nombre)
+        from public.modificadores m where m.activo), '[]'::jsonb),
+    'mesas', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'id', t.id, 'nombre', t.nombre,
+               'pedido_abierto', (select o.id from public.pedidos o
+                                   where o.mesa_id = t.id and not o.anulado and o.cobrado_at is null
+                                   order by o.created_at desc limit 1)
+             ) order by t.orden, t.nombre)
+        from public.mesas t where t.activa), '[]'::jsonb)
+  )
+$$;
+
+select public.fn_aplicar_permisos();
+
+-- >>>>>>>>>> 20261005000018_demo_al_dia.sql >>>>>>>>>>
+-- =====================================================================
+-- 18 · Los datos de ejemplo de la demo, al día con las migraciones 14 a 17
+--
+-- fn_cargar_datos_demo es una sola función larga (migración 0005). En vez de repetirla en cada migración que le cambia
+-- un detalle, se redefine UNA vez aquí con todo lo nuevo:
+--   · Bebidas no pasa por la cocina (migración 14): sus platos no salen en la plancha.
+-- =====================================================================
+
+create or replace function public.fn_cargar_datos_demo(p_rest uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_hoy date := public.hoy_bogota();
+  v_ahora timestamptz := now();
+  v_cli uuid[] := array(select gen_random_uuid() from generate_series(1, 8));
+  v_mesas uuid[];
+  v_conteos int[] := array[17, 19, 16, 22, 25, 21];   -- pedidos por día: hace 6, 5, 4, 3, 2 y 1 días
+  v_direcciones text[] := array['Cra 15 #8-22', 'Calle 20 #4-10, apto 201', 'Mz C casa 7, Los Pinos', 'Cll 9 #12-40', 'Cra 7 #19-33, local 2'];
+  v_nombres text[] := array['Marleny Ríos', 'Don Jairo Cárdenas', 'Yeison Torres', 'Luisa Gómez', 'Camilo Ortega', 'Doña Nubia', 'Andrés Rojas', 'Stiven Castaño'];
+  v_d int; v_k int; v_n int; v_seq int := 0; v_fiado_n int := 0;
+  v_min int; v_ts timestamptz; v_r int; v_tipo text; v_mesa uuid; v_medio text; v_cliente uuid;
+  v_contacto text; v_dir text;
+  v_res jsonb; v_adj int[] := array[0, -2000, 0, 5000, -1000, 0];   -- diferencia de caja de hace 6..1 días
+  v_dia date; v_abono int; v_cargos int; v_c int;
+  v_anular uuid;
+begin
+  -- 1) Limpiar (es la única excepción al "no se borra": solo en la demo y solo aquí).
+  perform set_config('app.reiniciando_demo', 'on', true);
+  delete from public.movimientos_fiado where restaurante_id = p_rest;
+  delete from public.pagos_pedido      where restaurante_id = p_rest;
+  delete from public.pedido_items      where restaurante_id = p_rest;
+  delete from public.pedidos           where restaurante_id = p_rest;
+  delete from public.gastos            where restaurante_id = p_rest;
+  delete from public.cierres_dia       where restaurante_id = p_rest;
+  perform set_config('app.reiniciando_demo', 'off', true);
+  delete from public.modificadores       where restaurante_id = p_rest;
+  delete from public.productos           where restaurante_id = p_rest;
+  delete from public.categorias_producto where restaurante_id = p_rest;
+  delete from public.mesas               where restaurante_id = p_rest;
+  delete from public.clientes            where restaurante_id = p_rest;
+  update public.restaurantes set consecutivo_pedido = 0 where id = p_rest;
+
+  -- 2) Menú
+  insert into public.categorias_producto (restaurante_id, nombre, icono, orden, se_prepara) values
+    -- Emojis antiguos (Unicode ≤ 6): se ven bien incluso en Androids viejos de gama baja.
+    (p_rest, 'Hamburguesas', '🍔', 1, true), (p_rest, 'Perros', '🌭', 2, true), (p_rest, 'Salchipapas', '🍟', 3, true),
+    (p_rest, 'A la plancha', '🍖', 4, true), (p_rest, 'Pollo', '🍗', 5, true), (p_rest, 'Arepas', '🌮', 6, true),
+    -- Las bebidas se entregan de una vez: no pasan por la cocina ni salen en la plancha.
+    (p_rest, 'Bebidas', '🍹', 7, false);
+
+  insert into public.productos (restaurante_id, categoria_id, nombre, precio, orden)
+  select p_rest, c.id, v.nombre, v.precio, v.orden
+    from (values
+      ('Hamburguesas', 'Hamburguesa sencilla', 14000, 1),
+      ('Hamburguesas', 'Hamburguesa doble carne', 19000, 2),
+      ('Hamburguesas', 'Hamburguesa especial', 22000, 3),
+      ('Perros', 'Perro caliente', 9000, 1),
+      ('Perros', 'Perro americano', 11000, 2),
+      ('Perros', 'Perro especial', 13000, 3),
+      ('Salchipapas', 'Salchipapa sencilla', 12000, 1),
+      ('Salchipapas', 'Salchipapa especial', 18000, 2),
+      ('Salchipapas', 'Salchipapa para dos', 28000, 3),
+      ('A la plancha', 'Carne a la plancha', 24000, 1),
+      ('A la plancha', 'Churrasco', 32000, 2),
+      ('A la plancha', 'Cerdo a la plancha', 22000, 3),
+      ('A la plancha', 'Pechuga a la plancha', 21000, 4),
+      ('Pollo', 'Pollo asado 1/4', 16000, 1),
+      ('Pollo', 'Pollo asado 1/2', 29000, 2),
+      ('Pollo', 'Alitas BBQ x6', 18000, 3),
+      ('Arepas', 'Arepa rellena de carne', 12000, 1),
+      ('Arepas', 'Arepa rellena de pollo', 11000, 2),
+      ('Arepas', 'Arepa con todo', 15000, 3),
+      ('Bebidas', 'Gaseosa personal', 3500, 1),
+      ('Bebidas', 'Gaseosa 1,5 L', 8000, 2),
+      ('Bebidas', 'Jugo en agua', 5500, 3),
+      ('Bebidas', 'Jugo en leche', 7000, 4),
+      ('Bebidas', 'Limonada natural', 5000, 5),
+      ('Bebidas', 'Agua en botella', 2500, 6)
+    ) as v(categoria, nombre, precio, orden)
+    join public.categorias_producto c on c.restaurante_id = p_rest and c.nombre = v.categoria;
+
+  insert into public.modificadores (restaurante_id, categoria_id, nombre, precio_extra)
+  select p_rest, c.id, v.nombre, v.precio
+    from (values
+      ('Hamburguesas', 'Queso extra', 2000), ('Hamburguesas', 'Tocineta', 3000),
+      ('Hamburguesas', 'Huevo', 2000), ('Hamburguesas', 'Carne extra', 6000),
+      ('Perros', 'Queso extra', 2000), ('Perros', 'Tocineta', 3000), ('Perros', 'Papitas', 1500),
+      ('Salchipapas', 'Queso gratinado', 3000), ('Salchipapas', 'Huevo', 2000), ('Salchipapas', 'Papas extra', 4000),
+      ('A la plancha', 'Porción de papas', 4000), ('A la plancha', 'Arroz', 3000), ('A la plancha', 'Ensalada', 2500),
+      ('Pollo', 'Porción de papas', 4000), ('Pollo', 'Arroz', 3000), ('Pollo', 'Ensalada', 2500),
+      ('Arepas', 'Queso extra', 2000), ('Arepas', 'Aguacate', 2500)
+    ) as v(categoria, nombre, precio)
+    join public.categorias_producto c on c.restaurante_id = p_rest and c.nombre = v.categoria;
+  insert into public.modificadores (restaurante_id, categoria_id, nombre, precio_extra)
+  values (p_rest, null, 'Salsa de la casa', 500);
+
+  insert into public.mesas (restaurante_id, nombre, orden)
+  select p_rest, 'Mesa ' || i, i from generate_series(1, 6) i;
+  select array_agg(id order by orden) into v_mesas from public.mesas where restaurante_id = p_rest;
+
+  -- 3) Clientes (nombres y teléfonos INVENTADOS)
+  insert into public.clientes (id, restaurante_id, nombre, telefono)
+  select v_cli[n.i], p_rest, n.nombre, '+5730000001' || lpad(n.i::text, 2, '0')
+    from unnest(v_nombres) with ordinality as n(nombre, i);
+
+  -- 4) Ventas de los 6 días anteriores (de más viejo a más nuevo, para que el consecutivo sea cronológico)
+  for v_d in reverse 6..1 loop
+    v_n := v_conteos[7 - v_d];
+    for v_k in 1..v_n loop
+      v_seq := v_seq + 1;
+      v_min := 11 * 60 + ((v_k - 1) * 600 / v_n) + public.fn_demo_hash('h' || v_seq, 12);
+      v_ts := ((v_hoy - v_d)::timestamp + make_interval(mins => v_min)) at time zone 'America/Bogota';
+      v_r := public.fn_demo_hash('t' || v_seq, 100);
+      v_tipo := case when v_r < 58 then 'mesa' when v_r < 82 then 'llevar' else 'domicilio' end;
+      v_mesa := case when v_tipo = 'mesa' then v_mesas[1 + public.fn_demo_hash('m' || v_seq, 6)] end;
+      v_cliente := null; v_contacto := null; v_dir := null;
+
+      if v_seq % 9 = 0 then
+        v_fiado_n := v_fiado_n + 1;
+        v_medio := 'fiado';
+        v_cliente := v_cli[1 + (v_fiado_n - 1) % 8];
+        v_contacto := v_nombres[1 + (v_fiado_n - 1) % 8];
+      else
+        v_medio := case when public.fn_demo_hash('p' || v_seq, 100) < 62 then 'efectivo' else 'transferencia' end;
+      end if;
+      if v_tipo = 'domicilio' then
+        v_dir := v_direcciones[1 + public.fn_demo_hash('d' || v_seq, 5)];
+        v_contacto := coalesce(v_contacto, v_nombres[1 + public.fn_demo_hash('c' || v_seq, 8)]);
+      end if;
+
+      perform public.fn_demo_pedido(p_rest, v_ts, v_seq, v_tipo, v_mesa, v_medio, v_cliente, 'entregado', true, v_contacto, v_dir);
+    end loop;
+  end loop;
+
+  -- 5) Hoy: cobrados (hacia atrás desde ahora, cada 27 min, mientras sigan siendo de hoy) ...
+  for v_k in reverse 10..1 loop
+    v_ts := v_ahora - make_interval(mins => 40 + (v_k - 1) * 27);
+    continue when public.fecha_bogota(v_ts) <> v_hoy;
+    v_seq := v_seq + 1;
+    v_r := public.fn_demo_hash('t' || v_seq, 100);
+    v_tipo := case when v_r < 58 then 'mesa' when v_r < 82 then 'llevar' else 'domicilio' end;
+    v_mesa := case when v_tipo = 'mesa' then v_mesas[1 + public.fn_demo_hash('m' || v_seq, 6)] end;
+    v_cliente := null; v_contacto := null; v_dir := null;
+    if v_seq % 9 = 0 then
+      v_fiado_n := v_fiado_n + 1;
+      v_medio := 'fiado';
+      v_cliente := v_cli[1 + (v_fiado_n - 1) % 8];
+      v_contacto := v_nombres[1 + (v_fiado_n - 1) % 8];
+    else
+      v_medio := case when public.fn_demo_hash('p' || v_seq, 100) < 62 then 'efectivo' else 'transferencia' end;
+    end if;
+    if v_tipo = 'domicilio' then
+      v_dir := v_direcciones[1 + public.fn_demo_hash('d' || v_seq, 5)];
+      v_contacto := coalesce(v_contacto, v_nombres[1 + public.fn_demo_hash('c' || v_seq, 8)]);
+    end if;
+    perform public.fn_demo_pedido(p_rest, v_ts, v_seq, v_tipo, v_mesa, v_medio, v_cliente, 'entregado', true, v_contacto, v_dir);
+  end loop;
+
+  -- ... y cuatro pedidos en curso para que "Pendientes" se vea vivo (con tiempos de espera distintos).
+  perform public.fn_demo_pedido(p_rest, v_ahora - interval '31 minutes', 901, 'mesa', v_mesas[5], 'efectivo', null,
+                                'entregado', false, null, null, null, 'Sin picante');
+  perform public.fn_demo_pedido(p_rest, v_ahora - interval '17 minutes', 902, 'llevar', null, 'efectivo', null,
+                                'listo', false, 'Daniela', null, null, null);
+  perform public.fn_demo_pedido(p_rest, v_ahora - interval '9 minutes', 903, 'domicilio', null, 'efectivo', null,
+                                'pendiente', false, v_nombres[3], 'Cll 9 #12-40, apto 301', 'Llamar al llegar', null);
+  perform public.fn_demo_pedido(p_rest, v_ahora - interval '4 minutes', 904, 'mesa', v_mesas[2], 'efectivo', null,
+                                'pendiente', false, null, null, null, 'Sin cebolla');
+
+  -- 6) Abonos de fiado (el 50 % de lo que debían hasta ese día) para que haya movimiento y saldos distintos
+  for v_c in select unnest(array[1, 4, 6]) loop
+    v_dia := v_hoy - (array[4, 3, 2])[array_position(array[1, 4, 6], v_c)];
+    v_ts := ((v_dia)::timestamp + interval '15 hours 20 minutes') at time zone 'America/Bogota';
+    select coalesce(sum(monto), 0) into v_cargos from public.movimientos_fiado
+     where restaurante_id = p_rest and cliente_id = v_cli[v_c] and tipo = 'cargo' and created_at <= v_ts;
+    v_abono := (floor(v_cargos * 0.5 / 1000.0) * 1000)::int;
+    if v_abono > 0 then
+      insert into public.movimientos_fiado (restaurante_id, cliente_id, tipo, monto, medio, referencia, created_at)
+      values (p_rest, v_cli[v_c], 'abono', v_abono,
+              case when v_c = 4 then 'transferencia' else 'efectivo' end,
+              case when v_c = 4 then 'NEQ' || lpad(public.fn_demo_hash('ab' || v_c, 999999)::text, 6, '0') end,
+              v_ts);
+    end if;
+  end loop;
+
+  -- 7) Gastos de los últimos 7 días
+  for v_d in reverse 6..0 loop
+    v_dia := v_hoy - v_d;
+    v_ts := least(v_ahora - interval '5 minutes', ((v_dia)::timestamp + interval '8 hours 30 minutes') at time zone 'America/Bogota');
+    -- La carne y las bebidas se pagan por transferencia al proveedor (no salen del efectivo de la caja).
+    insert into public.gastos (restaurante_id, fecha, monto, categoria, nota, de_caja, created_at)
+    select p_rest, v_dia, g.monto, g.categoria, g.nota, g.de_caja, v_ts
+      from (values
+        ('carnes', 110000 + 8000 * public.fn_demo_hash('g1' || v_d, 5), 'Carne molida, res y chorizo', true, false),
+        ('pan', 26000 + 3000 * public.fn_demo_hash('g2' || v_d, 3), 'Pan de hamburguesa y perro', true, true),
+        ('verduras', 21000 + 2000 * public.fn_demo_hash('g3' || v_d, 4), 'Tomate, cebolla, lechuga', true, true),
+        ('ayudante', 40000, 'Jornal del ayudante', v_d > 0, true),
+        ('bebidas', 45000, 'Gaseosas y jugos', v_d in (6, 3), false),
+        ('gas', 52000, 'Pipeta de gas', v_d in (5, 1), true),
+        ('domiciliario', 18000, 'Domiciliario', v_d in (6, 4, 2), true),
+        ('empaques', 22000, 'Cajas y servilletas', v_d = 4, true)
+      ) as g(categoria, monto, nota, aplica, de_caja)
+     where g.aplica;
+  end loop;
+  -- Un gasto anulado ayer (para ver la anulación con motivo en acción).
+  insert into public.gastos (restaurante_id, fecha, monto, categoria, nota, created_at, anulado, anulado_motivo, anulado_at)
+  values (p_rest, v_hoy - 1, 180000, 'domiciliario', 'Domiciliario',
+          ((v_hoy - 1)::timestamp + interval '17 hours') at time zone 'America/Bogota',
+          true, 'Monto mal digitado (eran $ 18.000)', ((v_hoy - 1)::timestamp + interval '17 hours 5 minutes') at time zone 'America/Bogota');
+
+  -- 8) Un pedido anulado hace dos días (con su cobro) para ver la anulación con motivo
+  select id into v_anular from public.pedidos p
+   where p.restaurante_id = p_rest and p.fecha = v_hoy - 2
+     and not exists (select 1 from public.pagos_pedido g where g.pedido_id = p.id and g.medio = 'fiado')
+   order by p.numero offset 3 limit 1;
+  if v_anular is not null then
+    update public.pedidos set anulado = true, anulado_motivo = 'Cliente se fue antes de que estuviera listo',
+           anulado_at = created_at + interval '25 minutes' where id = v_anular;
+    update public.pagos_pedido set anulado = true, anulado_motivo = 'Pedido anulado: Cliente se fue antes de que estuviera listo',
+           anulado_at = created_at where pedido_id = v_anular;
+  end if;
+
+  -- 9) Cierres de los 6 días anteriores (con pequeñas diferencias de caja)
+  for v_d in reverse 6..1 loop
+    v_dia := v_hoy - v_d;
+    v_res := public.fn_resumen_dia(p_rest, v_dia, 100000);
+    insert into public.cierres_dia
+      (restaurante_id, fecha, ventas, propinas, gastos, ganancia, cobrado_efectivo, cobrado_transferencia, fiado_nuevo,
+       abonos_efectivo, abonos_transferencia, gastos_caja, base_caja, efectivo_esperado, efectivo_contado, diferencia, created_at)
+    values
+      (p_rest, v_dia, (v_res ->> 'ventas')::int, (v_res ->> 'propinas')::int, (v_res ->> 'gastos')::int,
+       (v_res ->> 'ganancia')::int, (v_res ->> 'cobrado_efectivo')::int, (v_res ->> 'cobrado_transferencia')::int,
+       (v_res ->> 'fiado_nuevo')::int, (v_res ->> 'abonos_efectivo')::int, (v_res ->> 'abonos_transferencia')::int,
+       (v_res ->> 'gastos_caja')::int, 100000, (v_res ->> 'efectivo_esperado')::int,
+       (v_res ->> 'efectivo_esperado')::int + v_adj[7 - v_d], v_adj[7 - v_d],
+       ((v_dia)::timestamp + interval '21 hours 40 minutes') at time zone 'America/Bogota');
+  end loop;
+end $$;
+
+select public.fn_aplicar_permisos();

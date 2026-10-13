@@ -50,11 +50,18 @@ export function alLlegarPedidoCliente(token: string) {
   });
 }
 
-/** El restaurante aceptó el pedido de un cliente: a la parrilla y al cliente. */
+/**
+ * El restaurante aceptó el pedido de un cliente: a la parrilla y al cliente. Si el pedido no trae nada que cocinar (solo
+ * bebidas) queda listo al aceptarlo: la parrilla no se entera y al cliente se le dice de una vez que está listo.
+ */
 export function alAceptarPedido(pedidoId: string, minutos: number | null) {
   return seguro("pedido aceptado", async () => {
     const info = await datosDelPedido(pedidoId);
     if (!info.numero) return;
+    if (info.estado === "listo") {
+      await avisarCliente(info, avisoClienteListo(info));
+      return;
+    }
     await Promise.all([avisarPersonal("cocina", avisoALaPlancha(info)), avisarCliente(info, avisoClienteAceptado(info, minutos))]);
   });
 }

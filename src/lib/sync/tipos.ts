@@ -78,9 +78,19 @@ export type Operacion<T extends TipoOperacion = TipoOperacion> = {
  *  - fallida: el servidor la rechazó (con su motivo); espera que alguien la revise.
  */
 export type EstadoOperacion = "pendiente" | "enviada" | "fallida";
-export type OperacionEnCola = Operacion & { estado: EstadoOperacion; error?: string; intentos: number };
+export type OperacionEnCola = Operacion & {
+  estado: EstadoOperacion;
+  error?: string;
+  intentos: number;
+  /** Veces que el servidor no pudo atenderla por un fallo pasajero (ver `reintentable`); con un tope, para no trancar la fila. */
+  fallosServidor?: number;
+};
 
 export type EstadoCola = { version: 1; siguienteLocal: number; ops: OperacionEnCola[] };
 
-/** Lo que el servidor contesta al aplicar una operación. */
-export type RespuestaOperacion = { ok: true; datos: unknown } | { ok: false; error: string; sinSesion?: boolean };
+/**
+ * Lo que el servidor contesta al aplicar una operación. Un `ok: false` es un rechazo definitivo (no se reintenta) salvo:
+ *  - `sinSesion`: hay que volver a entrar; la operación se conserva.
+ *  - `reintentable`: el servidor no pudo atenderla ahora (la base no contestó); se reintenta sola, como sin señal.
+ */
+export type RespuestaOperacion = { ok: true; datos: unknown } | { ok: false; error: string; sinSesion?: boolean; reintentable?: boolean };

@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { after } from "next/server";
 import { listarClientes } from "@/lib/datos/fiado";
 import { obtenerContexto } from "@/lib/datos/inicio";
-import { ejecutar } from "@/lib/datos/llamar";
+import { consultar } from "@/lib/datos/llamar";
 import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerMenuParaPedido } from "@/lib/datos/pedidos";
-import { ErrorApp } from "@/lib/errores";
+import { ErrorApp, esFalloPasajero, MENSAJE_GENERICO } from "@/lib/errores";
 import { alEntrarACocina, alQuedarListo } from "@/lib/push/eventos";
 import { argumentosDeOperacion, esquemaSobreOperacion } from "@/lib/esquemas/operacion";
 import { obtenerUsuario } from "@/lib/sesion";
@@ -15,6 +16,9 @@ import type { RespuestaOperacion, Snapshot } from "@/lib/sync/tipos";
 /**
  * Aplica UNA operación (hecha con o sin señal). Llega con su clave: si ya se aplicó antes, la base devuelve el
  * mismo resultado en vez de repetirla. Sin sesión no redirige (la cola sigue guardada): avisa con `sinSesion`.
+ *
+ * Distingue dos clases de "no": el rechazo de la base por una regla del negocio (definitivo: la persona lo revisa) y
+ * el fallo pasajero (la base no contestó): ese se marca `reintentable` para que el celular lo vuelva a intentar solo.
  */
 export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOperacion> {
   const sobre = esquemaSobreOperacion.safeParse(entrada);
@@ -26,15 +30,23 @@ export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOpera
   const construido = argumentosDeOperacion(tipo, datos);
   if (!construido.ok) return construido;
 
-  const r = await ejecutar<unknown>("aplicar_operacion", { p_clave: clave, p_tipo: tipo, p_args: construido.args, p_ocurrido_en: ocurridoEn });
-  if (!r.ok) return r;
+  let resultado: unknown;
+  try {
+    resultado = await consultar<unknown>("aplicar_operacion", { p_clave: clave, p_tipo: tipo, p_args: construido.args, p_ocurrido_en: ocurridoEn });
+  } catch (e) {
+    unstable_rethrow(e); // redirecciones y otros errores internos de Next no se tragan
+    if (e instanceof ErrorApp) return esFalloPasajero(e.codigo) ? { ok: false, error: e.message, reintentable: true } : { ok: false, error: e.message };
+    // Ni siquiera se pudo hablar con la base (configuración, conexión): tampoco es culpa de la operación.
+    console.error("[sync] aplicar_operacion no llegó a la base:", e instanceof Error ? e.message : e);
+    return { ok: false, error: MENSAJE_GENERICO, reintentable: true };
+  }
   // Avisos push con la app cerrada. Un reintento de la misma operación repite el aviso, pero lleva la misma etiqueta:
   // en el celular reemplaza al anterior en vez de apilarse.
   const args = construido.args;
   if (tipo === "crear_pedido" && typeof args.p_id === "string") after(() => alEntrarACocina(args.p_id as string));
   if (tipo === "cambiar_estado" && args.p_estado === "listo" && typeof args.p_pedido_id === "string") after(() => alQuedarListo(args.p_pedido_id as string));
   revalidatePath("/", "layout");
-  return { ok: true, datos: r.datos };
+  return { ok: true, datos: resultado };
 }
 
 /**

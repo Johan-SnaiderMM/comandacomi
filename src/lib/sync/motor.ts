@@ -8,7 +8,10 @@
  *  - Se suben en el MISMO orden en que ocurrieron (cobrar un pedido depende de haberlo creado).
  *  - Con operaciones pendientes, una nueva nunca se salta la fila: primero se vacía la cola.
  *  - Un rechazo del servidor (el plato ya no existe, el pedido ya estaba cobrado) no se reintenta: queda "fallida"
- *    con su motivo para que una persona la revise. Un fallo de red sí se reintenta.
+ *    con su motivo para que una persona la revise. Un fallo de red sí se reintenta, y también un fallo pasajero del
+ *    servidor (la base no contestó): ese no es culpa de la operación.
+ *  - Con la red caída nadie espera: mientras el último intento haya fallado, lo nuevo se guarda de inmediato y la
+ *    subida sigue por detrás. La primera subida que sale bien devuelve todo al modo directo.
  *
  * No depende de React ni del navegador: se prueba con un almacén en memoria y una red falsa.
  */
@@ -27,6 +30,12 @@ import { vistaDe } from "./vista";
 export const CLAVE_SNAPSHOT = "sc:snapshot";
 export const CLAVE_COLA = "sc:cola";
 
+/**
+ * Cuántas veces se reintenta sola una operación que el servidor no pudo atender por un fallo pasajero. Al pasarse queda
+ * "fallida" para que una persona la revise: así un fallo que en realidad no era pasajero no tranca la fila para siempre.
+ */
+export const MAX_FALLOS_SERVIDOR = 10;
+
 /** Sube una operación. Si lanza, se trata como fallo de red y se reintenta más tarde. */
 export type Transporte = (op: Operacion) => Promise<RespuestaOperacion>;
 
@@ -34,7 +43,7 @@ export type EstadoMotor = {
   snapshot: Snapshot | null;
   ops: OperacionEnCola[];
   sincronizando: boolean;
-  /** El último intento de hablar con el servidor falló por la red. */
+  /** El último intento de hablar con el servidor falló: por la red, o porque el servidor no pudo atender. */
   sinRed: boolean;
   /** El servidor dijo que no hay sesión: hay que volver a entrar para poder subir. */
   sinSesion: boolean;
@@ -61,6 +70,8 @@ export class Motor {
   private siguienteLocal = 1;
   private oyentes = new Set<() => void>();
   private vaciando: Promise<void> | null = null;
+  /** Alguien pidió subir mientras ya había una subida en marcha: al terminar se da otra pasada. */
+  private otraPasada = false;
   private vistaCache: { de: EstadoMotor; vista: Snapshot | null } | null = null;
   private readonly ahora: () => Date;
   private readonly nuevoId: () => string;
@@ -107,13 +118,16 @@ export class Motor {
 
   /**
    * Hace una operación: si hay señal y la cola está vacía la manda directo y devuelve el resultado real; si no hay
-   * señal (o falla la red) la guarda en la cola con la misma clave y devuelve `pendiente: true`.
-   * Un rechazo del servidor se devuelve como error: la persona lo ve y corrige, no se encola.
+   * señal (o falla la red, o el servidor no pudo atender) la guarda en la cola con la misma clave y devuelve
+   * `pendiente: true`. Un rechazo del servidor se devuelve como error: la persona lo ve y corrige, no se encola.
+   *
+   * Si el último intento falló (`sinRed`), ni siquiera prueba: guarda de una vez y la subida sigue por detrás. Así,
+   * con la señal mala, solo el primer toque espera; los demás responden al instante.
    */
   async ejecutar<T extends TipoOperacion>(tipo: T, datos: DatosOperacion[T]): Promise<ResultadoEjecucion> {
     const op = { clave: this.nuevoId(), tipo, datos, ocurridoEn: this.ahora().toISOString() } as Operacion;
 
-    if (this.deps.enLinea()) {
+    if (this.deps.enLinea() && !this.est.sinRed) {
       if (this.porSubir() > 0) await this.vaciar(); // no saltarse la fila
       if (this.porSubir() === 0) {
         try {
@@ -123,11 +137,12 @@ export class Motor {
             void this.refrescar();
             return { ok: true, pendiente: false, datos: r.datos };
           }
-          if (!r.sinSesion) {
+          if (r.sinSesion) this.cambiar({ sinSesion: true });
+          else if (r.reintentable) this.cambiar({ sinRed: true });
+          else {
             this.cambiar({ sinRed: false });
             return { ok: false, error: r.error };
           }
-          this.cambiar({ sinSesion: true });
         } catch {
           this.cambiar({ sinRed: true });
         }
@@ -148,14 +163,31 @@ export class Motor {
 
   // ------------------------------------------------------------------------------------------------ sincronizar
 
-  /** Sube lo pendiente, en orden. Si ya hay una subida en marcha, espera a esa. */
+  /**
+   * Sube lo pendiente, en orden. Si ya hay una subida en marcha, espera a esa (y, si quedó algo que esa no alcanzó a
+   * ver, se da otra pasada al terminar: lo guardado a último momento no se queda esperando a la próxima revisión).
+   */
   vaciar(): Promise<void> {
-    if (this.vaciando) return this.vaciando;
-    this.vaciando = this.subir().finally(() => {
+    if (this.vaciando) {
+      this.otraPasada = true;
+      return this.vaciando;
+    }
+    this.vaciando = this.subirHastaTerminar();
+    return this.vaciando;
+  }
+
+  private async subirHastaTerminar(): Promise<void> {
+    try {
+      do {
+        this.otraPasada = false;
+        await this.subir();
+      } while (this.otraPasada && this.deps.enLinea() && !this.est.sinRed && !this.est.sinSesion && this.porSubir() > 0);
+    } finally {
+      // En el mismo instante en que se decide no dar otra pasada: un `vaciar()` que llegue después ya arranca una nueva
+      // (si esto se soltara más tarde, ese pedido se quedaría esperando una subida que ya terminó).
       this.vaciando = null;
       this.cambiar({ sincronizando: false });
-    });
-    return this.vaciando;
+    }
   }
 
   private async subir(): Promise<void> {
@@ -163,7 +195,9 @@ export class Motor {
     this.cambiar({ sincronizando: true });
 
     let huboEnviadas = false;
-    for (const op of this.est.ops.filter((o) => o.estado === "pendiente")) {
+    // Siempre la más vieja que falte (no una lista fija): lo que se guarda MIENTRAS se sube sale en esta misma pasada.
+    // Cada vuelta deja la operación enviada o fallida, o corta la subida: nunca se repite la misma sin fin.
+    for (let op = this.masViejaPendiente(); op; op = this.masViejaPendiente()) {
       this.marcar(op.clave, { intentos: op.intentos + 1 });
       let r: RespuestaOperacion;
       try {
@@ -172,19 +206,29 @@ export class Motor {
         this.cambiar({ sinRed: true });
         return; // sin red: se queda todo como está y se reintenta después
       }
-      this.cambiar({ sinRed: false });
       if (r.ok) {
-        this.marcar(op.clave, { estado: "enviada", error: undefined });
+        this.cambiar({ sinRed: false });
+        this.marcar(op.clave, { estado: "enviada", error: undefined, fallosServidor: undefined });
         huboEnviadas = true;
       } else if (r.sinSesion) {
-        this.cambiar({ sinSesion: true });
+        this.cambiar({ sinRed: false, sinSesion: true });
+        return;
+      } else if (r.reintentable && (op.fallosServidor ?? 0) + 1 < MAX_FALLOS_SERVIDOR) {
+        // El servidor no pudo atender (no es culpa de la operación): se conserva y se reintenta, como sin señal.
+        this.marcar(op.clave, { fallosServidor: (op.fallosServidor ?? 0) + 1 });
+        this.cambiar({ sinRed: true });
         return;
       } else {
+        this.cambiar({ sinRed: false });
         this.marcar(op.clave, { estado: "fallida", error: r.error });
       }
     }
     this.cambiar({ sinSesion: false });
     if (huboEnviadas || this.est.ops.some((o) => o.estado === "enviada")) await this.refrescar();
+  }
+
+  private masViejaPendiente(): OperacionEnCola | undefined {
+    return this.est.ops.find((o) => o.estado === "pendiente");
   }
 
   /**
@@ -209,7 +253,7 @@ export class Motor {
   // ------------------------------------------------------------------------------------- revisar lo que falló
 
   reintentar(clave: string): void {
-    this.marcar(clave, { estado: "pendiente", error: undefined, intentos: 0 });
+    this.marcar(clave, { estado: "pendiente", error: undefined, intentos: 0, fallosServidor: undefined });
     void this.vaciar();
   }
 

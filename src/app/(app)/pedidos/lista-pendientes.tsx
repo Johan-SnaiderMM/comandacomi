@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { Bike, Check, ClipboardList, Ellipsis, MapPin, MessageCircle, Phone, ShoppingBag, Undo2, Utensils } from "lucide-react";
 import { Aviso } from "@/components/ui/aviso";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { Enlace, useIr } from "@/lib/navegacion";
 import { anularCobro, anularPedido, cambiarEstado } from "@/lib/sync/acciones";
 import { useEstadoSync } from "@/lib/sync/cliente";
 import { numeroVisible } from "@/lib/sync/numero";
+import { pendientesConCola } from "@/lib/sync/vista";
 import { formatearTelefono } from "@/lib/telefono";
 import { enlaceWhatsapp, mensajeSeguimiento } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
@@ -65,8 +66,12 @@ export function ListaPendientes({
   const [anulando, setAnulando] = useState<{ tipo: "pedido" | "cobro"; id: string; numero: number } | null>(null);
   const [, empezar] = useTransition();
 
+  const { ops } = useEstadoSync();
+  // Lo que está por subir (la señal se cayó sin salir de esta pantalla) se sigue viendo hecho.
+  const conCola = useMemo(() => pendientesConCola(pendientes, ops), [pendientes, ops]);
+
   // Actualización inmediata: el cambio de estado se ve al instante y el servidor confirma después.
-  const [lista, aplicarOptimista] = useOptimistic(pendientes, (estado, cambio: { id: string; estado: EstadoPedido }) =>
+  const [lista, aplicarOptimista] = useOptimistic(conCola, (estado, cambio: { id: string; estado: EstadoPedido }) =>
     estado
       .map((p) =>
         p.id === cambio.id
@@ -78,9 +83,7 @@ export function ListaPendientes({
 
   // Pedidos con cambios todavía por subir: no se pueden anular hasta que el servidor los conozca.
   const enCola = new Set(
-    useEstadoSync()
-      .ops.filter((o) => o.estado !== "fallida")
-      .flatMap((o) => ("pedidoId" in o.datos ? [o.datos.pedidoId] : o.tipo === "crear_pedido" ? [o.datos.id] : []))
+    ops.filter((o) => o.estado !== "fallida").flatMap((o) => ("pedidoId" in o.datos ? [o.datos.pedidoId] : o.tipo === "crear_pedido" ? [o.datos.id] : []))
   );
   const numeroMasNuevo = pendientes.reduce((m, p) => Math.max(m, p.numero), 0);
 

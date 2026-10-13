@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ID, snapshotDeEjemplo } from "@/test/sync-fixture";
 import type { Operacion, OperacionEnCola } from "./tipos";
-import { aplicarOperacion, vistaDe } from "./vista";
+import { aplicarOperacion, pendientesConCola, vistaDe } from "./vista";
 
 const AHORA = "2026-10-06T16:00:00.000Z";
 const NUEVO = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
@@ -197,5 +197,47 @@ describe("vistaDe", () => {
     const antes = JSON.stringify(s);
     vistaDe(s, [enCola(crear())]);
     expect(JSON.stringify(s)).toBe(antes);
+  });
+});
+
+describe("pendientes de la app normal con la cola encima", () => {
+  const estado = (pedidoId: string, a: "pendiente" | "listo" | "entregado", clave = "e1"): Operacion<"cambiar_estado"> => ({
+    clave,
+    tipo: "cambiar_estado",
+    ocurridoEn: AHORA,
+    datos: { pedidoId, estado: a },
+  });
+  const cobro = (pedidoId: string): Operacion<"cobrar"> => ({
+    clave: "k9",
+    tipo: "cobrar",
+    ocurridoEn: AHORA,
+    datos: { pedidoId, propina: 0, pagos: [{ medio: "efectivo", monto: 23000 }] },
+  });
+
+  it("un cambio de estado por subir se sigue viendo hecho", () => {
+    const lista = snapshotDeEjemplo().pendientes; // el pedido viejo está "listo"
+    const v = pendientesConCola(lista, [enCola(estado(ID.pedidoViejo, "entregado"))]);
+    expect(v[0].estado).toBe("entregado");
+    expect(lista[0].estado).toBe("listo"); // no toca la lista original
+  });
+
+  it("cobrado y entregado por subir: sale de la lista, como pasará en el servidor", () => {
+    const lista = snapshotDeEjemplo().pendientes;
+    expect(pendientesConCola(lista, [enCola(cobro(ID.pedidoViejo))])[0].cobrado).toBe(true);
+    expect(pendientesConCola(lista, [enCola(estado(ID.pedidoViejo, "entregado")), enCola(cobro(ID.pedidoViejo))])).toEqual([]);
+  });
+
+  it("lo rechazado no cuenta, y sin nada que aplicar devuelve la misma lista", () => {
+    const lista = snapshotDeEjemplo().pendientes;
+    expect(pendientesConCola(lista, [enCola(estado(ID.pedidoViejo, "entregado"), "fallida")])).toBe(lista);
+    expect(pendientesConCola(lista, [])).toBe(lista);
+    expect(pendientesConCola(lista, [enCola(estado(ID.pedidoViejo, "listo"))])).toBe(lista); // ya estaba listo
+    expect(pendientesConCola(lista, [enCola(crear())])).toBe(lista); // los pedidos nuevos no se pintan aquí
+  });
+
+  it("aplicarla dos veces da lo mismo (la app sin conexión ya trae la cola puesta)", () => {
+    const ops = [enCola(estado(ID.pedidoViejo, "pendiente", "e1")), enCola(estado(ID.pedidoViejo, "entregado", "e2"))];
+    const una = pendientesConCola(snapshotDeEjemplo().pendientes, ops);
+    expect(pendientesConCola(una, ops)).toEqual(una);
   });
 });

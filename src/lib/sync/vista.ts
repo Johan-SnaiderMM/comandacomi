@@ -169,3 +169,26 @@ export function aplicarOperacion(s: Snapshot, op: Operacion): Snapshot {
 export function vistaDe(s: Snapshot, ops: OperacionEnCola[]): Snapshot {
   return ops.filter((o) => o.estado !== "fallida").reduce<Snapshot>((acc, o) => aplicarOperacion(acc, o), s);
 }
+
+/**
+ * La lista de pendientes que mandó el servidor, con lo que está en la cola encima: los cambios de estado y los cobros
+ * que todavía no suben. Es para la app normal cuando la señal se cae sin salir de la pantalla: lo que la persona acaba
+ * de tocar se sigue viendo hecho, en vez de devolverse a como estaba. (Los pedidos nuevos y los platos agregados no
+ * se pintan aquí: necesitan el menú, que solo tiene la copia completa de `vistaDe`.)
+ * Aplicarla sobre una lista que ya trae esos cambios da lo mismo. Sin nada que aplicar devuelve la misma lista.
+ */
+export function pendientesConCola(pendientes: PedidoPendiente[], ops: OperacionEnCola[]): PedidoPendiente[] {
+  let lista = pendientes;
+  for (const op of ops) {
+    if (op.estado === "fallida") continue;
+    if (op.tipo === "cambiar_estado") {
+      const d = op.datos;
+      if (lista.some((p) => p.id === d.pedidoId && p.estado !== d.estado)) lista = lista.map((p) => (p.id === d.pedidoId ? { ...p, estado: d.estado } : p));
+    } else if (op.tipo === "cobrar") {
+      const d = op.datos;
+      if (lista.some((p) => p.id === d.pedidoId && !p.cobrado)) lista = lista.map((p) => (p.id === d.pedidoId ? { ...p, cobrado: true } : p));
+    }
+  }
+  if (lista === pendientes) return pendientes;
+  return lista.filter(sigueEnLista);
+}

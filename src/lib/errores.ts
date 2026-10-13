@@ -24,5 +24,18 @@ export function mensajeDeError(error: { codigo?: string; mensaje?: string }): st
   return MENSAJE_GENERICO;
 }
 
+/**
+ * ¿El fallo fue pasajero y vale la pena reintentar la MISMA operación más tarde? Pasajero = la base no contestó, estaba
+ * ocupada o se cortó la red entre servidores. Lo contrario es un rechazo definitivo: una regla del negocio (P0001,
+ * P0002, 42501) o datos que la base nunca va a aceptar (clases 22, 23 y 42 de Postgres); reintentar eso no sirve.
+ */
+export function esFalloPasajero(codigo: string | undefined): boolean {
+  const c = codigo ?? "";
+  if (c === "") return true; // sin código: la petición ni llegó a la base (red, puerta de enlace caída)
+  if (/^PGRST00[0-3]$/.test(c)) return true; // la API no pudo conectarse a la base
+  if (/^(08|40|53|57)/.test(c)) return true; // conexión, bloqueo mutuo, sin recursos, tiempo agotado o base reiniciando
+  return c === "55P03"; // no alcanzó a tomar un candado
+}
+
 /** Resultado estándar de una acción del servidor (nada de excepciones hacia el cliente). */
 export type Resultado<T = undefined> = ({ ok: true } & (T extends undefined ? object : { datos: T })) | { ok: false; error: string };

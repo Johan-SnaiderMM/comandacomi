@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ID, snapshotDeEjemplo } from "@/test/sync-fixture";
 import { almacenEnMemoria } from "./almacen";
-import { CLAVE_COLA, CLAVE_SNAPSHOT, Motor, type DepsMotor } from "./motor";
+import { CLAVE_COLA, CLAVE_SNAPSHOT, MAX_FALLOS_SERVIDOR, Motor, type DepsMotor } from "./motor";
 import type { DatosOperacion, Operacion, RespuestaOperacion, Snapshot } from "./tipos";
 
 type Guion = (op: Operacion, n: number) => RespuestaOperacion | Error;
@@ -199,6 +199,126 @@ describe("al volver la señal", () => {
     expect(e.motor.estado().sinSesion).toBe(true);
     expect(e.motor.porSubir()).toBe(1);
     expect(e.motor.conProblema()).toHaveLength(0);
+  });
+});
+
+describe("con la señal mala (el aparato dice que hay red, pero el servidor no contesta)", () => {
+  it("solo el primer toque espera: mientras la red siga caída, lo nuevo se guarda de inmediato", async () => {
+    // La 1.ª llamada falla rápido; las siguientes se quedan colgadas para siempre (como una red que no responde).
+    const e = escenario();
+    let llamadas = 0;
+    e.deps.transporte = (op) => {
+      e.llamadas.push(op);
+      return ++llamadas === 1 ? Promise.reject(new Error("Failed to fetch")) : new Promise(() => {});
+    };
+    const m = e.nuevo();
+
+    const primera = await m.ejecutar("crear_pedido", pedido("p-1"));
+    expect(primera.ok && primera.pendiente).toBe(true);
+    expect(m.estado().sinRed).toBe(true);
+
+    // Hay una subida colgada por detrás. Antes, este toque se quedaba esperándola; ahora responde ya.
+    const segunda = await m.ejecutar("cambiar_estado", cambio("p-1", "listo"));
+    const tercera = await m.ejecutar("cobrar", { pedidoId: "p-1", propina: 0, pagos: [{ medio: "efectivo", monto: 9000 }] });
+    expect(segunda.ok && segunda.pendiente).toBe(true);
+    expect(tercera.ok && tercera.pendiente).toBe(true);
+    expect(m.estado().ops.map((o) => o.tipo)).toEqual(["crear_pedido", "cambiar_estado", "cobrar"]); // en orden
+  });
+
+  it("cuando una subida vuelve a salir bien, todo regresa al modo directo", async () => {
+    let caida = true;
+    const e = escenario({ guion: () => (caida ? new Error("Failed to fetch") : { ok: true, datos: { numero: 7 } }) });
+    await e.motor.ejecutar("crear_pedido", pedido("p-1"));
+    await e.motor.vaciar();
+    expect(e.motor.estado().sinRed).toBe(true);
+
+    caida = false;
+    const guardada = await e.motor.ejecutar("cambiar_estado", cambio("p-1", "listo")); // todavía no sabe que volvió
+    expect(guardada.ok && guardada.pendiente).toBe(true);
+    await e.motor.vaciar(); // la subida de fondo sale bien
+    expect(e.motor.estado().sinRed).toBe(false);
+    expect(e.motor.estado().ops).toEqual([]);
+
+    const directa = await e.motor.ejecutar("cambiar_estado", cambio("p-1", "entregado"));
+    expect(directa).toEqual({ ok: true, pendiente: false, datos: { numero: 7 } });
+  });
+
+  it("lo que se guarda mientras hay una subida en marcha sale en esa misma subida, en orden", async () => {
+    const e = escenario({ enLinea: false });
+    await e.motor.ejecutar("crear_pedido", pedido("a"));
+    let soltar: () => void = () => {};
+    const lenta = new Promise<void>((r) => (soltar = r));
+    e.deps.transporte = async (op) => {
+      e.llamadas.push(op);
+      if (e.llamadas.length === 1) await lenta; // la primera subida tarda
+      return { ok: true, datos: {} };
+    };
+    const m = e.nuevo();
+    e.estado.enLinea = true;
+    const subida = m.vaciar();
+    await new Promise((r) => setTimeout(r, 5));
+    e.estado.enLinea = false;
+    await m.ejecutar("crear_pedido", pedido("b")); // llega mientras "a" sube
+    e.estado.enLinea = true;
+    soltar();
+    await subida;
+    expect(e.llamadas.map((l) => (l.datos as { id: string }).id)).toEqual(["a", "b"]);
+    expect(m.porSubir()).toBe(0);
+  });
+});
+
+describe("cuando el servidor no puede atender (fallo pasajero, no un rechazo)", () => {
+  const pasajero: RespuestaOperacion = { ok: false, error: "No se pudo completar. Revisa la señal e intenta de nuevo.", reintentable: true };
+
+  it("directo: no se muestra como error; se guarda y se reintenta sola", async () => {
+    let caida = true;
+    const e = escenario({ guion: () => (caida ? pasajero : { ok: true, datos: {} }) });
+    const r = await e.motor.ejecutar("cobrar", { pedidoId: ID.pedidoViejo, propina: 0, pagos: [{ medio: "efectivo", monto: 23000 }] });
+    expect(r.ok && r.pendiente).toBe(true);
+    await e.motor.vaciar();
+    expect(e.motor.conProblema()).toHaveLength(0);
+    expect(e.motor.porSubir()).toBe(1);
+    expect(e.motor.estado().sinRed).toBe(true);
+
+    caida = false;
+    await e.motor.vaciar();
+    expect(e.motor.estado().ops).toEqual([]);
+    expect(new Set(e.llamadas.map((l) => l.clave)).size).toBe(1); // siempre la misma clave: nunca se cobra dos veces
+  });
+
+  it("en la cola: la subida se detiene ahí (no marca nada como rechazado ni se salta el orden)", async () => {
+    let caida = true;
+    const e = escenario({ enLinea: false, guion: () => (caida ? pasajero : { ok: true, datos: {} }) });
+    await e.motor.ejecutar("crear_pedido", pedido("a"));
+    await e.motor.ejecutar("cobrar", { pedidoId: "a", propina: 0, pagos: [{ medio: "efectivo", monto: 9000 }] });
+    e.estado.enLinea = true;
+    await e.motor.vaciar();
+    expect(e.llamadas).toHaveLength(1); // el cobro ni se intentó: depende del pedido
+    expect(e.motor.estado().ops.map((o) => o.estado)).toEqual(["pendiente", "pendiente"]);
+
+    caida = false;
+    await e.motor.vaciar();
+    expect(e.llamadas.map((l) => l.tipo)).toEqual(["crear_pedido", "crear_pedido", "cobrar"]);
+    expect(e.motor.estado().ops).toEqual([]);
+  });
+
+  it("si nunca se compone, al rato queda como problema para revisar (no tranca la fila para siempre)", async () => {
+    const e = escenario({ enLinea: false, guion: (op) => ((op.datos as { id?: string }).id === "terca" ? pasajero : { ok: true, datos: {} }) });
+    await e.motor.ejecutar("crear_pedido", pedido("terca"));
+    await e.motor.ejecutar("crear_pedido", pedido("buena"));
+    e.estado.enLinea = true;
+    for (let i = 0; i < MAX_FALLOS_SERVIDOR; i++) await e.motor.vaciar();
+    const problemas = e.motor.conProblema();
+    expect(problemas.map((o) => (o.datos as { id: string }).id)).toEqual(["terca"]);
+    expect(problemas[0].error).toMatch(/No se pudo completar/);
+    expect(e.motor.porSubir()).toBe(0); // la que venía detrás ya subió
+  });
+
+  it("un rechazo de verdad sigue siendo definitivo", async () => {
+    const e = escenario({ guion: () => ({ ok: false, error: "Este pedido ya está cobrado." }) });
+    const r = await e.motor.ejecutar("cambiar_estado", cambio());
+    expect(r).toEqual({ ok: false, error: "Este pedido ya está cobrado." });
+    expect(e.motor.estado().sinRed).toBe(false);
   });
 });
 

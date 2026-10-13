@@ -55,6 +55,7 @@ export function HojaPedidoCliente({
   const [notas, setNotas] = useState("");
   const [sitio, setSitio] = useState(""); // campo trampa: una persona no lo ve ni lo llena
   const [error, setError] = useState<string | null>(null);
+  const [enviado, setEnviado] = useState<number | null>(null); // número del pedido que ya salió
   const [enviando, empezar] = useTransition();
 
   const total = totalBorrador(borrador);
@@ -80,8 +81,22 @@ export function HojaPedidoCliente({
       } catch {
         // sin localStorage el pedido se envía igual; solo no se recuerdan los datos
       }
+      // El pedido ya salió: el carrito guardado en el celular se limpia de una vez (si quedara, al volver al menú se
+      // podría enviar dos veces). Mientras abre el seguimiento se muestra la confirmación, no un carrito vacío.
+      setEnviado(r.datos.numero);
+      despachar({ tipo: "vaciar" });
       router.push(`/seguimiento/${r.datos.token}`);
     });
+  }
+
+  if (enviado !== null) {
+    return (
+      <HojaInferior titulo="Tu pedido" onCerrar={onCerrar}>
+        <p role="status" className="py-6 text-center text-lg font-bold">
+          Pedido #{enviado} enviado. Abriendo el seguimiento…
+        </p>
+      </HojaInferior>
+    );
   }
 
   return (

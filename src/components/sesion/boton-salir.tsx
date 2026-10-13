@@ -5,6 +5,7 @@ import { LogOut } from "lucide-react";
 import { salirDemo } from "@/app/acciones/sesion";
 import { Button } from "@/components/ui/button";
 import { HojaInferior } from "@/components/ui/hoja-inferior";
+import { olvidarBorradores } from "@/lib/borrador-local";
 import { obtenerMotor } from "@/lib/sync/cliente";
 
 /**
@@ -18,6 +19,7 @@ export function BotonSalir({ className }: { className?: string }) {
 
   function limpiarLocal() {
     obtenerMotor()?.limpiarTodo();
+    olvidarBorradores("pedido:"); // pedidos a medio tomar
     if ("caches" in window) void caches.keys().then((claves) => Promise.all(claves.map((c) => caches.delete(c))));
     try {
       window.localStorage.removeItem("sc:precarga"); // la app sin conexión se vuelve a guardar en la próxima visita

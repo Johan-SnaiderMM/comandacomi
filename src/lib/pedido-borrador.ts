@@ -33,6 +33,24 @@ export type Destino = {
 export const BORRADOR_VACIO: Borrador = { lineas: [] };
 export const DESTINO_INICIAL: Destino = { tipo: "mesa", mesaId: null, agregarA: null, contactoNombre: "", contactoTelefono: "", direccion: "" };
 
+/** Lee un destino guardado en el celular (texto que pudo dañarse): devuelve null si no tiene la forma esperada. */
+export function leerDestino(crudo: unknown): Destino | null {
+  if (typeof crudo !== "object" || crudo === null) return null;
+  const d = crudo as Record<string, unknown>;
+  const textoONulo = (v: unknown) => v === null || typeof v === "string";
+  if (d.tipo !== "mesa" && d.tipo !== "llevar" && d.tipo !== "domicilio") return null;
+  if (!textoONulo(d.mesaId) || !textoONulo(d.agregarA)) return null;
+  if (typeof d.contactoNombre !== "string" || typeof d.contactoTelefono !== "string" || typeof d.direccion !== "string") return null;
+  return {
+    tipo: d.tipo,
+    mesaId: d.mesaId as string | null,
+    agregarA: d.agregarA as string | null,
+    contactoNombre: d.contactoNombre,
+    contactoTelefono: d.contactoTelefono,
+    direccion: d.direccion,
+  };
+}
+
 export const MAX_CANTIDAD = 99;
 
 export function claveLinea(productoId: string, adicionIds: string[], notas: string): string {
@@ -87,6 +105,49 @@ export function reducir(estado: Borrador, accion: Accion): Borrador {
     case "restaurar":
       return accion.borrador;
   }
+}
+
+/** Lo que hace falta del menú para poner al día un pedido guardado (sirve el del personal y el del cliente). */
+export type MenuParaBorrador = {
+  productos: { id: string; categoria_id: string; nombre: string; precio: Pesos; disponible: boolean }[];
+  modificadores: { id: string; categoria_id: string | null; nombre: string; precio_extra: Pesos }[];
+};
+
+/**
+ * Pone al día un pedido que se guardó hace un rato con el menú de AHORA: quita los platos que ya no existen o se
+ * agotaron y las adiciones que ya no aplican, y corrige nombres y precios. Así lo que se muestra al retomar el pedido
+ * es lo que el servidor va a aceptar y cobrar. Si no cambió nada devuelve el mismo borrador.
+ */
+export function reconciliarConMenu(b: Borrador, menu: MenuParaBorrador): Borrador {
+  let cambio = false;
+  const lineas: LineaBorrador[] = [];
+  for (const l of b.lineas) {
+    const producto = menu.productos.find((p) => p.id === l.productoId);
+    if (!producto || !producto.disponible) {
+      cambio = true;
+      continue;
+    }
+    const adiciones = l.adiciones.flatMap((a) => {
+      const m = menu.modificadores.find((x) => x.id === a.id && (x.categoria_id === null || x.categoria_id === producto.categoria_id));
+      return m ? [{ id: m.id, nombre: m.nombre, precio: m.precio_extra }] : [];
+    });
+    const igual =
+      producto.nombre === l.nombre &&
+      producto.precio === l.precio &&
+      adiciones.length === l.adiciones.length &&
+      adiciones.every((a, i) => a.nombre === l.adiciones[i].nombre && a.precio === l.adiciones[i].precio);
+    if (igual) {
+      lineas.push(l);
+      continue;
+    }
+    cambio = true;
+    // Al perder una adición puede quedar igual a otra línea del pedido: se suman en una sola.
+    const clave = claveLinea(producto.id, adiciones.map((a) => a.id), l.notas);
+    const i = lineas.findIndex((x) => x.clave === clave);
+    if (i >= 0) lineas[i] = { ...lineas[i], cantidad: Math.min(MAX_CANTIDAD, lineas[i].cantidad + l.cantidad) };
+    else lineas.push({ ...l, clave, nombre: producto.nombre, precio: producto.precio, adiciones });
+  }
+  return cambio ? { lineas } : b;
 }
 
 /** Cuántas unidades de un plato hay en el pedido (sumando todas sus variantes). */

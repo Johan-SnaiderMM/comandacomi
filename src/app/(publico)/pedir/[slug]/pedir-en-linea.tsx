@@ -1,21 +1,15 @@
 "use client";
 
-import { useMemo, useReducer, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ClipboardList, Store } from "lucide-react";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Aviso } from "@/components/ui/aviso";
 import { Button } from "@/components/ui/button";
 import { Stepper } from "@/components/ui/stepper";
+import { almacenBorrador } from "@/lib/borrador-local";
 import { formatearPesos } from "@/lib/dinero";
-import {
-  BORRADOR_VACIO,
-  cantidadDe,
-  reducir,
-  totalBorrador,
-  totalUnidades,
-  type AdicionElegida,
-} from "@/lib/pedido-borrador";
+import { cantidadDe, reconciliarConMenu, totalBorrador, totalUnidades, type AdicionElegida } from "@/lib/pedido-borrador";
 import type { MenuPublico } from "@/lib/publico/tipos";
 import { HojaExtras } from "@/app/(tarea)/pedido/nuevo/hoja-extras";
 import { HojaPedidoCliente } from "./hoja-pedido-cliente";
@@ -52,7 +46,11 @@ function suscribirAlmacenamiento(oyente: () => void): () => void {
  */
 export function PedirEnLinea({ menu }: { menu: MenuPublico }) {
   const { restaurante } = menu;
-  const [borrador, despachar] = useReducer(reducir, BORRADOR_VACIO);
+  // El pedido que el cliente va armando se guarda en su celular (lib/borrador-local.ts): si recarga, cambia de app para
+  // preguntar algo o el celular cierra la pestaña, al volver sigue ahí. Se borra al enviarlo.
+  const almacen = almacenBorrador<null>({ clave: `cliente:${restaurante.slug}`, extraInicial: null, vigenciaMs: HORAS_EN_CURSO * 3_600_000 });
+  const { borrador } = useSyncExternalStore(almacen.suscribir, almacen.leer, () => almacen.vacio);
+  const despachar = almacen.despachar;
   const [extras, setExtras] = useState<Producto | null>(null);
   const [hoja, setHoja] = useState(false);
   const guardado = useSyncExternalStore(suscribirAlmacenamiento, () => leerPedidoEnCurso(restaurante.slug), () => null);
@@ -69,6 +67,13 @@ export function PedirEnLinea({ menu }: { menu: MenuPublico }) {
         .filter((s) => s.productos.length > 0),
     [menu]
   );
+
+  // Un pedido retomado se pone al día con el menú de ahora: fuera lo agotado, precios vigentes.
+  useEffect(() => {
+    const actual = almacen.leer().borrador;
+    const alDia = reconciliarConMenu(actual, menu);
+    if (alDia !== actual) almacen.despachar({ tipo: "restaurar", borrador: alDia });
+  }, [almacen, menu]);
 
   /** Quita una unidad de un plato (la última variante que se agregó). */
   function quitarUno(productoId: string) {

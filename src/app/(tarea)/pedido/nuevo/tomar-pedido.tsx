@@ -1,18 +1,19 @@
 "use client";
 
-import { useReducer, useState, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { ChevronDown, ChevronLeft, SlidersHorizontal } from "lucide-react";
 import { ChipGuia } from "@/components/guia/chip-guia";
 import { BandaSync } from "@/components/sync/banda-sync";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { Button } from "@/components/ui/button";
+import { almacenBorrador } from "@/lib/borrador-local";
 import type { MenuParaPedido } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
 import { Enlace, useIr } from "@/lib/navegacion";
 import { enviarPedido } from "@/lib/sync/acciones";
 import { numeroVisible } from "@/lib/sync/numero";
 import {
-  aItemsDeEnvio, BORRADOR_VACIO, cantidadDe, DESTINO_INICIAL, etiquetaDestino, faltaEnDestino, reducir, totalBorrador, totalUnidades,
+  aItemsDeEnvio, cantidadDe, DESTINO_INICIAL, etiquetaDestino, faltaEnDestino, leerDestino, reconciliarConMenu, totalBorrador, totalUnidades,
   type AdicionElegida, type Destino,
 } from "@/lib/pedido-borrador";
 import { cn } from "@/lib/utils";
@@ -25,15 +26,30 @@ type Producto = MenuParaPedido["productos"][number];
 /** Cuando se llega desde "Agregar platos" de un pedido que ya existe. */
 export type ModoAgregar = { pedidoId: string; numero: number; tipo: Destino["tipo"]; etiqueta: string };
 
+/** Un pedido a medio tomar se conserva este tiempo desde el último toque; después se descarta solo. */
+const VIGENCIA_BORRADOR_MS = 30 * 60_000;
+const sinSuscripcion = () => () => {};
+
 export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: ModoAgregar | null }) {
   const router = useIr();
-  const [borrador, despachar] = useReducer(reducir, BORRADOR_VACIO);
-  const [destino, setDestino] = useState<Destino>(
-    agregar ? { ...DESTINO_INICIAL, tipo: agregar.tipo, agregarA: agregar.pedidoId } : DESTINO_INICIAL
-  );
+  // El pedido a medio tomar vive fuera de la pantalla (lib/borrador-local.ts): si una alerta, una notificación o la
+  // flecha de volver sacan de aquí, al regresar sigue como estaba. Cada pedido al que se le agregan platos lleva el suyo.
+  const almacen = almacenBorrador<Destino>({
+    clave: agregar ? `pedido:agregar:${agregar.pedidoId}` : "pedido:nuevo",
+    extraInicial: DESTINO_INICIAL,
+    vigenciaMs: VIGENCIA_BORRADOR_MS,
+    leerExtra: leerDestino,
+  });
+  const guardado = useSyncExternalStore(almacen.suscribir, almacen.leer, () => almacen.vacio);
+  const { borrador } = guardado;
+  const despachar = almacen.despachar;
+  const destino: Destino = agregar ? { ...DESTINO_INICIAL, tipo: agregar.tipo, agregarA: agregar.pedidoId } : guardado.extra;
+  const listo = useSyncExternalStore(sinSuscripcion, () => true, () => false); // ya en el celular (no en el HTML del servidor)
   const [categoriaId, setCategoriaId] = useState(menu.categorias[0]?.id ?? "");
-  // Lo primero que hay que decidir es para quién es: la hoja se abre sola (salvo si se agregan platos a un pedido).
-  const [hojaDestino, setHojaDestino] = useState(!agregar);
+  // Lo primero que hay que decidir es para quién es: mientras nadie la toque ("auto"), la hoja se abre sola si eso
+  // falta. Al retomar un pedido que ya tenía destino no estorba; al agregar platos a un pedido tampoco.
+  const [hojaDestino, setHojaDestino] = useState<"auto" | boolean>("auto");
+  const destinoAbierta = hojaDestino === "auto" ? listo && !agregar && faltaEnDestino(destino) !== null : hojaDestino;
   const [hojaCarrito, setHojaCarrito] = useState(false);
   const [extras, setExtras] = useState<Producto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +61,13 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
   const etiqueta = agregar ? agregar.etiqueta : etiquetaDestino(destino, nombreMesa);
   const unidades = totalUnidades(borrador);
   const total = totalBorrador(borrador);
+
+  // Un pedido retomado se pone al día con el menú de ahora: fuera lo agotado, precios vigentes.
+  useEffect(() => {
+    const actual = almacen.leer().borrador;
+    const alDia = reconciliarConMenu(actual, menu);
+    if (alDia !== actual) almacen.despachar({ tipo: "restaurar", borrador: alDia });
+  }, [almacen, menu]);
 
   function enviar() {
     if (!agregar) {
@@ -71,7 +94,8 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
         setHojaCarrito(true);
         return;
       }
-      despachar({ tipo: "vaciar" });
+      setHojaDestino(false); // el pedido ya salió: que la hoja de destino no se asome mientras se cambia de pantalla
+      almacen.olvidar();
       router.push(`/pedidos?enviado=${r.datos.numero}${r.datos.agregado ? "&agregado=1" : ""}${r.datos.pendiente ? "&pendiente=1" : ""}`);
     });
   }
@@ -203,12 +227,12 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
         </Button>
       </BarraAccion>
 
-      {hojaDestino && (
+      {destinoAbierta && (
         <HojaDestino
           mesas={menu.mesas}
           destino={destino}
           onElegir={(d) => {
-            setDestino(d);
+            almacen.ponerExtra(d);
             setHojaDestino(false);
           }}
           onCerrar={() => setHojaDestino(false)}

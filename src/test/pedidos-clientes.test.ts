@@ -122,8 +122,9 @@ describe("slug del restaurante", () => {
     await rpc(db, C.userId, "reiniciar_demo", { p_nombre: "Fladi" });
     const ctx = await rpc<{ restaurante: { slug: string; pedidos_en_linea: boolean; nombre: string } }>(db, C.userId, "obtener_contexto");
     expect(ctx.restaurante).toMatchObject({ slug: "fladi", nombre: "Fladi", pedidos_en_linea: true });
-    expect(await publico("publico_menu", { p_slug: "local-de-prueba" })).toBeNull();
     expect(await publico("publico_menu", { p_slug: "fladi" })).not.toBeNull();
+    // El enlace anterior sigue funcionando y dice cuál es el vigente (ver enlaces-y-quitados.test.ts).
+    expect(await publico("publico_menu", { p_slug: "local-de-prueba" })).toMatchObject({ restaurante: { slug: "fladi" } });
   });
 });
 

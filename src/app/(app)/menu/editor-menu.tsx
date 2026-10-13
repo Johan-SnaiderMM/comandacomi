@@ -34,6 +34,8 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
   const [, empezar] = useTransition();
   const [devolviendo, empezarDevolver] = useTransition();
   const quitados = menu.quitados ?? [];
+  // La categoría que se está viendo (null = la primera). Las categorías FILTRAN, igual que en el menú del cliente.
+  const [categoriaElegida, setCategoriaElegida] = useState<string | null>(null);
 
   const [categorias, aplicar] = useOptimistic(menu.categorias, (estado, cambio: { id: string; disponible: boolean }) =>
     estado.map((c) => ({ ...c, productos: c.productos.map((p) => (p.id === cambio.id ? { ...p, disponible: cambio.disponible } : p)) }))
@@ -54,17 +56,22 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
     empezarDevolver(async () => {
       const r = await guardarProducto({ id: q.id, categoriaId: q.categoria_id, nombre: q.nombre, precio: q.precio, disponible: true, activo: true });
       if (!r.ok) setError(r.error);
-      else setAviso(`«${q.nombre}» volvió al menú, en ${q.categoria}.`);
+      else {
+        setAviso(`«${q.nombre}» volvió al menú, en ${q.categoria}.`);
+        setCategoriaElegida(q.categoria_id); // se pasa a su categoría para que se vea de una vez
+      }
     });
   }
 
   const totalPlatos = categorias.reduce((s, c) => s + c.productos.length, 0);
+  // Si la elegida ya no existe (se reinició la demo), se vuelve a la primera.
+  const visible = categorias.find((c) => c.id === categoriaElegida) ?? categorias[0];
 
   return (
     <>
       <div className="space-y-5 px-4 pt-3">
         <p className="text-base text-tinta-2">
-          {totalPlatos} platos. Toca un plato o una adición para cambiar su nombre o precio; el interruptor dice si hay hoy.
+          {totalPlatos} platos. Elige una categoría; toca un plato o una adición para cambiar su nombre o precio. El interruptor dice si hay hoy.
         </p>
         {error && (
           <Aviso tipo="error" onCerrar={() => setError(null)}>
@@ -77,7 +84,35 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
           </Aviso>
         )}
 
-        {categorias.map((c) => (
+        {/* Las categorías son un filtro: se ve una sola a la vez (los 25 platos seguidos eran una lista muy larga).
+            El número dice cuántos platos tiene; si alguno está agotado, lo avisa. */}
+        {categorias.length > 1 && (
+          <div role="group" aria-label="Categorías" className="flex flex-wrap gap-2">
+            {categorias.map((c) => {
+              const elegida = c.id === visible?.id;
+              const agotados = c.productos.filter((p) => !p.disponible).length;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  aria-pressed={elegida}
+                  onClick={() => setCategoriaElegida(c.id)}
+                  className={`flex min-h-12 items-center gap-1.5 rounded-xl border-2 border-tinta px-3 text-left text-base font-bold leading-tight active:translate-y-[2px] ${elegida ? "bg-sol shadow-sello-chico" : "bg-papel"} ${c.activa ? "" : "border-dashed"}`}
+                >
+                  <span aria-hidden>{c.icono}</span>
+                  {c.nombre}
+                  <span className="cifra text-lg text-tinta-2">
+                    {c.productos.length}
+                    <span className="sr-only"> platos</span>
+                  </span>
+                  {agotados > 0 && <span className="text-base font-bold text-aji">· {agotados === 1 ? "1 agotado" : `${agotados} agotados`}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {(visible ? [visible] : []).map((c) => (
           <section key={c.id} aria-label={c.nombre}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="font-display flex items-center gap-2 text-2xl font-extrabold uppercase leading-none tracking-tight">
@@ -182,7 +217,9 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
           onCerrar={() => setHoja(null)}
         />
       )}
-      {hoja?.tipo === "categoria" && <HojaCategoria key={hoja.categoria?.id ?? "nueva"} categoria={hoja.categoria} onCerrar={() => setHoja(null)} />}
+      {hoja?.tipo === "categoria" && (
+        <HojaCategoria key={hoja.categoria?.id ?? "nueva"} categoria={hoja.categoria} onGuardada={setCategoriaElegida} onCerrar={() => setHoja(null)} />
+      )}
       {hoja?.tipo === "adicion" && (
         <HojaAdicion
           key={hoja.adicion?.id ?? `nueva-${hoja.categoriaId ?? "todas"}`}

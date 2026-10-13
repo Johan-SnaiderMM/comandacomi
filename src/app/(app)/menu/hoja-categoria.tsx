@@ -14,7 +14,16 @@ import { cn } from "@/lib/utils";
 type Categoria = MenuAdmin["categorias"][number];
 
 /** Crear o editar una categoría: nombre, emoji, si se muestra al tomar pedidos y si sus platos pasan por la cocina. */
-export function HojaCategoria({ categoria, onCerrar }: { categoria: Categoria | null; onCerrar: () => void }) {
+export function HojaCategoria({
+  categoria,
+  onGuardada,
+  onCerrar,
+}: {
+  categoria: Categoria | null;
+  /** Avisa cuál categoría se guardó: el menú pasa a mostrarla (una recién creada, si no, no se vería). */
+  onGuardada?: (id: string) => void;
+  onCerrar: () => void;
+}) {
   const [nombre, setNombre] = useState(categoria?.nombre ?? "");
   const [icono, setIcono] = useState(categoria?.icono ?? ICONOS_CATEGORIA[0]);
   const [activa, setActiva] = useState(categoria?.activa ?? true);
@@ -30,6 +39,7 @@ export function HojaCategoria({ categoria, onCerrar }: { categoria: Categoria | 
         setError(r.error);
         return;
       }
+      onGuardada?.(r.datos.id);
       onCerrar();
     });
   }

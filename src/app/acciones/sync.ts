@@ -8,7 +8,7 @@ import { obtenerContexto } from "@/lib/datos/inicio";
 import { consultar } from "@/lib/datos/llamar";
 import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerMenuParaPedido } from "@/lib/datos/pedidos";
 import { ErrorApp, esFalloPasajero, MENSAJE_GENERICO } from "@/lib/errores";
-import { alEntrarACocina, alQuedarListo } from "@/lib/push/eventos";
+import { alAgregarPlatos, alEntrarACocina, alQuedarListo } from "@/lib/push/eventos";
 import { argumentosDeOperacion, esquemaSobreOperacion } from "@/lib/esquemas/operacion";
 import { obtenerUsuario } from "@/lib/sesion";
 import type { RespuestaOperacion, Snapshot } from "@/lib/sync/tipos";
@@ -44,6 +44,7 @@ export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOpera
   // en el celular reemplaza al anterior en vez de apilarse.
   const args = construido.args;
   if (tipo === "crear_pedido" && typeof args.p_id === "string") after(() => alEntrarACocina(args.p_id as string));
+  if (tipo === "agregar_items" && typeof args.p_pedido_id === "string") after(() => alAgregarPlatos(args.p_pedido_id as string));
   if (tipo === "cambiar_estado" && args.p_estado === "listo" && typeof args.p_pedido_id === "string") after(() => alQuedarListo(args.p_pedido_id as string));
   revalidatePath("/", "layout");
   return { ok: true, datos: resultado };

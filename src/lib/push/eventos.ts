@@ -7,6 +7,7 @@ import {
   avisoClienteRechazado,
   avisoPedidoListo,
   avisoPedidoNuevo,
+  avisoPlatosAgregados,
 } from "./mensajes";
 import { avisosConfigurados, enviarAviso } from "./servidor";
 import type { Aviso, CanalPersonal, Destino, InfoPedidoAviso } from "./tipos";
@@ -67,12 +68,24 @@ export function alRechazarPedido(pedidoId: string, motivo: string) {
   });
 }
 
-/** Entró un pedido nuevo a la cocina por el mostrador (mesero/cajero): a la parrilla. */
+/**
+ * Entró un pedido nuevo a la cocina por el mostrador (mesero/cajero): a la parrilla. Si ya no está por preparar (la
+ * operación se subió tarde o se repitió y el pedido ya salió) no se avisa: sería un aviso de algo que ya pasó.
+ */
 export function alEntrarACocina(pedidoId: string) {
   return seguro("pedido a la plancha", async () => {
     const info = await datosDelPedido(pedidoId);
-    if (!info.numero) return;
+    if (!info.numero || info.estado !== "pendiente") return;
     await avisarPersonal("cocina", avisoALaPlancha(info));
+  });
+}
+
+/** A un pedido que ya estaba le agregaron platos: a la parrilla (antes solo se enteraba mirando la pantalla). */
+export function alAgregarPlatos(pedidoId: string) {
+  return seguro("platos agregados", async () => {
+    const info = await datosDelPedido(pedidoId);
+    if (!info.numero || info.estado !== "pendiente") return;
+    await avisarPersonal("cocina", avisoPlatosAgregados(info));
   });
 }
 

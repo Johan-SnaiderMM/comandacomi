@@ -53,6 +53,20 @@ export function separarPlancha(pedidos: PedidoPlancha[]): { porPreparar: PedidoP
   return { porPreparar, listos };
 }
 
+/**
+ * Trabajo NUEVO para la cocina desde la última consulta: por cada pedido, los platos por preparar que antes no estaban.
+ * Sirve para dos casos con una sola regla: el pedido que acaba de llegar (todos sus platos son nuevos) y el pedido que
+ * ya estaba y al que le agregaron platos ("la mesa pidió más"). Se mira plato por plato, no pedido por pedido: mirando
+ * solo el pedido, los platos agregados llegaban sin sonar.
+ * Un plato que ya se había visto y vuelve a quedar por preparar (alguien lo desmarcó) no cuenta como nuevo.
+ */
+export function platosNuevos(vistos: ReadonlySet<string>, pedidos: Pick<PedidoPlancha, "id" | "items">[]): { pedidoId: string; items: string[] }[] {
+  return pedidos.flatMap((p) => {
+    const items = p.items.filter((i) => !i.listo && !vistos.has(i.id)).map((i) => i.id);
+    return items.length > 0 ? [{ pedidoId: p.id, items }] : [];
+  });
+}
+
 /** Ids que aparecen ahora y antes no estaban (para el aviso de pedido nuevo). */
 export function idsNuevos(vistos: ReadonlySet<string>, actuales: { id: string }[]): string[] {
   return actuales.filter((a) => !vistos.has(a.id)).map((a) => a.id);

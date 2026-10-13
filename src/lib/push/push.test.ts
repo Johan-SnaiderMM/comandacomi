@@ -9,6 +9,7 @@ import {
   avisoDePrueba,
   avisoPedidoListo,
   avisoPedidoNuevo,
+  avisoPlatosAgregados,
 } from "./mensajes";
 import type { InfoPedidoAviso } from "./tipos";
 
@@ -46,6 +47,13 @@ describe("texto de los avisos", () => {
     });
     expect(avisoPedidoListo(info()).cuerpo).toBe("Domicilio · Camila. Ya se puede llevar.");
     expect(avisoPedidoListo(info()).titulo).toBe("Listo para entregar: #125");
+  });
+
+  it("platos agregados a un pedido que ya estaba: avisa a la plancha y reemplaza el aviso de ese pedido", () => {
+    const mesa = info({ tipo: "mesa", mesa: "Mesa 3", origen: "mostrador", estado: "pendiente" });
+    const agregado = avisoPlatosAgregados(mesa);
+    expect(agregado).toMatchObject({ titulo: "Más platos: #125", cuerpo: "Mesa 3. Le agregaron platos al pedido.", url: "/plancha", urgente: true });
+    expect(agregado.etiqueta).toBe(avisoALaPlancha(mesa).etiqueta);
   });
 
   it("al cliente: lleva a SU seguimiento y reemplaza el aviso anterior (misma etiqueta)", () => {

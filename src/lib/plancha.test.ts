@@ -5,6 +5,7 @@ import {
   destinoDePedido,
   idsNuevos,
   minutosDeEspera,
+  platosNuevos,
   progresoDePedido,
   separarPlancha,
   textoDeAviso,
@@ -117,5 +118,29 @@ describe("aviso de pedidos nuevos", () => {
     );
     expect(textoDeAviso({ ...uno, cantidad: 3 }, formatearPesos)).toBe("3 pedidos de clientes por confirmar");
     expect(textoDeAviso({ ...uno, cantidad: 0, recientes: [] }, formatearPesos)).toBe("");
+  });
+});
+
+describe("trabajo nuevo para la cocina (plato por plato)", () => {
+  const plato = (id: string, listo = false) => ({ id, nombre: "Plato", cantidad: 1, notas: null, adiciones: [], listo });
+
+  it("un pedido que acaba de llegar: todos sus platos son nuevos", () => {
+    const r = platosNuevos(new Set(), [pedido({ id: "p1", items: [plato("a"), plato("b")] })]);
+    expect(r).toEqual([{ pedidoId: "p1", items: ["a", "b"] }]);
+  });
+
+  it("a un pedido que ya estaba le agregan platos: solo cuentan los agregados", () => {
+    const vistos = new Set(["a", "b"]);
+    const r = platosNuevos(vistos, [pedido({ id: "p1", items: [plato("a"), plato("b", true), plato("c")] }), pedido({ id: "p2", items: [plato("x")] })]);
+    expect(r).toEqual([
+      { pedidoId: "p1", items: ["c"] },
+      { pedidoId: "p2", items: ["x"] },
+    ]);
+  });
+
+  it("sin nada nuevo no hay aviso: ni al desmarcar un plato ya visto, ni con pedidos que llegan ya listos", () => {
+    expect(platosNuevos(new Set(["a"]), [pedido({ id: "p1", items: [plato("a")] })])).toEqual([]); // se desmarcó: ya se había visto
+    expect(platosNuevos(new Set(), [pedido({ id: "p9", estado: "listo", items: [plato("z", true)] })])).toEqual([]); // lo marcaron listo en otra pantalla
+    expect(platosNuevos(new Set(), [])).toEqual([]);
   });
 });

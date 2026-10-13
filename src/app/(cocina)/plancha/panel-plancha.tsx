@@ -8,7 +8,7 @@ import { deshacerPedidoListo, marcarItemListo, marcarPedidoListo } from "@/app/a
 import { Aviso } from "@/components/ui/aviso";
 import type { PedidoPlancha, Plancha } from "@/lib/datos/tipos";
 import { MENSAJE_GENERICO } from "@/lib/errores";
-import { destinoDePedido, idsNuevos, minutosDeEspera, progresoDePedido, separarPlancha, textoDeEspera, urgenciaDeEspera } from "@/lib/plancha";
+import { destinoDePedido, minutosDeEspera, platosNuevos, progresoDePedido, separarPlancha, textoDeEspera, urgenciaDeEspera } from "@/lib/plancha";
 import { activarSonido, desbloquearConElPrimerToque, sonidoActivo, suscribirSonido, tocar, vibrar } from "@/lib/sonido";
 import { cn } from "@/lib/utils";
 
@@ -63,7 +63,9 @@ function suscribirSilencio(oyente: () => void): () => void {
 /**
  * Panel de la plancha: lo que hay que cocinar, pedido por pedido y plato por plato. Un toque marca un plato listo (y el
  * cliente lo ve en su celular); cuando todos los platos de un pedido están listos, el pedido pasa solo a "listo".
- * Se actualiza solo cada pocos segundos; los pedidos nuevos llegan con sonido y vibración.
+ * Se actualiza solo cada pocos segundos; los pedidos nuevos llegan con sonido y vibración, y también los platos que
+ * se le agregan a un pedido que ya estaba (esos quedan marcados "Agregado" hasta que se preparan).
+ * Usa todo el ancho de la pantalla (tableta o celular acostado): ver `(cocina)/layout.tsx`.
  */
 export function PanelPlancha({ inicial }: { inicial: Plancha }) {
   const [datos, setDatos] = useState<Plancha>(inicial);
@@ -75,7 +77,10 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
   // En el servidor se asume que puede sonar (así el HTML inicial no trae el aviso de "activar sonido").
   const sonidoListo = useSyncExternalStore(suscribirSonido, sonidoActivo, () => true);
   const [llegados, setLlegados] = useState<Set<string>>(new Set());
-  const vistos = useRef<Set<string>>(new Set(inicial.pedidos.map((p) => p.id)));
+  // Platos que se le agregaron a un pedido que ya estaba en pantalla: llevan la marca "Agregado" hasta prepararse.
+  const [agregados, setAgregados] = useState<Set<string>>(new Set());
+  const pedidosVistos = useRef<Set<string>>(new Set(inicial.pedidos.map((p) => p.id)));
+  const platosVistos = useRef<Set<string>>(new Set(inicial.pedidos.flatMap((p) => p.items.map((i) => i.id))));
   const sinSesion = useRef(false);
 
   const consultar = useCallback(async () => {
@@ -89,8 +94,14 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
       }
       if (!r.ok) throw new Error("estado " + r.status);
       const nuevo = (await r.json()) as Plancha;
-      const ids = idsNuevos(vistos.current, nuevo.pedidos);
-      nuevo.pedidos.forEach((p) => vistos.current.add(p.id));
+      // Lo nuevo se mira plato por plato: así también suena cuando a un pedido que ya estaba le agregan platos.
+      const novedades = platosNuevos(platosVistos.current, nuevo.pedidos);
+      const ids = novedades.map((n) => n.pedidoId);
+      const platosAgregados = novedades.filter((n) => pedidosVistos.current.has(n.pedidoId)).flatMap((n) => n.items);
+      nuevo.pedidos.forEach((p) => {
+        pedidosVistos.current.add(p.id);
+        p.items.forEach((i) => platosVistos.current.add(i.id));
+      });
       setDatos(nuevo);
       setSinConexion(false);
       // Lo que el servidor ya confirmó deja de ser una marca pendiente.
@@ -103,6 +114,7 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
         return Object.keys(resto).length === Object.keys(m).length ? m : resto;
       });
       if (ids.length > 0) {
+        if (platosAgregados.length > 0) setAgregados((prev) => new Set([...prev, ...platosAgregados]));
         setLlegados((prev) => new Set([...prev, ...ids]));
         window.setTimeout(() => setLlegados((prev) => new Set([...prev].filter((x) => !ids.includes(x)))), 20_000);
         if (!leerSilencio()) {
@@ -270,7 +282,7 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Pedidos por preparar">
             {porPreparar.map((p) => (
-              <TarjetaPedido key={p.id} pedido={p} ahora={datos.ahora} nuevo={llegados.has(p.id)} onPlato={marcarPlato} onTodo={() => void todoListo(p)} />
+              <TarjetaPedido key={p.id} pedido={p} ahora={datos.ahora} nuevo={llegados.has(p.id)} agregados={agregados} onPlato={marcarPlato} onTodo={() => void todoListo(p)} />
             ))}
           </ul>
         )}
@@ -313,12 +325,15 @@ function TarjetaPedido({
   pedido: p,
   ahora,
   nuevo,
+  agregados,
   onPlato,
   onTodo,
 }: {
   pedido: PedidoPlancha;
   ahora: string;
   nuevo: boolean;
+  /** Platos que se agregaron después de que el pedido ya estaba en pantalla. */
+  agregados: ReadonlySet<string>;
   onPlato: (itemId: string, listo: boolean) => void;
   onTodo: () => void;
 }) {
@@ -369,6 +384,9 @@ function TarjetaPedido({
               <span className={cn("min-w-0 flex-1 leading-tight", i.listo && "text-tinta-2 line-through decoration-2")}>
                 <span className="cifra mr-2 text-3xl">{i.cantidad}×</span>
                 <span className="text-xl font-extrabold">{i.nombre}</span>
+                {!i.listo && agregados.has(i.id) && (
+                  <span className="ml-2 inline-block rounded-md border-2 border-tinta bg-aji px-1.5 align-middle text-base font-extrabold leading-tight text-papel">Agregado</span>
+                )}
                 {i.adiciones.length > 0 && <span className="block text-lg font-bold">+ {i.adiciones.map((a) => a.nombre).join(", ")}</span>}
                 {i.notas && <span className="block text-lg font-extrabold text-aji">“{i.notas}”</span>}
               </span>

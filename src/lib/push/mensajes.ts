@@ -40,6 +40,20 @@ export function avisoALaPlancha(info: InfoPedidoAviso): Aviso {
   };
 }
 
+/**
+ * A la parrilla: a un pedido que ya estaba le agregaron platos ("la mesa pidió más"). Lleva la misma etiqueta que el
+ * aviso de ese pedido: en el celular lo reemplaza (y vuelve a sonar) en vez de apilarse.
+ */
+export function avisoPlatosAgregados(info: InfoPedidoAviso): Aviso {
+  return {
+    titulo: `Más platos: #${info.numero}`,
+    cuerpo: `${destino(info)}. Le agregaron platos al pedido.`,
+    url: "/plancha",
+    etiqueta: `plancha-${info.numero}`,
+    urgente: true,
+  };
+}
+
 /** Al mesero: el pedido quedó listo para entregar. */
 export function avisoPedidoListo(info: InfoPedidoAviso): Aviso {
   return {

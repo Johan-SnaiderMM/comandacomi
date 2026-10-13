@@ -25,6 +25,23 @@ export function mensajeRecordatorio({ cliente, saldo, restaurante }: { cliente: 
   return `Hola ${nombreCorto(cliente)}, te saluda ${restaurante}. Te recordamos que tienes un saldo pendiente de ${formatearPesos(saldo)}. Cuando puedas pasar o enviarlo por Nequi, nos ayudas mucho. ¡Gracias!`;
 }
 
+/** El restaurante le escribe a un cliente que pidió en línea (aclarar la dirección, avisar de un cambio). */
+export function mensajeAlClienteEnLinea({ cliente, numero, restaurante }: { cliente: string; numero: number; restaurante: string }): string {
+  const nombre = nombreCorto(cliente);
+  return `Hola${nombre ? ` ${nombre}` : ""}, te escribe ${restaurante} por tu pedido #${numero}.`;
+}
+
+/** El restaurante le manda a un cliente el enlace para seguir su pedido (por ejemplo, un domicilio por teléfono). */
+export function mensajeSeguimiento({ cliente, numero, restaurante, enlace }: { cliente: string; numero: number; restaurante: string; enlace: string }): string {
+  const nombre = nombreCorto(cliente);
+  return `Hola${nombre ? ` ${nombre}` : ""}, soy ${restaurante}. Sigue tu pedido #${numero} aquí: ${enlace}`;
+}
+
+/** Invitación para que un cliente pida desde su celular (se manda por WhatsApp a quien el dueño escoja). */
+export function mensajeInvitacionPedidos({ restaurante, enlace }: { restaurante: string; enlace: string }): string {
+  return `Hola, ya puedes pedir en ${restaurante} desde tu celular, sin llamar: ${enlace}`;
+}
+
 export type DatosResumen = {
   restaurante: string;
   /** 'Lunes 5 de octubre' */

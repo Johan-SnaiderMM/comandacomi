@@ -6,6 +6,8 @@
  *    para abrir. Los datos que muestra salen de la copia local del celular (localStorage), no de aquí.
  *  - Pantallas normales de la app: primero la red (8 s). Si no hay señal, en vez de mostrar una copia vieja con datos
  *    de ayer, se lleva a la persona a la app sin conexión, a la pantalla equivalente (/sc#/pedidos, etc.).
+ *  - Páginas del cliente (/pedir, /seguimiento): no existen en la app sin conexión (esa es del personal); sin señal se
+ *    muestra la página "Sin señal" con el botón de reintentar. Misma regla que src/lib/rutas-publicas.ts.
  *
  * NO toca POST (acciones del servidor: la cola de la app las reintenta con su propia clave), no guarda páginas con
  * datos del restaurante y no usa IndexedDB. Al salir de la sesión la app borra estas cachés.
@@ -16,6 +18,7 @@ const CACHE_SC = `sc-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
 const SC_URL = "/sc";
 const TIMEOUT_RED_MS = 8000;
+const RUTAS_PUBLICAS = /^\/(?:pedir|seguimiento)(?:\/|$)/;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -131,6 +134,7 @@ async function navegar(request) {
   } catch {
     const copia = await (await caches.open(CACHE_SC)).match(SC_URL);
     if (url.pathname === SC_URL) return copia || (await caches.match(OFFLINE_URL)) || new Response("Sin conexión", { status: 503 });
+    if (RUTAS_PUBLICAS.test(url.pathname)) return (await caches.match(OFFLINE_URL)) || new Response("Sin conexión", { status: 503 });
     if (copia) return Response.redirect(`${SC_URL}#${url.pathname}${url.search}`, 302);
     return (await caches.match(OFFLINE_URL)) || new Response("Sin conexión", { status: 503 });
   }

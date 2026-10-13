@@ -180,10 +180,49 @@ textarea {
   animation: guia-late 1.1s ease-in-out infinite;
 }
 
+/* Aviso de pedido nuevo de un cliente: parpadea entre rojo y amarillo y la campana se sacude. Imposible de no ver. */
+@keyframes alerta-parpadeo {
+  0%, 100% { background-color: var(--color-aji); color: var(--color-papel); }
+  50% { background-color: var(--color-sol); color: var(--color-tinta); }
+}
+@keyframes alerta-campana {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(16deg); }
+  30% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  75% { transform: rotate(0deg); }
+}
+.alerta-parpadeo {
+  animation: alerta-parpadeo 1s steps(1, end) infinite;
+}
+.alerta-campana {
+  transform-origin: 50% 10%;
+  animation: alerta-campana 1.2s ease-in-out infinite;
+}
+
+/* Un pedido que acaba de llegar a la plancha late una vez para que el ojo lo encuentre. */
+@keyframes plancha-llega {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-aji) 70%, transparent); }
+  100% { box-shadow: 0 0 0 18px transparent; }
+}
+.plancha-llega {
+  animation: plancha-llega 1.2s ease-out 3;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-guia-aro] {
     animation: none;
     box-shadow: 0 0 0 3px var(--color-papel), 0 0 0 7px var(--color-aji);
+  }
+  .alerta-parpadeo {
+    animation: none;
+    background-color: var(--color-aji);
+    color: var(--color-papel);
+  }
+  .alerta-campana,
+  .plancha-llega {
+    animation: none;
   }
   .hoja[open],
   .hoja[open]::backdrop {

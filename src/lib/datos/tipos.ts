@@ -9,7 +9,7 @@ export type TipoPedido = "mesa" | "llevar" | "domicilio";
 export type EstadoPedido = "pendiente" | "listo" | "entregado";
 
 export type Contexto = {
-  restaurante: { id: string; nombre: string; es_demo: boolean } | null;
+  restaurante: { id: string; nombre: string; es_demo: boolean; slug: string; pedidos_en_linea: boolean } | null;
   perfil: { nombre: string; rol: "dueno" | "ayudante" } | null;
 };
 
@@ -26,6 +26,8 @@ export type Inicio = {
   clientes_con_deuda: number;
   pedidos_pendientes: number;
   pedidos_sin_cobrar: number;
+  /** Pedidos que hicieron clientes en línea y todavía no se aceptan (opcional: copias locales viejas no lo traen). */
+  pedidos_por_confirmar?: number;
 };
 
 export type ItemPedidoResumen = {
@@ -34,7 +36,12 @@ export type ItemPedidoResumen = {
   cantidad: number;
   notas: string | null;
   adiciones: { id: string; nombre: string; precio: number }[];
+  /** La plancha ya lo preparó (opcional: copias locales viejas no lo traen). */
+  listo?: boolean;
 };
+
+/** De dónde vino el pedido: lo tomó el personal (mostrador) o lo hizo el cliente en línea. */
+export type OrigenPedido = "mostrador" | "cliente";
 
 export type PedidoPendiente = {
   id: string;
@@ -50,6 +57,63 @@ export type PedidoPendiente = {
   direccion: string | null;
   notas: string | null;
   items: ItemPedidoResumen[];
+  origen?: OrigenPedido;
+  /** Código del seguimiento público (para compartirle el enlace al cliente). */
+  token?: string | null;
+  tiempo_estimado_min?: number | null;
+};
+
+/** Pedido que un cliente hizo en línea y espera que el restaurante lo acepte o lo rechace. */
+export type PedidoPorConfirmar = {
+  id: string;
+  numero: number;
+  tipo: "llevar" | "domicilio";
+  created_at: string;
+  total: number;
+  contacto_nombre: string | null;
+  contacto_telefono: string | null;
+  direccion: string | null;
+  notas: string | null;
+  token: string;
+  items: { id: string; nombre: string; cantidad: number; notas: string | null; adiciones: { id: string; nombre: string; precio: number }[] }[];
+};
+
+export type ResumenPorConfirmar = {
+  /** El restaurante recibe pedidos en línea (si no, la app pregunta con más calma). */
+  activo: boolean;
+  cantidad: number;
+  recientes: { id: string; numero: number; tipo: "llevar" | "domicilio"; total: number; contacto_nombre: string | null; created_at: string }[];
+};
+
+export type ItemPlancha = {
+  id: string;
+  nombre: string;
+  cantidad: number;
+  notas: string | null;
+  adiciones: { id: string; nombre: string; precio: number }[];
+  listo: boolean;
+};
+
+export type PedidoPlancha = {
+  id: string;
+  numero: number;
+  tipo: TipoPedido;
+  estado: EstadoPedido;
+  origen: OrigenPedido;
+  created_at: string;
+  confirmado_at: string | null;
+  listo_at: string | null;
+  mesa: string | null;
+  contacto_nombre: string | null;
+  notas: string | null;
+  tiempo_estimado_min: number | null;
+  items: ItemPlancha[];
+};
+
+export type Plancha = {
+  /** Hora del servidor: las esperas se calculan contra ella, no contra el reloj del celular. */
+  ahora: string;
+  pedidos: PedidoPlancha[];
 };
 
 export type PedidoCobrado = {

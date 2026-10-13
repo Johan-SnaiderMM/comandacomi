@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AlertaPedidosClientes } from "@/components/clientes/alerta-pedidos";
 import { BarraNavegacion } from "@/components/layout/barra-navegacion";
 import { contarPendientes } from "@/lib/datos/inicio";
 import { exigirSesion } from "@/lib/sesion";
@@ -14,6 +15,7 @@ export default async function LayoutApp({ children }: LayoutProps<"/">) {
   await exigirSesion();
   return (
     <div className="columna-app">
+      <AlertaPedidosClientes />
       {children}
       <Suspense fallback={<BarraNavegacion />}>
         <NavegacionConPendientes />

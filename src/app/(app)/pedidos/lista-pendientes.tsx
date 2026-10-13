@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { Bike, ClipboardList, Ellipsis, MapPin, Phone, ShoppingBag, Undo2, Utensils } from "lucide-react";
+import { Bike, Check, ClipboardList, Ellipsis, MapPin, MessageCircle, Phone, ShoppingBag, Undo2, Utensils } from "lucide-react";
 import { Aviso } from "@/components/ui/aviso";
 import { Badge } from "@/components/ui/badge";
 import { botonVariantes, Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { anularCobro, anularPedido, cambiarEstado } from "@/lib/sync/acciones";
 import { useEstadoSync } from "@/lib/sync/cliente";
 import { numeroVisible } from "@/lib/sync/numero";
 import { formatearTelefono } from "@/lib/telefono";
+import { enlaceWhatsapp, mensajeSeguimiento } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { Espera } from "./espera";
 
@@ -46,12 +47,15 @@ export function ListaPendientes({
   cobrados,
   ahora,
   enviado,
+  restaurante = "el restaurante",
 }: {
   pendientes: PedidoPendiente[];
   cobrados: PedidoCobrado[];
   ahora: string;
   /** Número del pedido recién enviado (para el aviso verde). */
   enviado: { numero: number; agregado: boolean; pendiente?: boolean } | null;
+  /** Para el mensaje de WhatsApp con el enlace de seguimiento. */
+  restaurante?: string;
 }) {
   const router = useIr();
   const [vista, setVista] = useState<Vista>("pendientes");
@@ -64,7 +68,11 @@ export function ListaPendientes({
   // Actualización inmediata: el cambio de estado se ve al instante y el servidor confirma después.
   const [lista, aplicarOptimista] = useOptimistic(pendientes, (estado, cambio: { id: string; estado: EstadoPedido }) =>
     estado
-      .map((p) => (p.id === cambio.id ? { ...p, estado: cambio.estado } : p))
+      .map((p) =>
+        p.id === cambio.id
+          ? { ...p, estado: cambio.estado, items: p.items.map((i) => ({ ...i, listo: cambio.estado !== "pendiente" })) }
+          : p
+      )
       .filter((p) => !(p.estado === "entregado" && p.cobrado))
   );
 
@@ -143,7 +151,11 @@ export function ListaPendientes({
                           <span className="truncate">{dondeEs(p)}</span>
                         </span>
                       </p>
-                      <Espera desde={p.created_at} ahora={ahora} alertar={p.estado !== "entregado"} />
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <Espera desde={p.created_at} ahora={ahora} alertar={p.estado !== "entregado"} />
+                        {p.origen === "cliente" && <Badge variante="sol">En línea</Badge>}
+                        {p.tiempo_estimado_min && p.estado === "pendiente" && <span className="text-base text-tinta-2">· ~{p.tiempo_estimado_min} min</span>}
+                      </div>
                     </div>
                     <Badge variante={p.estado === "listo" ? "listo" : p.estado === "pendiente" ? "sol" : "neutro"}>
                       {p.estado === "pendiente" ? "Pendiente" : p.estado === "listo" ? "Listo" : "Entregado"}
@@ -166,9 +178,16 @@ export function ListaPendientes({
                   )}
                   {p.notas && <p className="mt-2 text-base font-bold">“{p.notas}”</p>}
 
+                  {p.estado === "pendiente" && p.items.some((i) => i.listo) && !p.items.every((i) => i.listo) && (
+                    <p className="mt-2 text-base font-bold text-listo">
+                      {p.items.filter((i) => i.listo).length} de {p.items.length} platos listos
+                    </p>
+                  )}
+
                   <ul className="mt-3 space-y-1.5 border-t-2 border-dashed border-tinta/30 pt-3">
                     {p.items.map((i) => (
-                      <li key={i.id} className="text-lg leading-tight">
+                      <li key={i.id} className={cn("text-lg leading-tight", i.listo && "text-tinta-2")}>
+                        {i.listo && <Check className="mr-1 inline size-5 align-text-bottom text-listo" strokeWidth={3} aria-label="Listo" />}
                         <span className="cifra mr-1.5 text-xl">{i.cantidad}×</span>
                         <span className="font-bold">{i.nombre}</span>
                         {i.adiciones.length > 0 && <span className="block pl-7 text-base text-tinta-2">+ {i.adiciones.map((a) => a.nombre).join(", ")}</span>}
@@ -237,6 +256,24 @@ export function ListaPendientes({
             <Enlace href={`/pedido/nuevo?agregar=${menuDe.id}`} className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
               Agregar platos
             </Enlace>
+            {menuDe.token && menuDe.contacto_telefono && menuDe.tipo !== "mesa" && (
+              <a
+                href={enlaceWhatsapp({
+                  telefono: menuDe.contacto_telefono,
+                  texto: mensajeSeguimiento({
+                    cliente: menuDe.contacto_nombre ?? "",
+                    numero: menuDe.numero,
+                    restaurante,
+                    enlace: `${window.location.origin}/seguimiento/${menuDe.token}`,
+                  }),
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}
+              >
+                <MessageCircle className="size-5" aria-hidden /> Enviar seguimiento por WhatsApp
+              </a>
+            )}
             {ANTERIOR[menuDe.estado] && (
               <Button variante="secundario" tamano="lg" bloque onClick={() => mover(menuDe.id, ANTERIOR[menuDe.estado]!.estado)}>
                 {ANTERIOR[menuDe.estado]!.etiqueta}

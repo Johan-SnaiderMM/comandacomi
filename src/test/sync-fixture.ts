@@ -20,7 +20,7 @@ export function snapshotDeEjemplo(): Snapshot {
     version: 1,
     guardadoEn: "2026-10-06T15:00:00.000Z",
     contexto: {
-      restaurante: { id: "99999999-9999-4999-8999-999999999999", nombre: "Picnic Delicias", es_demo: true },
+      restaurante: { id: "99999999-9999-4999-8999-999999999999", nombre: "Picnic Delicias", es_demo: true, slug: "picnic-delicias", pedidos_en_linea: true },
       perfil: { nombre: "Administrador", rol: "dueno" },
     },
     menu: {

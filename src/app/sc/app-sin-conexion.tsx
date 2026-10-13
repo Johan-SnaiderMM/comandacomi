@@ -116,7 +116,13 @@ export function AppSinConexion() {
           <>
             <EncabezadoPantalla titulo="Pendientes" />
             <main className="pb-nav">
-              <ListaPendientes pendientes={vista.pendientes} cobrados={vista.cobrados} ahora={new Date().toISOString()} enviado={enviado} />
+              <ListaPendientes
+                pendientes={vista.pendientes}
+                cobrados={vista.cobrados}
+                ahora={new Date().toISOString()}
+                enviado={enviado}
+                restaurante={restaurante}
+              />
             </main>
           </>
         );

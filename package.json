@@ -13,7 +13,8 @@
     "iconos": "node scripts/generar-iconos.mjs",
     "verificar": "npm run lint && npm run typecheck && npm test",
     "esquema": "node scripts/unir-migraciones.mjs",
-    "e2e": "node scripts/e2e-sin-conexion.mjs"
+    "e2e": "node scripts/e2e-sin-conexion.mjs",
+    "e2e:clientes": "node scripts/e2e-pedidos-clientes.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -22,6 +23,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.52.0",
     "next": "16.3.8",
+    "qrcode-generator": "^1.5.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",

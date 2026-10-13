@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Lightbulb, NotebookPen, ReceiptText, Wallet } from "lucide-react";
+import { ChefHat, ClipboardList, Lightbulb, NotebookPen, ReceiptText, Smartphone, Wallet } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { BotonGuia } from "@/components/guia/boton-guia";
 import { AvisoUrl } from "@/components/ui/aviso-url";
@@ -102,6 +102,17 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
         </div>
 
         <div className="grid grid-cols-2 gap-3 pt-1">
+          <Link href="/plancha" className={botonVariantes({ variante: "secundario", tamano: "lg" })}>
+            <ChefHat className="size-5" aria-hidden /> Plancha
+          </Link>
+          <Link href="/pedidos-en-linea" className={cn(botonVariantes({ variante: "secundario", tamano: "lg" }), "relative")}>
+            <Smartphone className="size-5" aria-hidden /> En línea
+            {(inicio.pedidos_por_confirmar ?? 0) > 0 && (
+              <span className="cifra absolute -right-1.5 -top-2 flex min-h-7 min-w-7 items-center justify-center rounded-full border-2 border-tinta bg-aji px-1.5 text-base text-papel">
+                {inicio.pedidos_por_confirmar}
+              </span>
+            )}
+          </Link>
           <Link href="/gastos" className={botonVariantes({ variante: "secundario", tamano: "lg" })}>
             <Wallet className="size-5" aria-hidden /> Gasto
           </Link>

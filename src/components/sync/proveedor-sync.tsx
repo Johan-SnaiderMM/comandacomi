@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { esRutaPublica } from "@/lib/rutas-publicas";
 import { obtenerMotor } from "@/lib/sync/cliente";
 
 /** Con qué frecuencia se revisa si hay algo por subir o si la copia local quedó vieja. */
@@ -11,10 +12,11 @@ const COPIA_VIEJA_MS = 60_000;
 /**
  * Mantiene el trabajo sin conexión andando mientras la app está abierta (no pinta nada): sube lo pendiente apenas
  * vuelve la señal o la app vuelve a primer plano, y mantiene fresca la copia local (menú, pendientes, clientes).
- * En la portada no hace nada (todavía no hay sesión).
+ * En la portada no hace nada (todavía no hay sesión) ni en las páginas del cliente (pedir y seguir su pedido).
  */
 export function ProveedorSync() {
-  const enPortada = usePathname() === "/";
+  const ruta = usePathname();
+  const enPortada = ruta === "/" || esRutaPublica(ruta);
 
   useEffect(() => {
     if (enPortada) return;

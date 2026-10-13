@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { esRutaPublica } from "@/lib/rutas-publicas";
 
 /** Cada cuánto se vuelve a guardar la app sin conexión (se actualiza con cada versión nueva). */
 const PRECARGA_CADA_MS = 6 * 60 * 60 * 1000;
@@ -9,12 +11,15 @@ const CLAVE_PRECARGA = "sc:precarga";
 /**
  * Registra el service worker (solo en producción: en desarrollo estorba al recargar en caliente; para probarlo allí
  * se activa con NEXT_PUBLIC_SW_EN_DEV=1). Con señal le pide guardar la app sin conexión, para que ya esté lista
- * cuando falte la señal.
+ * cuando falte la señal. No se registra en las páginas del cliente (pedir y seguir su pedido): a un cliente no le
+ * sirve la app del personal y bajarla le gastaría datos.
  */
 export function RegistrarServiceWorker() {
+  const publica = esRutaPublica(usePathname());
+
   useEffect(() => {
     const activo = process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_SW_EN_DEV === "1";
-    if (!activo || !("serviceWorker" in navigator)) return;
+    if (publica || !activo || !("serviceWorker" in navigator)) return;
 
     navigator.serviceWorker
       .register("/sw.js", { scope: "/", updateViaCache: "none" })
@@ -38,7 +43,7 @@ export function RegistrarServiceWorker() {
       .catch(() => {
         // Sin service worker la app funciona igual; solo se pierde abrir sin señal.
       });
-  }, []);
+  }, [publica]);
 
   return null;
 }

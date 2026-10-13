@@ -6,7 +6,7 @@
  */
 import type { ClienteFiado, ItemPedidoResumen, PedidoCobrado, PedidoPendiente } from "@/lib/datos/tipos";
 import { totalPedido } from "@/lib/dinero";
-import { hoyBogota } from "@/lib/fechas";
+import { hoyDeTrabajo } from "@/lib/fechas";
 import { normalizarTelefono } from "@/lib/telefono";
 import type { ItemEnvio, Operacion, OperacionEnCola, Snapshot } from "./tipos";
 
@@ -125,7 +125,7 @@ export function aplicarOperacion(s: Snapshot, op: Operacion): Snapshot {
         cobrado_at: op.ocurridoEn,
         medios: [...new Set(d.pagos.map((p) => p.medio))],
       };
-      const hoy = hoyBogota(new Date(op.ocurridoEn));
+      const hoy = hoyDeTrabajo(new Date(op.ocurridoEn), s.contexto.restaurante?.hora_corte);
       let clientes = s.clientes;
       for (const pago of d.pagos) {
         if (pago.medio !== "fiado" || !pago.clienteId) continue;

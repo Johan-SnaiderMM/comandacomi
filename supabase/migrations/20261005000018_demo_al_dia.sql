@@ -4,6 +4,8 @@
 -- fn_cargar_datos_demo es una sola función larga (migración 0005). En vez de repetirla en cada migración que le cambia
 -- un detalle, se redefine UNA vez aquí con todo lo nuevo:
 --   · Bebidas no pasa por la cocina (migración 14): sus platos no salen en la plancha.
+--   · "Hoy" es el día de trabajo (migración 16), no la fecha del calendario: una demo abierta de madrugada trae las
+--     ventas de toda la noche, no solo las de después de las 12.
 -- =====================================================================
 
 create or replace function public.fn_cargar_datos_demo(p_rest uuid)
@@ -13,7 +15,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_hoy date := public.hoy_bogota();
+  v_hoy date;   -- la jornada de ahora (se calcula abajo, ya sin los cierres viejos)
   v_ahora timestamptz := now();
   v_cli uuid[] := array(select gen_random_uuid() from generate_series(1, 8));
   v_mesas uuid[];
@@ -42,6 +44,9 @@ begin
   delete from public.mesas               where restaurante_id = p_rest;
   delete from public.clientes            where restaurante_id = p_rest;
   update public.restaurantes set consecutivo_pedido = 0 where id = p_rest;
+
+  -- "Hoy" es el día de trabajo (migración 16): a la 1:44 a. m. sigue siendo el día que empezó ayer por la tarde.
+  v_hoy := public.fn_jornada(p_rest, v_ahora);
 
   -- 2) Menú
   insert into public.categorias_producto (restaurante_id, nombre, icono, orden, se_prepara) values
@@ -138,7 +143,7 @@ begin
   -- 5) Hoy: cobrados (hacia atrás desde ahora, cada 27 min, mientras sigan siendo de hoy) ...
   for v_k in reverse 10..1 loop
     v_ts := v_ahora - make_interval(mins => 40 + (v_k - 1) * 27);
-    continue when public.fecha_bogota(v_ts) <> v_hoy;
+    continue when public.fn_jornada(p_rest, v_ts) <> v_hoy;
     v_seq := v_seq + 1;
     v_r := public.fn_demo_hash('t' || v_seq, 100);
     v_tipo := case when v_r < 58 then 'mesa' when v_r < 82 then 'llevar' else 'domicilio' end;

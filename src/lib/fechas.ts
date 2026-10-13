@@ -7,6 +7,24 @@ export function hoyBogota(ahora: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: ZONA }).format(ahora);
 }
 
+/** Hora (de Bogotá) en que termina el día de trabajo si el restaurante no dice otra (restaurantes.hora_corte). */
+export const HORA_CORTE = 4;
+
+/**
+ * 'YYYY-MM-DD' del DÍA DE TRABAJO: el día no cambia a medianoche sino a la hora de corte (4 a. m.), para que la venta
+ * de la 1:44 a. m. siga siendo del día que empezó la tarde anterior. Es la misma cuenta que hace la base
+ * (fn_fecha_trabajo); lo que no sabe el celular es si el dueño ya cerró el día a mano: eso lo decide el servidor.
+ */
+export function hoyDeTrabajo(ahora: Date = new Date(), horaCorte: number = HORA_CORTE): string {
+  return hoyBogota(new Date(ahora.getTime() - horaCorte * 3_600_000));
+}
+
+/** 4 -> "4:00 a. m."; 0 -> "12:00 a. m." (medianoche); 12 -> "12:00 p. m.". Para decir a qué hora cambia el día. */
+export function textoHoraCorte(horaCorte: number = HORA_CORTE): string {
+  const h = Math.min(Math.max(Math.trunc(horaCorte), 0), 23);
+  return `${h % 12 === 0 ? 12 : h % 12}:00 ${h < 12 ? "a. m." : "p. m."}`;
+}
+
 // Nombres escritos a mano: Intl cambia de forma según el motor (servidor vs. navegador) y rompería la hidratación.
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];

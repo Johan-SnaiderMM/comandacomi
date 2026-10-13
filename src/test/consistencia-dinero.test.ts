@@ -19,8 +19,9 @@ afterAll(() => db.close());
 
 describe("TypeScript y SQL calculan igual", () => {
   it("cierre de cada uno de los 7 días del seed", async () => {
-    const hoy = (await db.query<{ f: string }>(`select public.hoy_bogota()::text as f`)).rows[0].f;
-    const dias = (await db.query<{ f: string }>(`select (public.hoy_bogota() - g)::text as f from generate_series(0, 6) g`)).rows.map((r) => r.f);
+    // "Hoy" es la jornada (el día de trabajo, con su hora de corte), no la fecha del calendario.
+    const hoy = (await db.query<{ f: string }>(`select public.fn_jornada($1, now())::text as f`, [R])).rows[0].f;
+    const dias = (await db.query<{ f: string }>(`select (public.fn_jornada($1, now()) - g)::text as f from generate_series(0, 6) g`, [R])).rows.map((r) => r.f);
     expect(dias).toContain(hoy);
 
     for (const dia of dias) {

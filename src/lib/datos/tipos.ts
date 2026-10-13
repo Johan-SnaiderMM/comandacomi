@@ -17,12 +17,17 @@ export type Contexto = {
     pedidos_en_linea: boolean;
     /** Reiniciar la demo pide PIN (falta antes de la migración 15: no lo pide). */
     reinicio_con_pin?: boolean;
+    /** Hora de Bogotá en que termina el día de trabajo (falta antes de la migración 16: se asume 4). */
+    hora_corte?: number;
   } | null;
   perfil: { nombre: string; rol: "dueno" | "ayudante" } | null;
 };
 
 export type Inicio = {
+  /** La jornada: el día al que entra lo que se registre ahora (cambia a la hora de corte o al cerrar el día a mano). */
   fecha: string;
+  /** El día de trabajo ya se cerró a mano: hasta la hora de corte, lo que se registre cuenta para el siguiente. */
+  jornada_adelantada?: boolean;
   ventas_hoy: number;
   gastos_hoy: number;
   ganancia_hoy: number;
@@ -268,6 +273,8 @@ export type CierreReciente = Pick<
 export type CierreDelDia = {
   resumen: ResumenDia;
   cierre: CierreDia | null;
+  /** A qué día entra lo que se registre ahora; si el de `resumen` ya se cerró, es el siguiente. Falta antes de la migración 16. */
+  jornada?: string;
   cierres_recientes: CierreReciente[];
 };
 

@@ -13,7 +13,7 @@ import { HojaMotivo } from "@/components/ui/hoja-motivo";
 import { Input } from "@/components/ui/input";
 import type { CierreDelDia } from "@/lib/datos/tipos";
 import { describirDiferencia, diferenciaCaja, efectivoEsperado, formatearPesos } from "@/lib/dinero";
-import { fechaCorta, fechaLarga, fechaRelativa, horaCorta } from "@/lib/fechas";
+import { fechaCorta, fechaLarga, fechaRelativa, horaCorta, textoHoraCorte } from "@/lib/fechas";
 import { enlaceWhatsapp, mensajeResumenCierre } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 
@@ -28,21 +28,29 @@ function Fila({ etiqueta, valor, fuerte, className }: { etiqueta: string; valor:
   );
 }
 
-/** Cierre del día: ventas − gastos = ganancia aproximada, efectivo esperado contra el contado y el resumen por WhatsApp. */
+/**
+ * Cierre del día: ventas − gastos = ganancia aproximada, efectivo esperado contra el contado y el resumen por WhatsApp.
+ * El día es el de TRABAJO: va hasta la hora de corte (4 a. m.), no hasta medianoche. Cerrarlo a mano lo termina antes:
+ * lo que se registre después entra al día siguiente y estas cifras ya no se mueven.
+ */
 export function CierreDia({
   datos,
   porCobrar,
   restaurante,
-  hoy,
+  horaCorte,
 }: {
   datos: CierreDelDia;
   /** Total que le deben al restaurante (fiado), para el resumen. */
   porCobrar: number;
   restaurante: string;
-  hoy: string;
+  /** Hora de Bogotá en que cambia el día de trabajo (4 si la base no la trae). */
+  horaCorte?: number;
 }) {
   const router = useRouter();
   const { resumen: r, cierre } = datos;
+  const hoy = r.fecha;
+  // Ya se cerró y todavía no llega la hora de corte: lo nuevo está entrando al día siguiente.
+  const siguiente = cierre && datos.jornada && datos.jornada !== r.fecha ? datos.jornada : null;
   const [base, setBase] = useState(cierre?.base_caja ?? datos.cierres_recientes[0]?.base_caja ?? 0);
   const [contado, setContado] = useState<number | null>(cierre?.efectivo_contado ?? null);
   const [notas, setNotas] = useState("");
@@ -90,10 +98,16 @@ export function CierreDia({
     <div className="flex min-h-dvh flex-col">
       <EncabezadoPantalla titulo="Cierre del día" atras="/inicio" />
       <main className="flex-1 space-y-3 px-4 pt-3 pb-[calc(var(--accion-h)+var(--seguro-abajo)+1rem)]">
-        <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">{fechaLarga(r.fecha)}</p>
+        <div>
+          <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">{fechaLarga(r.fecha)}</p>
+          {!cierre && <p className="text-base leading-snug text-tinta-2">Cuenta lo vendido hasta las {textoHoraCorte(horaCorte)}, o hasta que lo cierres.</p>}
+        </div>
 
         {cierre && (
-          <Aviso tipo="ok">Día cerrado ({horaCorta(cierre.created_at)}). Estas cifras quedaron guardadas.</Aviso>
+          <Aviso tipo="ok">
+            Día cerrado ({horaCorta(cierre.created_at)}). Estas cifras quedaron guardadas.
+            {siguiente && ` Lo que registres desde ahora cuenta para el ${fechaLarga(siguiente).toLowerCase()}.`}
+          </Aviso>
         )}
         {error && <Aviso tipo="error">{error}</Aviso>}
 
@@ -232,7 +246,7 @@ export function CierreDia({
       {hoja === "anular" && cierre && (
         <HojaMotivo
           titulo="Anular cierre"
-          descripcion="El día vuelve a quedar abierto para cerrarlo de nuevo. Este cierre queda registrado con el motivo."
+          descripcion="El día vuelve a quedar abierto para cerrarlo de nuevo, con lo que se haya registrado después incluido. Este cierre queda registrado con el motivo."
           confirmar="Anular cierre"
           motivosRapidos={["Conté mal la caja", "Faltaba registrar algo", "Base equivocada"]}
           onConfirmar={async (motivo) => {

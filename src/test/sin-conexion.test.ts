@@ -115,14 +115,17 @@ describe("aplicar_operacion: cuándo ocurrió", () => {
     const total = 2 * plato("Perro caliente").precio;
     await op(A.userId, "cobrar", { p_pedido_id: id, p_propina: 0, p_pagos: [{ medio: "transferencia", monto: total }] }, uuid(), ayer);
 
-    const f = await una<{ fecha: string; fecha_cobro: string; hoy: string; listo: boolean }>(
-      `select p.fecha::text, p.fecha_cobro::text, public.hoy_bogota()::text as hoy,
+    // La jornada sale de CUÁNDO ocurrió (no de cuándo se subió): la misma que da la base para ese instante.
+    const f = await una<{ fecha: string; fecha_cobro: string; esperada: string; creado_ayer: boolean; listo: boolean }>(
+      `select p.fecha::text, p.fecha_cobro::text, public.fn_jornada(p.restaurante_id, $2::timestamptz)::text as esperada,
+              (p.created_at < now() - interval '25 hours') as creado_ayer,
               (p.listo_at is not null and p.entregado_at is not null) as listo
          from public.pedidos p where p.id = $1`,
-      [id]
+      [id, ayer]
     );
     expect(f.fecha).toBe(f.fecha_cobro);
-    expect(f.fecha).not.toBe(f.hoy);
+    expect(f.fecha).toBe(f.esperada);
+    expect(f.creado_ayer).toBe(true);
     expect(f.listo).toBe(true);
     const pago = await una<{ fecha: string }>(`select fecha::text from public.pagos_pedido where pedido_id = $1`, [id]);
     expect(pago.fecha).toBe(f.fecha);
@@ -131,14 +134,20 @@ describe("aplicar_operacion: cuándo ocurrió", () => {
   it("un gasto y un abono hechos ayer quedan en ayer", async () => {
     const ayer = hace(25);
     const g = await op<{ id: string }>(A.userId, "gasto", { p_monto: 12345, p_categoria: "gas", p_nota: "sin señal" }, uuid(), ayer);
-    const gasto = await una<{ fecha: string; hoy: string }>(`select fecha::text, public.hoy_bogota()::text as hoy from public.gastos where id = $1`, [g.id]);
-    expect(gasto.fecha).not.toBe(gasto.hoy);
+    const gasto = await una<{ fecha: string; esperada: string }>(
+      `select fecha::text, public.fn_jornada(restaurante_id, $2::timestamptz)::text as esperada from public.gastos where id = $1`,
+      [g.id, ayer]
+    );
+    expect(gasto.fecha).toBe(gasto.esperada);
 
     const clientes = await rpc<{ id: string; saldo: number }[]>(db, A.userId, "listar_clientes");
     const deudor = clientes.find((c) => c.saldo > 1000)!;
     const ab = await op<{ id: string }>(A.userId, "abonar", { p_cliente_id: deudor.id, p_monto: 1000, p_medio: "efectivo" }, uuid(), ayer);
-    const mov = await una<{ fecha: string; hoy: string }>(`select fecha::text, public.hoy_bogota()::text as hoy from public.movimientos_fiado where id = $1`, [ab.id]);
-    expect(mov.fecha).not.toBe(mov.hoy);
+    const mov = await una<{ fecha: string; esperada: string }>(
+      `select fecha::text, public.fn_jornada(restaurante_id, $2::timestamptz)::text as esperada from public.movimientos_fiado where id = $1`,
+      [ab.id, ayer]
+    );
+    expect(mov.fecha).toBe(mov.esperada);
   });
 
   it("un reloj adelantado se limita a ahora y lo de hace más de 7 días se rechaza", async () => {

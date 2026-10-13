@@ -4,7 +4,7 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { BarraNavegacion } from "@/components/layout/barra-navegacion";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import type { ClienteFiado, PedidoDetalle, PedidoPendiente } from "@/lib/datos/tipos";
-import { hoyBogota } from "@/lib/fechas";
+import { hoyDeTrabajo } from "@/lib/fechas";
 import { ProveedorNavegacionSC, type NavegacionSC } from "@/lib/navegacion";
 import { useVista } from "@/lib/sync/cliente";
 import { numeroVisible } from "@/lib/sync/numero";
@@ -132,7 +132,7 @@ export function AppSinConexion() {
           <>
             <EncabezadoPantalla titulo="Fiado" />
             <main className="pb-nav">
-              <ListaFiado clientes={vista.clientes as ClienteFiado[]} hoy={hoyBogota()} restaurante={restaurante} />
+              <ListaFiado clientes={vista.clientes as ClienteFiado[]} hoy={hoyDeTrabajo(new Date(), vista.contexto.restaurante?.hora_corte)} restaurante={restaurante} />
             </main>
           </>
         );

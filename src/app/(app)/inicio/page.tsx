@@ -18,7 +18,9 @@ const tarjeta =
 export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
   const sp = await searchParams;
   const [inicio, contexto] = await Promise.all([obtenerInicio(), obtenerContexto()]);
-  const veredicto = veredictoDelDia(inicio.ventas_hoy, inicio.gastos_hoy);
+  // "Hoy" es el día de trabajo: cambia a la hora de corte (4 a. m.) o cuando el dueño lo cierra, no a medianoche.
+  const diaCerrado = inicio.jornada_adelantada === true;
+  const veredicto = veredictoDelDia(inicio.ventas_hoy, inicio.gastos_hoy, diaCerrado);
 
   return (
     <>
@@ -49,6 +51,9 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
             {veredicto.titulo}
           </h2>
           <p className="mt-0.5 text-base leading-snug text-tinta-2">{veredicto.detalle}</p>
+          {diaCerrado && (inicio.ventas_hoy > 0 || inicio.gastos_hoy > 0) && (
+            <p className="mt-0.5 text-base leading-snug text-tinta-2">Ya cerraste el día anterior: esto cuenta para el siguiente.</p>
+          )}
         </div>
 
         {/* El día en un tiquete: ventas − gastos = ganancia aproximada */}

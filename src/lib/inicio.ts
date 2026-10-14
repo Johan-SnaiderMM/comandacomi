@@ -14,14 +14,29 @@ export type ResumenDeInicio = {
   pedidos: number | null;
 };
 
+type Cifra = "ventas_hoy" | "gastos_hoy" | "ganancia_hoy" | "ventas_ayer" | "gastos_ayer" | "ganancia_ayer";
+
+/** Lo que Inicio necesita para el tiquete del día, ya sin nulls. */
+export type CifrasDeInicio = Pick<Inicio, "fecha" | "jornada_adelantada" | "pedidos_hoy"> & Record<Cifra, Pesos>;
+
+/**
+ * Las cifras de plata del día, o null si quien entra no ve las cuentas (la base se las manda en null: ver migración
+ * 19). Inicio solo arma el tiquete con lo que devuelve esto.
+ */
+export function cifrasDelDia(i: Inicio): CifrasDeInicio | null {
+  const { ventas_hoy, gastos_hoy, ganancia_hoy, ventas_ayer, gastos_ayer, ganancia_ayer } = i;
+  if (ventas_hoy === null || gastos_hoy === null || ganancia_hoy === null || ventas_ayer === null || gastos_ayer === null || ganancia_ayer === null) {
+    return null;
+  }
+  return { fecha: i.fecha, jornada_adelantada: i.jornada_adelantada, pedidos_hoy: i.pedidos_hoy, ventas_hoy, gastos_hoy, ganancia_hoy, ventas_ayer, gastos_ayer, ganancia_ayer };
+}
+
 /**
  * Qué día muestra Inicio. Normalmente la jornada en curso. Pero cuando el dueño cierra el día antes de la hora de
  * corte (se va a la 1 a. m. porque no hay movimiento), la jornada nueva arranca vacía: mostrarle ceros sería esconderle
  * justo lo que quiere ver al cerrar. Mientras no se registre nada nuevo, Inicio muestra el día recién cerrado.
  */
-export function resumenDeInicio(
-  i: Pick<Inicio, "fecha" | "jornada_adelantada" | "ventas_hoy" | "gastos_hoy" | "ganancia_hoy" | "pedidos_hoy" | "ventas_ayer" | "gastos_ayer" | "ganancia_ayer">
-): ResumenDeInicio {
+export function resumenDeInicio(i: CifrasDeInicio): ResumenDeInicio {
   const recienCerrado = i.jornada_adelantada === true && i.ventas_hoy === 0 && i.gastos_hoy === 0;
   if (recienCerrado) {
     return { cerrado: true, fecha: sumarDias(i.fecha, -1), ventas: i.ventas_ayer, gastos: i.gastos_ayer, ganancia: i.ganancia_ayer, pedidos: null };

@@ -25,15 +25,20 @@ type Estado = { cargando: boolean; activa: boolean; canales: CanalPersonal[]; su
 /**
  * "Avisos en este celular": el dueño, la parrilla y el mesero activan en SU celular los avisos que les tocan, y les
  * llegan aunque la app esté cerrada (pedido nuevo, pedido a la plancha, pedido listo para entregar).
+ * `canales`: los que le sirven a quien entra según su rol (ver AREA_DEL_CANAL); solo esos se ofrecen.
  */
-export function AvisosDelCelular() {
+export function AvisosDelCelular({ canales = [...CANALES_PERSONAL] }: { canales?: CanalPersonal[] }) {
   const disponible = useSyncExternalStore(sinSuscripcion, avisosDisponibles, () => false);
   const soportado = useSyncExternalStore(sinSuscripcion, avisosSoportados, () => false);
   const ios = useSyncExternalStore(sinSuscripcion, esIosSinInstalar, () => false);
   const permiso = useSyncExternalStore(sinSuscripcion, permisoDeAvisos, () => "default" as const);
 
   const [estado, setEstado] = useState<Estado>({ cargando: true, activa: false, canales: [], suscripcion: null });
-  const [elegidos, setElegidos] = useState<CanalPersonal[]>(["pedidos", "listos"]);
+  // Marcados de entrada: los del dueño y el mesero (pedido nuevo, pedido listo); a la cocina, el suyo.
+  const [elegidos, setElegidos] = useState<CanalPersonal[]>(() => {
+    const deMostrador = canales.filter((c) => c !== "cocina");
+    return deMostrador.length > 0 ? deMostrador : canales;
+  });
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [ocupado, empezar] = useTransition();
@@ -70,13 +75,16 @@ export function AvisosDelCelular() {
     setElegidos((v) => (v.includes(canal) ? v.filter((c) => c !== canal) : [...v, canal]));
   }
 
+  // Solo lo que se le ofrece: si al rol le quitaron un área, guardar quita también ese aviso de este celular.
+  const marcados = elegidos.filter((c) => canales.includes(c));
+
   function activar() {
     setError(null);
     setOk(null);
     empezar(async () => {
       try {
         const sub = await activarAvisos("personal");
-        const r = await guardarAvisos(sub, elegidos);
+        const r = await guardarAvisos(sub, marcados);
         if (!r.ok) {
           setError(r.error);
           return;
@@ -95,7 +103,7 @@ export function AvisosDelCelular() {
     setError(null);
     setOk(null);
     empezar(async () => {
-      const r = await guardarAvisos(sub, elegidos).catch(() => ({ ok: false as const, error: MENSAJE_GENERICO }));
+      const r = await guardarAvisos(sub, marcados).catch(() => ({ ok: false as const, error: MENSAJE_GENERICO }));
       if (!r.ok) {
         setError(r.error);
         return;
@@ -132,7 +140,7 @@ export function AvisosDelCelular() {
     });
   }
 
-  const cambiaron = estado.activa && (elegidos.length !== estado.canales.length || elegidos.some((c) => !estado.canales.includes(c)));
+  const cambiaron = estado.activa && (marcados.length !== estado.canales.length || marcados.some((c) => !estado.canales.includes(c)));
 
   return (
     <section aria-label="Avisos en este celular" className="rounded-2xl border-2 border-tinta bg-papel p-4 shadow-sello">
@@ -158,7 +166,7 @@ export function AvisosDelCelular() {
         <>
           <fieldset className="mt-3 space-y-2" disabled={ocupado}>
             <legend className="sr-only">¿Qué avisos quieres en este celular?</legend>
-            {CANALES_PERSONAL.map((canal) => {
+            {canales.map((canal) => {
               const marcado = elegidos.includes(canal);
               return (
                 <label
@@ -191,13 +199,13 @@ export function AvisosDelCelular() {
 
           <div className="mt-3 space-y-2">
             {!estado.activa ? (
-              <Button tamano="lg" bloque disabled={ocupado || estado.cargando || elegidos.length === 0} onClick={activar}>
+              <Button tamano="lg" bloque disabled={ocupado || estado.cargando || marcados.length === 0} onClick={activar}>
                 {ocupado ? "Activando…" : "Activar avisos"}
               </Button>
             ) : (
               <>
                 {cambiaron && (
-                  <Button tamano="lg" bloque disabled={ocupado || elegidos.length === 0} onClick={guardarCambios}>
+                  <Button tamano="lg" bloque disabled={ocupado || marcados.length === 0} onClick={guardarCambios}>
                     Guardar cambios
                   </Button>
                 )}

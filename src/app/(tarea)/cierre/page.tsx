@@ -1,5 +1,7 @@
+import { SinPermiso } from "@/components/layout/sin-permiso";
 import { obtenerCierreDelDia } from "@/lib/datos/gastos";
-import { obtenerContexto, obtenerInicio } from "@/lib/datos/inicio";
+import { obtenerInicio } from "@/lib/datos/inicio";
+import { revisarPermiso } from "@/lib/permisos";
 import { CierreDia } from "./cierre-dia";
 
 export const metadata = { title: "Cierre del día" };
@@ -9,11 +11,13 @@ export const metadata = { title: "Cierre del día" };
  * cerrado se sigue viendo ese día, con sus cifras guardadas; la página nueva empieza a la hora de corte.
  */
 export default async function PaginaCierre() {
-  const [datos, inicio, contexto] = await Promise.all([obtenerCierreDelDia(), obtenerInicio(), obtenerContexto()]);
+  const { contexto, permitido } = await revisarPermiso("cierre");
+  if (!permitido) return <SinPermiso pantalla="cierre" />;
+  const [datos, inicio] = await Promise.all([obtenerCierreDelDia(), obtenerInicio()]);
   return (
     <CierreDia
       datos={datos}
-      porCobrar={inicio.por_cobrar}
+      porCobrar={inicio.por_cobrar ?? 0}
       restaurante={contexto.restaurante?.nombre ?? "Mi restaurante"}
       horaCorte={contexto.restaurante?.hora_corte}
     />

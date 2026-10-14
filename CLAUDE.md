@@ -19,6 +19,10 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   `requerir_restaurante()` (`src/test/permisos-por-area.test.ts` fija la lista de las que no piden área). Las tablas de
   plata (pagos, fiado, clientes, gastos, cierres) se leen con `tiene_area` en su RLS: una lectura no falla, devuelve
   vacío o `null` en las cifras que no le tocan. Al redefinir una función copia la ÚLTIMA versión (la que ya pide área).
+  En pantalla decide `lib/areas.ts` (`quienEs`, `puedeVer`, `PANTALLAS`, `pestanasDe`): toda página del personal empieza
+  con `revisarPermiso("<pantalla>")` (`lib/permisos.ts`) y si no hay permiso muestra `<SinPermiso>` (una prueba,
+  `src/test/pantallas-con-permiso.test.ts`, lo exige para cada `page.tsx`); los botones se esconden con
+  `abre(quien, …)`. Una pantalla nueva del personal se agrega a `PANTALLAS`. Más → Equipo (`/equipo`) es del dueño.
 - Migraciones (`supabase/migrations/`): toda migración que agregue funciones termina con
   `select public.fn_aplicar_permisos();` (cierra EXECUTE a anon y a las `fn_*`/`requerir_*`) y se corre `npm run esquema`
   para regenerar `supabase/esquema-completo.sql` (una prueba lo verifica). Toda tabla nueva lleva `restaurante_id`

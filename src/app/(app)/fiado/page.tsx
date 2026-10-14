@@ -1,13 +1,16 @@
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { SinPermiso } from "@/components/layout/sin-permiso";
 import { listarClientes } from "@/lib/datos/fiado";
-import { obtenerContexto } from "@/lib/datos/inicio";
 import { hoyDeTrabajo } from "@/lib/fechas";
+import { revisarPermiso } from "@/lib/permisos";
 import { ListaFiado } from "./lista-fiado";
 
 export const metadata = { title: "Fiado" };
 
 export default async function Fiado() {
-  const [clientes, contexto] = await Promise.all([listarClientes(), obtenerContexto()]);
+  const { contexto, permitido } = await revisarPermiso("fiado");
+  if (!permitido) return <SinPermiso pantalla="fiado" />;
+  const clientes = await listarClientes();
   return (
     <>
       <EncabezadoPantalla titulo="Fiado" atras="/mas" />

@@ -2,13 +2,16 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { BarraAccion } from "@/components/layout/barra-accion";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { SinPermiso } from "@/components/layout/sin-permiso";
 import { botonVariantes } from "@/components/ui/button";
 import { listarGastos } from "@/lib/datos/gastos";
+import { revisarPermiso } from "@/lib/permisos";
 import { ListaGastos } from "./lista-gastos";
 
 export const metadata = { title: "Gastos" };
 
 export default async function Gastos({ searchParams }: PageProps<"/gastos">) {
+  if (!(await revisarPermiso("gastos")).permitido) return <SinPermiso pantalla="gastos" />;
   const sp = await searchParams;
   const guardado = typeof sp.guardado === "string" ? Number(sp.guardado) : NaN;
   const dia = await listarGastos();

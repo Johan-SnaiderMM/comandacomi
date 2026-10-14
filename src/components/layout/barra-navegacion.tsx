@@ -1,43 +1,51 @@
 "use client";
 
-import { ClipboardList, Ellipsis, House, NotebookPen, Plus, Smartphone, type LucideIcon } from "lucide-react";
+import { ChefHat, ClipboardList, Ellipsis, House, NotebookPen, Plus, Smartphone, type LucideIcon } from "lucide-react";
+import { AREAS, pestanasDe, type Pestana, type Quien } from "@/lib/areas";
 import { Enlace, useRuta } from "@/lib/navegacion";
 import { cn } from "@/lib/utils";
 
-type Item = { href: string; etiqueta: string; Icono: LucideIcon; central?: boolean; /** Otras rutas que cuentan como "esta pestaña". */ tambien?: string[] };
+type Item = { href: string; etiqueta: string; Icono: LucideIcon; central?: boolean };
 
-const EN_LINEA: Item = { href: "/pedidos-en-linea", etiqueta: "En línea", Icono: Smartphone };
-const FIADO: Item = { href: "/fiado", etiqueta: "Fiado", Icono: NotebookPen };
+const ITEMS: Record<Pestana, Item> = {
+  inicio: { href: "/inicio", etiqueta: "Inicio", Icono: House },
+  pendientes: { href: "/pedidos", etiqueta: "Pendientes", Icono: ClipboardList },
+  tomar: { href: "/pedido/nuevo", etiqueta: "Tomar", Icono: Plus, central: true },
+  enLinea: { href: "/pedidos-en-linea", etiqueta: "En línea", Icono: Smartphone },
+  plancha: { href: "/plancha", etiqueta: "Plancha", Icono: ChefHat },
+  fiado: { href: "/fiado", etiqueta: "Fiado", Icono: NotebookPen },
+  mas: { href: "/mas", etiqueta: "Más", Icono: Ellipsis },
+};
 
-/** La cuarta pestaña es "En línea" (pedidos de clientes); Fiado vive en Más. Sin conexión es al revés (ver abajo). */
-const items = (sinConexion: boolean): Item[] => [
-  { href: "/inicio", etiqueta: "Inicio", Icono: House },
-  { href: "/pedidos", etiqueta: "Pendientes", Icono: ClipboardList },
-  { href: "/pedido/nuevo", etiqueta: "Tomar", Icono: Plus, central: true },
-  sinConexion ? FIADO : EN_LINEA,
-  { href: "/mas", etiqueta: "Más", Icono: Ellipsis, tambien: sinConexion ? ["/gastos"] : ["/gastos", "/menu", "/mesas", "/fiado"] },
-];
+/** Pantallas que viven dentro de "Más": con una de ellas abierta, la pestaña marcada es Más (si no tiene la suya). */
+const DENTRO_DE_MAS = ["/gastos", "/menu", "/mesas", "/fiado", "/equipo"];
+
+/** Mientras no se sabe quién es (no debería pasar), la barra de siempre. */
+const TODO: Quien = { areas: [...AREAS], esDueno: false };
 
 /**
- * Barra de navegación inferior (zona del pulgar). Cinco destinos de 72 px de alto; el central
- * ("Tomar pedido") es la acción más frecuente y sobresale. La pestaña activa se marca con relleno
- * amarillo Y con `aria-current`, no solo con color.
+ * Barra de navegación inferior (zona del pulgar). Hasta cinco destinos de 72 px de alto; el central ("Tomar pedido")
+ * es la acción más frecuente y sobresale. La pestaña activa se marca con relleno amarillo Y con `aria-current`, no
+ * solo con color.
  *
- * `sinConexion`: en la app sin conexión (/sc) la cuarta pestaña sigue siendo Fiado. Los pedidos en línea necesitan
- * señal (allí la pestaña solo llevaría a "esto necesita conexión"), y el fiado sí se trabaja sin ella.
+ * Las pestañas dependen de lo que abre quien entra (ver `pestanasDe`): el dueño y el mesero ven Inicio, Pendientes,
+ * Tomar, En línea y Más; la cocina, Inicio, Plancha y Más. `sinConexion`: en la app sin conexión (/sc) la cuarta es
+ * Fiado, porque los pedidos en línea necesitan señal y el fiado sí se trabaja sin ella.
  */
-export function BarraNavegacion({ pendientes = 0, sinConexion = false }: { pendientes?: number; sinConexion?: boolean }) {
+export function BarraNavegacion({ pendientes = 0, sinConexion = false, quien = TODO }: { pendientes?: number; sinConexion?: boolean; quien?: Quien }) {
   const ruta = useRuta();
-  const ITEMS = items(sinConexion);
+  const pestanas = pestanasDe(quien, sinConexion).map((p) => ITEMS[p]);
+  const enBarra = pestanas.map((i) => i.href);
 
   return (
     <nav
       aria-label="Principal"
       className="fixed bottom-0 left-1/2 z-30 w-full max-w-[var(--ancho-app)] -translate-x-1/2 border-t-2 border-tinta bg-papel pb-[var(--seguro-abajo)]"
     >
-      <ul className="grid h-[var(--nav-h)] grid-cols-5">
-        {ITEMS.map(({ href, etiqueta, Icono, central, tambien }) => {
-          const activo = [href, ...(tambien ?? [])].some((r) => ruta === r || (r !== "/inicio" && ruta.startsWith(`${r}/`)));
+      <ul className="grid h-[var(--nav-h)]" style={{ gridTemplateColumns: `repeat(${pestanas.length}, minmax(0, 1fr))` }}>
+        {pestanas.map(({ href, etiqueta, Icono, central }) => {
+          const propias = href === "/mas" ? [href, ...DENTRO_DE_MAS.filter((r) => !enBarra.includes(r))] : [href];
+          const activo = propias.some((r) => ruta === r || (r !== "/inicio" && ruta.startsWith(`${r}/`)));
           return (
             <li key={href} className="relative">
               <Enlace

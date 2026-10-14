@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { resumenDeInicio, veredictoDelDia } from "./inicio";
+import type { Inicio } from "@/lib/datos/tipos";
+import { cifrasDelDia, resumenDeInicio, veredictoDelDia } from "./inicio";
 
 describe("¿voy ganando hoy?", () => {
   it("responde según ventas y gastos", () => {
@@ -16,9 +17,9 @@ describe("¿voy ganando hoy?", () => {
   });
 });
 
-describe("qué día muestra Inicio", () => {
-  const base = { fecha: "2026-10-14", jornada_adelantada: false, ventas_hoy: 80000, gastos_hoy: 30000, ganancia_hoy: 50000, pedidos_hoy: 6, ventas_ayer: 376500, gastos_ayer: 184000, ganancia_ayer: 192500 };
+const base = { fecha: "2026-10-14", jornada_adelantada: false, ventas_hoy: 80000, gastos_hoy: 30000, ganancia_hoy: 50000, pedidos_hoy: 6, ventas_ayer: 376500, gastos_ayer: 184000, ganancia_ayer: 192500 };
 
+describe("qué día muestra Inicio", () => {
   it("normalmente, la jornada en curso", () => {
     expect(resumenDeInicio(base)).toEqual({ cerrado: false, fecha: "2026-10-14", ventas: 80000, gastos: 30000, ganancia: 50000, pedidos: 6 });
     // Un día sin movimiento que nadie ha cerrado se muestra tal cual: en ceros.
@@ -38,5 +39,20 @@ describe("qué día muestra Inicio", () => {
   it("el día cerrado puede ser el último del mes", () => {
     const primero = { ...base, fecha: "2026-11-01", jornada_adelantada: true, ventas_hoy: 0, gastos_hoy: 0, ganancia_hoy: 0, pedidos_hoy: 0 };
     expect(resumenDeInicio(primero).fecha).toBe("2026-10-31");
+  });
+});
+
+describe("las cuentas del día solo para quien las ve", () => {
+  const inicio: Inicio = { ...base, por_cobrar: 120000, clientes_con_deuda: 3, pedidos_pendientes: 2, pedidos_sin_cobrar: 1 };
+
+  it("con las cifras, el tiquete se arma", () => {
+    expect(cifrasDelDia(inicio)).toMatchObject({ ventas_hoy: 80000, ganancia_ayer: 192500, pedidos_hoy: 6 });
+  });
+
+  it("a quien no ve las cuentas la base le manda las cifras en null: no hay tiquete (ni ceros que engañen)", () => {
+    const sinPlata: Inicio = { ...inicio, ventas_hoy: null, gastos_hoy: null, ganancia_hoy: null, ventas_ayer: null, gastos_ayer: null, ganancia_ayer: null };
+    expect(cifrasDelDia(sinPlata)).toBeNull();
+    // Basta con que falte una.
+    expect(cifrasDelDia({ ...inicio, gastos_ayer: null })).toBeNull();
   });
 });

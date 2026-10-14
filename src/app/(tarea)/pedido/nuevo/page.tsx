@@ -1,5 +1,7 @@
+import { SinPermiso } from "@/components/layout/sin-permiso";
 import { obtenerMenuParaPedido, obtenerPedido } from "@/lib/datos/pedidos";
 import { ErrorApp } from "@/lib/errores";
+import { revisarPermiso } from "@/lib/permisos";
 import { TomarPedido, type ModoAgregar } from "./tomar-pedido";
 
 export const metadata = { title: "Tomar pedido" };
@@ -21,6 +23,7 @@ async function modoAgregar(id: string | undefined): Promise<ModoAgregar | null> 
 }
 
 export default async function PaginaTomarPedido({ searchParams }: PageProps<"/pedido/nuevo">) {
+  if (!(await revisarPermiso("tomar")).permitido) return <SinPermiso pantalla="tomar" />;
   const sp = await searchParams;
   const agregar = typeof sp.agregar === "string" ? sp.agregar : undefined;
   const [menu, modo] = await Promise.all([obtenerMenuParaPedido(), modoAgregar(agregar)]);

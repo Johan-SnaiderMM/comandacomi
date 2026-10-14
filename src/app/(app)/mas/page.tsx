@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { Armchair, ChefHat, ChevronRight, Lightbulb, MessageCircle, NotebookPen, ReceiptText, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { Armchair, ChefHat, ChevronRight, Lightbulb, MessageCircle, NotebookPen, ReceiptText, UsersRound, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { AvisosDelCelular } from "@/components/avisos/avisos-del-celular";
 import { BotonGuia } from "@/components/guia/boton-guia";
 import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
+import { abre, puedeVer, quienEs } from "@/lib/areas";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { MARCA } from "@/lib/marca";
+import { AREA_DEL_CANAL, CANALES_PERSONAL } from "@/lib/push/tipos";
 
 export const metadata = { title: "Más" };
 
@@ -26,8 +28,12 @@ function Enlace({ href, Icono, titulo, detalle }: { href: string; Icono: LucideI
   );
 }
 
+/** Más: lo que no cabe en la barra de abajo. Cada quien ve solo lo que su rol abre (el dueño, todo). */
 export default async function Mas() {
   const contexto = await obtenerContexto();
+  const quien = quienEs(contexto);
+  const roles = contexto.perfil?.roles ?? [];
+  const canales = CANALES_PERSONAL.filter((c) => abre(quien, AREA_DEL_CANAL[c]));
   const textoContacto = encodeURIComponent(`Hola, vi la demo de ${MARCA.nombre} y quiero esta app para mi restaurante.`);
 
   return (
@@ -36,8 +42,9 @@ export default async function Mas() {
       <main className="pb-nav space-y-3 px-4 pt-4">
         <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">
           {contexto.restaurante?.nombre} · {contexto.perfil?.nombre}
+          {!quien.esDueno && roles.length > 0 && ` · ${roles.join(", ")}`}
         </p>
-        {contexto.restaurante?.es_demo && (
+        {contexto.restaurante?.es_demo && quien.esDueno && (
           <BotonGuia className={`${fila} bg-sol`}>
             <Lightbulb className="size-6 shrink-0" aria-hidden />
             <span className="flex-1 text-left leading-tight">
@@ -46,13 +53,21 @@ export default async function Mas() {
             </span>
           </BotonGuia>
         )}
-        <Enlace href="/plancha" Icono={ChefHat} titulo="Plancha" detalle="Lo que hay que cocinar, plato por plato" />
-        <Enlace href="/fiado" Icono={NotebookPen} titulo="Fiado" detalle="Quién debe, abonos y recordatorios por WhatsApp" />
-        <AvisosDelCelular />
-        <Enlace href="/gastos" Icono={Wallet} titulo="Gastos del día" detalle="Carne, pan, gas, domiciliario…" />
-        <Enlace href="/cierre" Icono={ReceiptText} titulo="Cierre del día" detalle="Ventas, gastos y efectivo de la caja" />
-        <Enlace href="/menu" Icono={UtensilsCrossed} titulo="Menú" detalle="Platos, precios, adiciones y disponibilidad" />
-        <Enlace href="/mesas" Icono={Armchair} titulo="Mesas" detalle="Agregar, cambiar el nombre o quitar" />
+        {puedeVer(quien, "plancha") && <Enlace href="/plancha" Icono={ChefHat} titulo="Plancha" detalle="Lo que hay que cocinar, plato por plato" />}
+        {puedeVer(quien, "fiado") && <Enlace href="/fiado" Icono={NotebookPen} titulo="Fiado" detalle="Quién debe, abonos y recordatorios por WhatsApp" />}
+        {canales.length > 0 && <AvisosDelCelular canales={canales} />}
+        {puedeVer(quien, "gastos") && <Enlace href="/gastos" Icono={Wallet} titulo="Gastos del día" detalle="Carne, pan, gas, domiciliario…" />}
+        {puedeVer(quien, "cierre") && <Enlace href="/cierre" Icono={ReceiptText} titulo="Cierre del día" detalle="Ventas, gastos y efectivo de la caja" />}
+        {puedeVer(quien, "menu") && (
+          <Enlace
+            href="/menu"
+            Icono={UtensilsCrossed}
+            titulo="Menú"
+            detalle={quien.esDueno ? "Platos, precios, adiciones y disponibilidad" : "Marcar los platos que se acabaron"}
+          />
+        )}
+        {puedeVer(quien, "mesas") && <Enlace href="/mesas" Icono={Armchair} titulo="Mesas" detalle="Agregar, cambiar el nombre o quitar" />}
+        {puedeVer(quien, "equipo") && <Enlace href="/equipo" Icono={UsersRound} titulo="Equipo y permisos" detalle="Quién toma pedidos, cobra, cocina…" />}
         {MARCA.contactoWhatsapp && (
           <a
             href={`https://wa.me/${MARCA.contactoWhatsapp}?text=${textoContacto}`}
@@ -69,7 +84,7 @@ export default async function Mas() {
           </a>
         )}
         <div className="space-y-3 pt-3">
-          {contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && (
+          {contexto.restaurante?.es_demo && quien.esDueno && (
             <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} conPin={contexto.restaurante.reinicio_con_pin === true} />
           )}
           <BotonSalir className={`${fila} text-tinta-2`} />

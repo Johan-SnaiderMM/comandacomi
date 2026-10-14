@@ -3,6 +3,8 @@
  * El envío (con la llave privada) vive en servidor.ts; la forma de la base está en la migración 11.
  */
 
+import type { Area } from "@/lib/areas";
+
 /** A qué avisos puede suscribirse un celular del personal. */
 export const CANALES_PERSONAL = ["pedidos", "cocina", "listos"] as const;
 export type CanalPersonal = (typeof CANALES_PERSONAL)[number];
@@ -12,6 +14,9 @@ export const TEXTOS_CANAL: Record<CanalPersonal, { titulo: string; detalle: stri
   cocina: { titulo: "Pedidos a la plancha", detalle: "Para la parrilla: hay platos por preparar" },
   listos: { titulo: "Pedidos listos", detalle: "Para el mesero: un pedido está listo para entregar" },
 };
+
+/** Qué área tiene que abrir alguien para que un aviso le sirva (aceptar pedidos y entregar: tomar pedidos; la plancha). */
+export const AREA_DEL_CANAL: Record<CanalPersonal, Area> = { pedidos: "pedidos", cocina: "plancha", listos: "pedidos" };
 
 /** Lo que viaja en la notificación (el service worker lo muestra tal cual). */
 export type Aviso = {

@@ -8,6 +8,7 @@ import { botonVariantes, Button } from "@/components/ui/button";
 import { HojaInferior } from "@/components/ui/hoja-inferior";
 import { HojaMotivo } from "@/components/ui/hoja-motivo";
 import { Segmentado } from "@/components/ui/segmentado";
+import { abre, type Quien } from "@/lib/areas";
 import type { EstadoPedido, PedidoCobrado, PedidoPendiente, TipoPedido } from "@/lib/datos/tipos";
 import { ETIQUETA_MEDIO, formatearPesos } from "@/lib/dinero";
 import { horaCorta } from "@/lib/fechas";
@@ -43,12 +44,18 @@ const ANTERIOR: Record<EstadoPedido, { estado: EstadoPedido; etiqueta: string } 
   entregado: { estado: "listo", etiqueta: "Volver a listo" },
 };
 
+/**
+ * Pendientes: los pedidos por entregar o por cobrar. Cada botón sale solo si quien entra lo puede usar (la base igual
+ * rechazaría lo demás): tomar pedidos → agregar, quitar platos, anular; tomar pedidos o plancha → marcar listo y
+ * entregado; caja → cobrar, ver los cobrados de hoy y deshacer un cobro.
+ */
 export function ListaPendientes({
   pendientes,
   cobrados,
   ahora,
   enviado,
   restaurante = "el restaurante",
+  quien,
 }: {
   pendientes: PedidoPendiente[];
   cobrados: PedidoCobrado[];
@@ -57,7 +64,12 @@ export function ListaPendientes({
   enviado: { numero: number; agregado: boolean; pendiente?: boolean } | null;
   /** Para el mensaje de WhatsApp con el enlace de seguimiento. */
   restaurante?: string;
+  /** Lo que abre quien entra (ver lib/areas.ts). */
+  quien: Quien;
 }) {
+  const puedeTomar = abre(quien, "pedidos");
+  const puedeMover = abre(quien, "pedidos", "plancha");
+  const puedeCobrar = abre(quien, "caja");
   const router = useIr();
   const [vista, setVista] = useState<Vista>("pendientes");
   const [error, setError] = useState<string | null>(null);
@@ -119,33 +131,41 @@ export function ListaPendientes({
             {error}
           </Aviso>
         )}
-        <Segmentado<Vista>
-          etiqueta="Qué pedidos ver"
-          valor={vista}
-          onCambio={setVista}
-          opciones={[
-            { valor: "pendientes", etiqueta: `Pendientes (${lista.length})` },
-            { valor: "cobrados", etiqueta: `Cobrados hoy (${cobrados.length})` },
-          ]}
-        />
+        {/* Los cobrados de hoy son de la caja: sin ese permiso solo hay una lista y no hace falta elegir. */}
+        {puedeCobrar && (
+          <Segmentado<Vista>
+            etiqueta="Qué pedidos ver"
+            valor={vista}
+            onCambio={setVista}
+            opciones={[
+              { valor: "pendientes", etiqueta: `Pendientes (${lista.length})` },
+              { valor: "cobrados", etiqueta: `Cobrados hoy (${cobrados.length})` },
+            ]}
+          />
+        )}
       </div>
 
-      {vista === "pendientes" ? (
+      {vista === "pendientes" || !puedeCobrar ? (
         lista.length === 0 ? (
           <div className="flex flex-col items-start gap-3 px-4 pt-10">
             <ClipboardList className="size-10" aria-hidden />
             <h2 className="font-display text-4xl font-extrabold uppercase leading-none">Todo al día</h2>
             <p className="text-lg text-tinta-2">No hay pedidos por entregar ni por cobrar.</p>
-            <Enlace href="/pedido/nuevo" className={botonVariantes({ tamano: "lg" })}>
-              Tomar un pedido
-            </Enlace>
+            {puedeTomar && (
+              <Enlace href="/pedido/nuevo" className={botonVariantes({ tamano: "lg" })}>
+                Tomar un pedido
+              </Enlace>
+            )}
           </div>
         ) : (
           <ul className="space-y-4 px-4 pt-3">
             {lista.map((p) => {
               const guia = p.numero === numeroMasNuevo ? "avanzar" : undefined; // el recorrido guiado sigue al pedido recién enviado
               const Icono = ICONO_TIPO[p.tipo];
-              const siguiente = SIGUIENTE[p.estado];
+              const siguiente = puedeMover ? SIGUIENTE[p.estado] : null;
+              const cobrable = !p.cobrado && puedeCobrar;
+              // El menú "⋯" (agregar, quitar, anular, volver atrás) solo si trae algo que esta persona pueda hacer.
+              const conOpciones = puedeTomar || (puedeMover && ANTERIOR[p.estado] !== null);
               return (
                 <li key={p.id} className="rounded-2xl border-2 border-tinta bg-papel p-3 shadow-sello">
                   <div className="flex items-start justify-between gap-2">
@@ -212,21 +232,25 @@ export function ListaPendientes({
                     <span className="cifra text-3xl">{formatearPesos(p.total)}</span>
                   </div>
 
-                  <div className="mt-3 flex gap-2">
-                    {siguiente && (
-                      <Button variante={siguiente.variante} tamano="lg" className="flex-1" data-guia={guia} onClick={() => mover(p.id, siguiente.estado)}>
-                        {siguiente.etiqueta}
-                      </Button>
-                    )}
-                    {!p.cobrado && (
-                      <Enlace href={`/pedidos/${p.id}/cobrar`} data-guia={guia} className={cn(botonVariantes({ variante: "primario", tamano: "lg" }), "flex-1")}>
-                        Cobrar
-                      </Enlace>
-                    )}
-                    <Button variante="secundario" tamano="icono" className="size-14 shrink-0" aria-label={`Más opciones del pedido ${numeroVisible(p.numero)}`} onClick={() => setMenuDe(p)}>
-                      <Ellipsis className="size-6" aria-hidden />
-                    </Button>
-                  </div>
+                  {(siguiente || cobrable || conOpciones) && (
+                    <div className="mt-3 flex gap-2">
+                      {siguiente && (
+                        <Button variante={siguiente.variante} tamano="lg" className="flex-1" data-guia={guia} onClick={() => mover(p.id, siguiente.estado)}>
+                          {siguiente.etiqueta}
+                        </Button>
+                      )}
+                      {cobrable && (
+                        <Enlace href={`/pedidos/${p.id}/cobrar`} data-guia={guia} className={cn(botonVariantes({ variante: "primario", tamano: "lg" }), "flex-1")}>
+                          Cobrar
+                        </Enlace>
+                      )}
+                      {conOpciones && (
+                        <Button variante="secundario" tamano="icono" className="size-14 shrink-0" aria-label={`Más opciones del pedido ${numeroVisible(p.numero)}`} onClick={() => setMenuDe(p)}>
+                          <Ellipsis className="size-6" aria-hidden />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -249,7 +273,7 @@ export function ListaPendientes({
                 {horaCorta(c.cobrado_at)} · {c.medios.map((m) => ETIQUETA_MEDIO[m]).join(" + ")}
                 {c.propina > 0 && ` · propina ${formatearPesos(c.propina)}`}
               </p>
-              {enCola.has(c.id) ? (
+              {!puedeCobrar ? null : enCola.has(c.id) ? (
                 <p className="mt-2 text-base text-tinta-2">Se sube con la señal; después podrás anularlo si hace falta.</p>
               ) : (
                 <Button variante="secundario" className="mt-2" onClick={() => setAnulando({ tipo: "cobro", id: c.id, numero: c.numero })}>
@@ -264,10 +288,12 @@ export function ListaPendientes({
       {menuDe && (
         <HojaInferior titulo={`Pedido ${numeroVisible(menuDe.numero)}`} onCerrar={() => setMenuDe(null)}>
           <div className="space-y-3">
-            <Enlace href={`/pedido/nuevo?agregar=${menuDe.id}`} className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
-              Agregar platos
-            </Enlace>
-            {menuDe.token && menuDe.contacto_telefono && menuDe.tipo !== "mesa" && (
+            {puedeTomar && (
+              <Enlace href={`/pedido/nuevo?agregar=${menuDe.id}`} className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
+                Agregar platos
+              </Enlace>
+            )}
+            {puedeTomar && menuDe.token && menuDe.contacto_telefono && menuDe.tipo !== "mesa" && (
               <a
                 href={enlaceWhatsapp({
                   telefono: menuDe.contacto_telefono,
@@ -285,13 +311,13 @@ export function ListaPendientes({
                 <MessageCircle className="size-5" aria-hidden /> Enviar seguimiento por WhatsApp
               </a>
             )}
-            {ANTERIOR[menuDe.estado] && (
+            {puedeMover && ANTERIOR[menuDe.estado] && (
               <Button variante="secundario" tamano="lg" bloque onClick={() => mover(menuDe.id, ANTERIOR[menuDe.estado]!.estado)}>
                 {ANTERIOR[menuDe.estado]!.etiqueta}
               </Button>
             )}
             {/* Con un solo plato no hay qué quitar: se anula el pedido completo. */}
-            {!menuDe.cobrado && menuDe.items.length > 1 && !enCola.has(menuDe.id) && (
+            {puedeTomar && !menuDe.cobrado && menuDe.items.length > 1 && !enCola.has(menuDe.id) && (
               <Button
                 variante="secundario"
                 tamano="lg"
@@ -304,7 +330,8 @@ export function ListaPendientes({
                 Quitar un plato
               </Button>
             )}
-            {enCola.has(menuDe.id) ? (
+            {/* Anular un pedido ya cobrado deshace también el cobro: eso es de la caja. */}
+            {!puedeTomar || (menuDe.cobrado && !puedeCobrar) ? null : enCola.has(menuDe.id) ? (
               <p className="text-base text-tinta-2">Este pedido tiene cambios por subir: cuando se suban podrás anularlo o quitarle platos.</p>
             ) : (
               <Button

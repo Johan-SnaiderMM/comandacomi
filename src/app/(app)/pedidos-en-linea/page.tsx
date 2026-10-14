@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { SinPermiso } from "@/components/layout/sin-permiso";
 import { Aviso } from "@/components/ui/aviso";
-import { obtenerContexto } from "@/lib/datos/inicio";
 import { abiertoPorHorario, leerHorario, textoProximaApertura } from "@/lib/horario";
+import { revisarPermiso } from "@/lib/permisos";
 import { PanelPedidosEnLinea } from "./panel-pedidos-en-linea";
 
 export const metadata = { title: "Pedidos en línea" };
@@ -12,7 +13,8 @@ export const metadata = { title: "Pedidos en línea" };
  * abrir o cerrar la recepción. Quien abre o cierra es el dueño.
  */
 export default async function PaginaPedidosEnLinea() {
-  const contexto = await obtenerContexto();
+  const { contexto, quien, permitido } = await revisarPermiso("enLinea");
+  if (!permitido) return <SinPermiso pantalla="enLinea" />;
   if (!contexto.restaurante) redirect("/");
   // La base aún no trae la actualización de pedidos en línea (migración 10): se explica en vez de armar un enlace roto.
   if (!contexto.restaurante.slug) {
@@ -40,7 +42,7 @@ export default async function PaginaPedidosEnLinea() {
           slug={contexto.restaurante.slug}
           nombre={contexto.restaurante.nombre}
           activo={contexto.restaurante.pedidos_en_linea}
-          esDueno={contexto.perfil?.rol === "dueno"}
+          esDueno={quien.esDueno}
           esDemo={contexto.restaurante.es_demo}
           horario={horario}
           enHorario={enHorario}

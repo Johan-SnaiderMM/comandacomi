@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { BarraNavegacion } from "@/components/layout/barra-navegacion";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
+import { SinPermiso } from "@/components/layout/sin-permiso";
+import { puedeVer, quienEs } from "@/lib/areas";
 import type { ClienteFiado, PedidoDetalle, PedidoPendiente } from "@/lib/datos/tipos";
 import { hoyDeTrabajo } from "@/lib/fechas";
 import { ProveedorNavegacionSC, type NavegacionSC } from "@/lib/navegacion";
@@ -101,15 +103,19 @@ export function AppSinConexion() {
     if (!vista) return ruta === "/sincronizacion" ? <Sincronizacion vista={null} /> : <SinDatos />;
 
     const restaurante = vista.contexto.restaurante?.nombre ?? "tu restaurante";
+    // Lo que abre quien usa el celular, según la copia guardada (la base igual rechaza lo demás al subirlo).
+    const quien = quienEs(vista.contexto);
     const conBarra = (contenido: React.ReactNode) => (
       <div className="columna-app">
         {contenido}
-        <BarraNavegacion sinConexion pendientes={vista.pendientes.filter((p) => !(p.estado === "entregado" && p.cobrado)).length} />
+        <BarraNavegacion sinConexion quien={quien} pendientes={vista.pendientes.filter((p) => !(p.estado === "entregado" && p.cobrado)).length} />
       </div>
     );
+    const sinBarra = (contenido: React.ReactNode) => <div className="columna-app">{contenido}</div>;
 
     switch (ruta) {
       case "/pedidos": {
+        if (!puedeVer(quien, "pendientes")) return conBarra(<SinPermiso pantalla="pendientes" />);
         const numero = Number(query.get("enviado"));
         const enviado = Number.isInteger(numero) && numero !== 0 ? { numero, agregado: query.get("agregado") === "1", pendiente: query.get("pendiente") === "1" } : null;
         return conBarra(
@@ -122,12 +128,14 @@ export function AppSinConexion() {
                 ahora={new Date().toISOString()}
                 enviado={enviado}
                 restaurante={restaurante}
+                quien={quien}
               />
             </main>
           </>
         );
       }
       case "/fiado":
+        if (!puedeVer(quien, "fiado")) return conBarra(<SinPermiso pantalla="fiado" />);
         return conBarra(
           <>
             <EncabezadoPantalla titulo="Fiado" />
@@ -137,12 +145,14 @@ export function AppSinConexion() {
           </>
         );
       case "/mas":
-        return conBarra(<MasSC vista={vista} />);
+        return conBarra(<MasSC vista={vista} quien={quien} />);
       case "/sincronizacion":
         return conBarra(<Sincronizacion vista={vista} />);
       case "/pedido/nuevo":
+        if (!puedeVer(quien, "tomar")) return sinBarra(<SinPermiso pantalla="tomar" />);
         return <TomarPedido menu={vista.menu} agregar={modoAgregarDe(vista, query.get("agregar"))} />;
       case "/gastos/nuevo":
+        if (!puedeVer(quien, "gastos")) return sinBarra(<SinPermiso pantalla="gastos" />);
         return <NuevoGasto />;
       case "/gastos": {
         const monto = Number(query.get("guardado"));
@@ -150,14 +160,15 @@ export function AppSinConexion() {
         return <RequiereConexion ruta="/gastos" />;
       }
       case "/inicio":
-        return conBarra(<InicioSC vista={vista} />);
+        return conBarra(<InicioSC vista={vista} quien={quien} />);
       default: {
         const id = idDeCobro(ruta);
         if (id) {
+          if (!puedeVer(quien, "cobrar")) return sinBarra(<SinPermiso pantalla="cobrar" />);
           const p = vista.pendientes.find((x) => x.id === id);
           return p ? <Cobrar detalle={detalleDe(p)} clientes={vista.clientes} /> : <NoEncontrado />;
         }
-        if (ruta === "/") return conBarra(<InicioSC vista={vista} />);
+        if (ruta === "/") return conBarra(<InicioSC vista={vista} quien={quien} />);
         // Una pantalla de la app normal que no existe aquí (cierre, menú, ficha de cliente…): llegó por el # que arma
         // el service worker al faltar la señal. Se explica y se ofrece abrirla cuando haya conexión.
         const resto = query.toString();

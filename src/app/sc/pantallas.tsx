@@ -9,6 +9,7 @@ import { ClipboardList, CloudOff, Plus, RefreshCw, ReceiptText, Trash2, Utensils
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { Aviso } from "@/components/ui/aviso";
 import { botonVariantes, Button } from "@/components/ui/button";
+import { puedeVer, type Quien } from "@/lib/areas";
 import { formatearPesos } from "@/lib/dinero";
 import { Enlace } from "@/lib/navegacion";
 import { obtenerMotor, useEnLinea, useEstadoSync } from "@/lib/sync/cliente";
@@ -40,12 +41,14 @@ export function Cargando() {
   );
 }
 
-/** El inicio sin conexión: lo que sí se puede hacer, y lo que espera a tener señal. */
-export function InicioSC({ vista }: { vista: Snapshot }) {
+/** El inicio sin conexión: lo que sí se puede hacer (según lo que abre quien usa el celular), y lo que espera a la señal. */
+export function InicioSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
   const enLinea = useEnLinea();
   const pendientes = vista.pendientes.filter((p) => !(p.estado === "entregado" && p.cobrado)).length;
   const porCobrar = vista.pendientes.filter((p) => !p.cobrado).length;
   const deben = vista.clientes.filter((c) => c.saldo > 0).reduce((s, c) => s + c.saldo, 0);
+  const verPendientes = puedeVer(quien, "pendientes");
+  const verFiado = puedeVer(quien, "fiado");
 
   return (
     <>
@@ -55,34 +58,46 @@ export function InicioSC({ vista }: { vista: Snapshot }) {
           {enLinea ? "Estás usando la copia guardada en este celular." : "Sin señal: trabajas con lo guardado y todo se sube solo cuando vuelva."}
         </p>
 
-        <Enlace href="/pedido/nuevo" className={cn(botonVariantes({ tamano: "lg", bloque: true }))}>
-          <Plus className="size-6" strokeWidth={3} aria-hidden /> Tomar un pedido
-        </Enlace>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Enlace href="/pedidos" className={cn(fila, "flex-col items-start gap-0 bg-sol")}>
-            <span className="flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide">
-              <ClipboardList className="size-4" aria-hidden /> Pendientes
-            </span>
-            <span className="cifra text-[2rem]">{pendientes}</span>
-            <span className="text-sm font-normal">{porCobrar === 0 ? "Todos cobrados" : `${porCobrar} por cobrar`}</span>
+        {puedeVer(quien, "tomar") && (
+          <Enlace href="/pedido/nuevo" className={cn(botonVariantes({ tamano: "lg", bloque: true }))}>
+            <Plus className="size-6" strokeWidth={3} aria-hidden /> Tomar un pedido
           </Enlace>
-          <Enlace href="/fiado" className={cn(fila, "flex-col items-start gap-0")}>
-            <span className="flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-tinta-2">
-              <NotebookPen className="size-4" aria-hidden /> Por cobrar
-            </span>
-            <span className={cn("cifra text-[2rem]", deben > 0 && "text-aji")}>{formatearPesos(deben)}</span>
-            <span className="text-sm font-normal text-tinta-2">fiado</span>
-          </Enlace>
-        </div>
+        )}
 
-        <Enlace href="/gastos/nuevo" className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
-          <Wallet className="size-5" aria-hidden /> Anotar un gasto
-        </Enlace>
+        {(verPendientes || verFiado) && (
+          <div className={cn("grid gap-3", verPendientes && verFiado && "grid-cols-2")}>
+            {verPendientes && (
+              <Enlace href="/pedidos" className={cn(fila, "flex-col items-start gap-0 bg-sol")}>
+                <span className="flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide">
+                  <ClipboardList className="size-4" aria-hidden /> Pendientes
+                </span>
+                <span className="cifra text-[2rem]">{pendientes}</span>
+                <span className="text-sm font-normal">{porCobrar === 0 ? "Todos cobrados" : `${porCobrar} por cobrar`}</span>
+              </Enlace>
+            )}
+            {verFiado && (
+              <Enlace href="/fiado" className={cn(fila, "flex-col items-start gap-0")}>
+                <span className="flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-tinta-2">
+                  <NotebookPen className="size-4" aria-hidden /> Por cobrar
+                </span>
+                <span className={cn("cifra text-[2rem]", deben > 0 && "text-aji")}>{formatearPesos(deben)}</span>
+                <span className="text-sm font-normal text-tinta-2">fiado</span>
+              </Enlace>
+            )}
+          </div>
+        )}
+
+        {puedeVer(quien, "gastos") && (
+          <Enlace href="/gastos/nuevo" className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
+            <Wallet className="size-5" aria-hidden /> Anotar un gasto
+          </Enlace>
+        )}
 
         <section aria-label="Lo que necesita conexión" className="rounded-2xl border-2 border-dashed border-tinta/40 p-3">
           <p className="text-base font-bold">Esto espera a tener señal</p>
-          <p className="mt-1 text-base text-tinta-2">Cierre del día, gastos anteriores, menú y fichas de clientes.</p>
+          <p className="mt-1 text-base text-tinta-2">
+            {quien.esDueno ? "Cierre del día, gastos anteriores, menú y fichas de clientes." : "La plancha, los pedidos en línea y todo lo que muestra datos del servidor."}
+          </p>
         </section>
       </main>
     </>
@@ -90,7 +105,7 @@ export function InicioSC({ vista }: { vista: Snapshot }) {
 }
 
 /** "Más" sin conexión: gasto, sincronización y volver a la app normal. */
-export function MasSC({ vista }: { vista: Snapshot }) {
+export function MasSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
   const { ops } = useEstadoSync();
   const porSubir = ops.filter((o) => o.estado === "pendiente").length;
   const problemas = ops.filter((o) => o.estado === "fallida").length;
@@ -101,13 +116,15 @@ export function MasSC({ vista }: { vista: Snapshot }) {
         <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">
           {vista.contexto.restaurante?.nombre} · {vista.contexto.perfil?.nombre}
         </p>
-        <Enlace href="/gastos/nuevo" className={fila}>
-          <Wallet className="size-6 shrink-0" aria-hidden />
-          <span className="flex-1 leading-tight">
-            Anotar un gasto
-            <span className="block text-sm font-normal text-tinta-2">Se guarda y se sube con la señal</span>
-          </span>
-        </Enlace>
+        {puedeVer(quien, "gastos") && (
+          <Enlace href="/gastos/nuevo" className={fila}>
+            <Wallet className="size-6 shrink-0" aria-hidden />
+            <span className="flex-1 leading-tight">
+              Anotar un gasto
+              <span className="block text-sm font-normal text-tinta-2">Se guarda y se sube con la señal</span>
+            </span>
+          </Enlace>
+        )}
         <Enlace href="/sincronizacion" className={fila}>
           <RefreshCw className="size-6 shrink-0" aria-hidden />
           <span className="flex-1 leading-tight">

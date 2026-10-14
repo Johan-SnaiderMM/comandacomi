@@ -38,15 +38,17 @@ export type Inicio = {
   fecha: string;
   /** El día de trabajo ya se cerró a mano: hasta la hora de corte, lo que se registre cuenta para el siguiente. */
   jornada_adelantada?: boolean;
-  ventas_hoy: number;
-  gastos_hoy: number;
-  ganancia_hoy: number;
+  /** Las cifras de plata llegan en null a quien no ve las cuentas del día (área "cierre", migración 19). */
+  ventas_hoy: number | null;
+  gastos_hoy: number | null;
+  ganancia_hoy: number | null;
   pedidos_hoy: number;
-  ventas_ayer: number;
-  gastos_ayer: number;
-  ganancia_ayer: number;
-  por_cobrar: number;
-  clientes_con_deuda: number;
+  ventas_ayer: number | null;
+  gastos_ayer: number | null;
+  ganancia_ayer: number | null;
+  /** Lo que deben los clientes: null para quien no maneja el fiado ni ve las cuentas. */
+  por_cobrar: number | null;
+  clientes_con_deuda: number | null;
   pedidos_pendientes: number;
   pedidos_sin_cobrar: number;
   /** Pedidos que hicieron clientes en línea y todavía no se aceptan (opcional: copias locales viejas no lo traen). */
@@ -322,3 +324,12 @@ export type Adicion = MenuAdmin["modificadores"][number];
 
 /** Una mesa activa. `ocupada` = tiene un pedido sin cobrar (no se puede quitar). */
 export type MesaAdmin = { id: string; nombre: string; orden: number; ocupada: boolean };
+
+/** Un rol del equipo del local (Mesero, Cocina, Caja…) y cuántas personas lo tienen. */
+export type RolEquipo = { id: string; nombre: string; areas: Area[]; personas: number };
+
+/** Una persona del equipo: sus roles (ids) y lo que abre con ellos (el dueño, todo). */
+export type PersonaEquipo = { user_id: string; nombre: string; rol: "dueno" | "ayudante"; yo: boolean; roles: string[]; areas: Area[] };
+
+/** Más → Equipo (listar_equipo, solo el dueño). */
+export type Equipo = { areas: Area[]; roles: RolEquipo[]; personas: PersonaEquipo[] };

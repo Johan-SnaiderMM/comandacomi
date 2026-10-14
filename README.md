@@ -233,7 +233,7 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 ## Estructura
 
 ```
-src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fiado, Más, Gastos, Menú, Mesas, Pedidos en línea
+src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fiado, Más, Gastos, Menú, Mesas, Equipo, Pedidos en línea
 src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente, QR para imprimir
 src/app/(cocina)/     La plancha, a todo el ancho (tableta o celular acostado)
 src/app/(publico)/    Lo que ve el CLIENTE sin cuenta: /pedir/<local> (menú y pedido) y /seguimiento/<código>
@@ -243,7 +243,7 @@ src/app/sc/           App sin conexión: una página estática con los mismos co
 src/lib/sync/         Trabajo sin conexión: tipos, vista local, motor de la cola, acciones del celular
 src/app/api/foto/     Sirve las fotos de gastos solo con sesión y solo del propio restaurante
 src/components/       ui (botón, hoja inferior, teclado numérico…), layout, fiado, gastos, sesión
-src/lib/              dinero.ts (TODOS los cálculos), fechas (día de trabajo), horario (de atención), whatsapp, teclado, esquemas/ (Zod), datos/ (lecturas)
+src/lib/              dinero.ts (TODOS los cálculos), areas (qué ve cada rol), fechas (día de trabajo), horario (de atención), whatsapp, teclado, esquemas/ (Zod), datos/ (lecturas)
 src/lib/local/        Modo local de desarrollo (PGlite)
 supabase/migrations/  Tablas, RLS, funciones de lectura/escritura, demo, permisos, almacenamiento
 supabase/seed.sql     Carga de la demo en Supabase (idempotente)
@@ -264,7 +264,9 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 - **Permisos por área, decididos por cada local** (migración `20261005000019_permisos_por_area.sql`): las áreas son
   *pedidos, plancha, caja, fiado, gastos y cierre*. Cada restaurante tiene sus roles (arranca con Mesero, Cocina y
   Caja) y elige qué áreas abre cada uno; una persona puede tener varios roles y ve la suma. El dueño lo ve todo. El
-  candado está en la base: sin el área, la función de escritura falla y las tablas de plata no se leen.
+  candado está en la base: sin el área, la función de escritura falla y las tablas de plata no se leen. El dueño los
+  arma en **Más → Equipo**; la barra de abajo, Inicio, Más y los botones de cada pantalla muestran a cada quien solo
+  lo suyo, y una pantalla que no le toca explica «No tienes permiso» (`src/lib/areas.ts`).
 - **Poco JavaScript:** una prueba impide que Zod (validación, solo servidor) llegue al navegador.
 - El proyecto usa Next.js 16: antes de escribir código lee la guía correspondiente en `node_modules/next/dist/docs/`
   (ver `AGENTS.md`).

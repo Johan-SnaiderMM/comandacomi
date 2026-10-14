@@ -202,6 +202,7 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > `20261005000017_carta_del_cliente.sql` y `20261005000018_demo_al_dia.sql`. Las cinco últimas van juntas (la 18
 > redefine los datos de ejemplo con todo lo de las cuatro anteriores); después, **Más → Reiniciar demo** para que la
 > demo tome las descripciones de los platos y Bebidas quede fuera de la plancha.
+> Luego `20261005000019_permisos_por_area.sql` (roles del equipo y permisos por área; al dueño no le cambia nada).
 
 ### Antes de enseñarla (lista rápida)
 
@@ -260,6 +261,10 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
   compuestas, así que ninguna fila puede apuntar a datos de otro restaurante.
 - **Los clientes no escriben tablas:** solo leen (con RLS). Toda escritura pasa por funciones SQL que validan
   restaurante y rol y **recalculan precios y totales desde la base** (el celular solo manda ids y cantidades).
+- **Permisos por área, decididos por cada local** (migración `20261005000019_permisos_por_area.sql`): las áreas son
+  *pedidos, plancha, caja, fiado, gastos y cierre*. Cada restaurante tiene sus roles (arranca con Mesero, Cocina y
+  Caja) y elige qué áreas abre cada uno; una persona puede tener varios roles y ve la suma. El dueño lo ve todo. El
+  candado está en la base: sin el área, la función de escritura falla y las tablas de plata no se leen.
 - **Poco JavaScript:** una prueba impide que Zod (validación, solo servidor) llegue al navegador.
 - El proyecto usa Next.js 16: antes de escribir código lee la guía correspondiente en `node_modules/next/dist/docs/`
   (ver `AGENTS.md`).

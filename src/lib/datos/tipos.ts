@@ -3,6 +3,7 @@
  * no hay generador de tipos; las pruebas de reglas-negocio verifican que el SQL devuelva estos campos.
  * Todo importe es un entero en pesos COP.
  */
+import type { Area } from "@/lib/areas";
 import type { MedioPago } from "@/lib/dinero";
 
 export type TipoPedido = "mesa" | "llevar" | "domicilio";
@@ -22,7 +23,14 @@ export type Contexto = {
     /** Horario de atención de los pedidos en línea (ver lib/horario.ts); null o ausente = sin horario. */
     horario?: unknown;
   } | null;
-  perfil: { nombre: string; rol: "dueno" | "ayudante" } | null;
+  perfil: {
+    nombre: string;
+    rol: "dueno" | "ayudante";
+    /** Lo que puede abrir quien entra: el dueño todas; el resto, la suma de sus roles (falta antes de la migración 19). */
+    areas?: Area[];
+    /** Nombres de sus roles en el local (Mesero, Caja…); el dueño puede no tener ninguno. */
+    roles?: string[];
+  } | null;
 };
 
 export type Inicio = {

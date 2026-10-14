@@ -12,6 +12,13 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
 - Anular con motivo en vez de borrar. Tablas en español, `created_at` y `registrado_por`.
 - Toda tabla de negocio lleva `restaurante_id` y RLS. Las escrituras van por funciones RPC (`security definer`),
   los clientes no escriben tablas directamente.
+- Permisos por área (migración 19): áreas fijas `pedidos`, `plancha`, `caja`, `fiado`, `gastos`, `cierre` (`fn_areas` en
+  SQL y `lib/areas.ts`, una prueba las compara). Cada local tiene sus roles (`roles_equipo`) y una persona puede tener
+  varios (`perfil_roles`): ve la suma. El dueño las abre todas; menú, mesas, horario, pedidos en línea y equipo siguen
+  siendo `requerir_dueno()`. Toda función de escritura nueva pide su área con `requerir_area('…')`, nunca solo
+  `requerir_restaurante()` (`src/test/permisos-por-area.test.ts` fija la lista de las que no piden área). Las tablas de
+  plata (pagos, fiado, clientes, gastos, cierres) se leen con `tiene_area` en su RLS: una lectura no falla, devuelve
+  vacío o `null` en las cifras que no le tocan. Al redefinir una función copia la ÚLTIMA versión (la que ya pide área).
 - Migraciones (`supabase/migrations/`): toda migración que agregue funciones termina con
   `select public.fn_aplicar_permisos();` (cierra EXECUTE a anon y a las `fn_*`/`requerir_*`) y se corre `npm run esquema`
   para regenerar `supabase/esquema-completo.sql` (una prueba lo verifica). Toda tabla nueva lleva `restaurante_id`

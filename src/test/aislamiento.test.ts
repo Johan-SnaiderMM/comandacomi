@@ -274,8 +274,11 @@ describe("sin sesión o sin restaurante: nada", () => {
     await expect(rpc(db, u.rows[0].id, "guardar_categoria", { p_id: null, p_nombre: "Nueva" })).rejects.toThrow(/Solo el dueño/);
     await expect(rpc(db, u.rows[0].id, "reiniciar_demo")).rejects.toThrow(/Solo el dueño/);
     await expect(rpc(db, u.rows[0].id, "reiniciar_demo", { p_nombre: "Otro nombre" })).rejects.toThrow(/Solo el dueño/);
-    // pero sí puede marcar "se acabó" y trabajar con pedidos
+    // pero con el rol de Mesero sí puede marcar "se acabó" y trabajar con pedidos (sin roles no puede nada: migración 19)
     const menu = await rpc<{ productos: { id: string }[] }>(db, u.rows[0].id, "obtener_menu_para_pedido");
+    await expect(rpc(db, u.rows[0].id, "cambiar_disponibilidad", { p_producto_id: menu.productos[0].id, p_disponible: false })).rejects.toThrow(/permiso/);
+    const mesero = (await rpc<{ roles: { id: string; nombre: string }[] }>(db, A.userId, "listar_equipo")).roles.find((r) => r.nombre === "Mesero")!;
+    await rpc(db, A.userId, "asignar_roles", { p_user_id: u.rows[0].id, p_roles: [mesero.id] });
     await expect(rpc(db, u.rows[0].id, "cambiar_disponibilidad", { p_producto_id: menu.productos[0].id, p_disponible: false })).resolves.toBeTruthy();
     await rpc(db, u.rows[0].id, "cambiar_disponibilidad", { p_producto_id: menu.productos[0].id, p_disponible: true });
   });

@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { after } from "next/server";
+import { leerVerComo } from "@/lib/areas";
 import { listarClientes } from "@/lib/datos/fiado";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { consultar } from "@/lib/datos/llamar";
@@ -10,6 +12,7 @@ import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerMenuParaPedid
 import { ErrorApp, esFalloPasajero, MENSAJE_GENERICO } from "@/lib/errores";
 import { alAgregarPlatos, alEntrarACocina, alQuedarListo } from "@/lib/push/eventos";
 import { argumentosDeOperacion, esquemaSobreOperacion } from "@/lib/esquemas/operacion";
+import { COOKIE_VER_COMO } from "@/lib/permisos";
 import { obtenerUsuario } from "@/lib/sesion";
 import type { RespuestaOperacion, Snapshot } from "@/lib/sync/tipos";
 
@@ -67,7 +70,13 @@ export async function obtenerSnapshot(): Promise<Snapshot | null> {
       listarPedidosCobradosHoy(),
       listarClientes(),
     ]);
-    return { version: 1, guardadoEn: new Date().toISOString(), contexto, menu, pendientes, cobrados, clientes };
+    // El dueño que está viendo la app "como" un rol la ve igual sin conexión.
+    const verComo = leerVerComo((await cookies()).get(COOKIE_VER_COMO)?.value);
+    const visto =
+      verComo && contexto.perfil?.rol === "dueno"
+        ? { ...contexto, perfil: { ...contexto.perfil, rol: "ayudante" as const, areas: verComo.areas, roles: [verComo.nombre] } }
+        : contexto;
+    return { version: 1, guardadoEn: new Date().toISOString(), contexto: visto, menu, pendientes, cobrados, clientes };
   } catch (e) {
     if (e instanceof ErrorApp) return null;
     throw e;

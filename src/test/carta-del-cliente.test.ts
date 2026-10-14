@@ -243,6 +243,8 @@ describe("horario de atención", () => {
   });
 
   it("solo el dueño lo cambia, y el de un restaurante no toca el de otro", async () => {
+    // Reiniciar saca al equipo de la visita anterior (migración 20): el ayudante vuelve a entrar para la prueba.
+    await db.query(`insert into public.perfiles (user_id, restaurante_id, rol, nombre) values ($1, $2, 'ayudante', 'Ayudante') on conflict do nothing`, [ayudante, A.restauranteId]);
     await expect(configurar(horarioCerradoAhora(), ayudante)).rejects.toThrow(/Solo el dueño/);
     await expect(rpc(db, null, "configurar_horario", { p_horario: null })).rejects.toThrow(/permission denied/);
     await configurar(horarioCerradoAhora());

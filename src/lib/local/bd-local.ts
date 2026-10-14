@@ -54,12 +54,18 @@ function baseLocal(): Promise<PGlite> {
 export async function crearBdLocal(): Promise<BaseDatos> {
   const almacen = await cookies();
   const db = await baseLocal();
+  // Quien entró en ESTA petición (la cookie nueva recién se manda al navegador): así `rpc` ya va con esa sesión.
+  let recienEntrado: string | undefined;
 
   const usuarioId = async (): Promise<string | null> => {
-    const id = almacen.get(COOKIE)?.value;
+    const id = recienEntrado ?? almacen.get(COOKIE)?.value;
     if (!id || !/^[0-9a-f-]{36}$/.test(id)) return null;
     const r = await db.query(`select 1 from auth.users where id = $1`, [id]);
     return r.rows.length ? id : null;
+  };
+  const abrirSesion = (id: string) => {
+    recienEntrado = id;
+    almacen.set(COOKIE, id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
   };
 
   return {
@@ -86,16 +92,26 @@ export async function crearBdLocal(): Promise<BaseDatos> {
 
     async usuario() {
       const id = await usuarioId();
-      return id ? { id, email: CORREO_LOCAL } : null;
+      if (!id) return null;
+      const r = await db.query<{ email: string | null }>(`select email from auth.users where id = $1`, [id]);
+      return { id, email: r.rows[0]?.email ?? null };
     },
 
     async entrarDemo() {
       const r = await db.query<{ id: string }>(`select id from auth.users where email = $1`, [CORREO_LOCAL]);
-      almacen.set(COOKIE, r.rows[0].id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+      abrirSesion(r.rows[0].id);
+      return { error: null };
+    },
+
+    // Como la sesión anónima de Supabase: un usuario nuevo, sin correo.
+    async entrarAnonimo() {
+      const r = await db.query<{ id: string }>(`insert into auth.users (email) values (null) returning id`);
+      abrirSesion(r.rows[0].id);
       return { error: null };
     },
 
     async salir() {
+      recienEntrado = undefined;
       almacen.delete(COOKIE);
     },
 

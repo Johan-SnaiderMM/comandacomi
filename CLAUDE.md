@@ -23,6 +23,13 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   con `revisarPermiso("<pantalla>")` (`lib/permisos.ts`) y si no hay permiso muestra `<SinPermiso>` (una prueba,
   `src/test/pantallas-con-permiso.test.ts`, lo exige para cada `page.tsx`); los botones se esconden con
   `abre(quien, …)`. Una pantalla nueva del personal se agrega a `PANTALLAS`. Más → Equipo (`/equipo`) es del dueño.
+  Las páginas sacan a quien entra con `obtenerQuien()` / `revisarPermiso()` (`lib/permisos.ts`), nunca con
+  `quienEs(obtenerContexto())` suelto: ahí van el "Ver como" y la salida a `/unirme` de una sesión sin equipo.
+- Equipo (migración 20): cada persona entra con un código de invitación (`crear_invitacion` → `/unirme` →
+  `canjear_invitacion`, con una sesión ANÓNIMA de Supabase; nada de `service_role` ni de crear usuarios). Quitar del
+  equipo borra su perfil (y con él sus roles y sus avisos push); reiniciar la demo saca al equipo y vuelve a los roles
+  de siempre. Los avisos push se filtran por área al suscribirse Y al enviar (`listar_destinos_push`). "Ver como" es
+  solo vista (cookie `ver_como`, solo vale para el dueño): nunca relajar ni endurecer la base con ella.
 - Migraciones (`supabase/migrations/`): toda migración que agregue funciones termina con
   `select public.fn_aplicar_permisos();` (cierra EXECUTE a anon y a las `fn_*`/`requerir_*`) y se corre `npm run esquema`
   para regenerar `supabase/esquema-completo.sql` (una prueba lo verifica). Toda tabla nueva lleva `restaurante_id`

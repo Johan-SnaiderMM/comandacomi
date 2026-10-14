@@ -16,3 +16,11 @@ export const esquemaAsignacion = z.object({
   userId: z.uuid("La persona no es válida."),
   roles: z.array(z.uuid("El rol no es válido.")).max(12),
 });
+
+/** Invitar a alguien al equipo: su nombre y al menos un rol. */
+export const esquemaInvitacion = z.object({
+  nombre: z.string().trim().min(1, "Escribe el nombre de la persona.").max(40, "El nombre es muy largo (máximo 40 caracteres)."),
+  roles: z.array(z.uuid("El rol no es válido.")).min(1, "Elige al menos un rol: sin roles no podría hacer nada.").max(12),
+});
+
+export const esquemaUuid = z.uuid();

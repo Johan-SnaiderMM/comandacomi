@@ -6,15 +6,16 @@ import { EditorEquipo } from "./editor-equipo";
 
 export const metadata = { title: "Equipo" };
 
-/** Más → Equipo: los roles del local, qué abre cada uno y quién tiene cuál. Solo el dueño. */
+/** Más → Equipo: los roles del local, qué abre cada uno, quién tiene cuál y cómo sumar a alguien. Solo el dueño. */
 export default async function Equipo() {
-  if (!(await revisarPermiso("equipo")).permitido) return <SinPermiso pantalla="equipo" />;
+  const { contexto, permitido } = await revisarPermiso("equipo");
+  if (!permitido) return <SinPermiso pantalla="equipo" />;
   const equipo = await listarEquipo();
   return (
     <>
       <EncabezadoPantalla titulo="Equipo" atras="/mas" />
       <main className="pb-nav-accion">
-        <EditorEquipo equipo={equipo} />
+        <EditorEquipo equipo={equipo} restaurante={contexto.restaurante?.nombre ?? "el restaurante"} />
       </main>
     </>
   );

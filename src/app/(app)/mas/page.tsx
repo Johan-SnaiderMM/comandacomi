@@ -1,13 +1,16 @@
 import Link from "next/link";
-import { Armchair, ChefHat, ChevronRight, Lightbulb, MessageCircle, NotebookPen, ReceiptText, UsersRound, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { Armchair, ChefHat, ChevronRight, Eye, Lightbulb, MessageCircle, NotebookPen, ReceiptText, UsersRound, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { dejarDeVerComo } from "@/app/acciones/equipo";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { AvisosDelCelular } from "@/components/avisos/avisos-del-celular";
+import { SelectorVerComo } from "@/components/equipo/selector-ver-como";
 import { BotonGuia } from "@/components/guia/boton-guia";
 import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
-import { abre, puedeVer, quienEs } from "@/lib/areas";
-import { obtenerContexto } from "@/lib/datos/inicio";
+import { abre, puedeVer } from "@/lib/areas";
+import { listarEquipo } from "@/lib/datos/equipo";
 import { MARCA } from "@/lib/marca";
+import { obtenerQuien } from "@/lib/permisos";
 import { AREA_DEL_CANAL, CANALES_PERSONAL } from "@/lib/push/tipos";
 
 export const metadata = { title: "Más" };
@@ -30,10 +33,11 @@ function Enlace({ href, Icono, titulo, detalle }: { href: string; Icono: LucideI
 
 /** Más: lo que no cabe en la barra de abajo. Cada quien ve solo lo que su rol abre (el dueño, todo). */
 export default async function Mas() {
-  const contexto = await obtenerContexto();
-  const quien = quienEs(contexto);
-  const roles = contexto.perfil?.roles ?? [];
+  const { contexto, quien } = await obtenerQuien();
+  const roles = quien.viendoComo ? [quien.viendoComo] : (contexto.perfil?.roles ?? []);
   const canales = CANALES_PERSONAL.filter((c) => abre(quien, AREA_DEL_CANAL[c]));
+  // "Ver la app como…": los roles del local (si la base todavía no los tiene, simplemente no aparece).
+  const rolesDelLocal = quien.esDueno ? ((await listarEquipo().catch(() => null))?.roles ?? []) : [];
   const textoContacto = encodeURIComponent(`Hola, vi la demo de ${MARCA.nombre} y quiero esta app para mi restaurante.`);
 
   return (
@@ -44,6 +48,17 @@ export default async function Mas() {
           {contexto.restaurante?.nombre} · {contexto.perfil?.nombre}
           {!quien.esDueno && roles.length > 0 && ` · ${roles.join(", ")}`}
         </p>
+        {quien.viendoComo && (
+          <form action={dejarDeVerComo}>
+            <button type="submit" className={`${fila} bg-sol`}>
+              <Eye className="size-6 shrink-0" aria-hidden />
+              <span className="flex-1 text-left leading-tight">
+                Volver a ver como dueño
+                <span className="block text-sm font-normal">Ahora la ves como {quien.viendoComo}</span>
+              </span>
+            </button>
+          </form>
+        )}
         {contexto.restaurante?.es_demo && quien.esDueno && (
           <BotonGuia className={`${fila} bg-sol`}>
             <Lightbulb className="size-6 shrink-0" aria-hidden />
@@ -68,6 +83,7 @@ export default async function Mas() {
         )}
         {puedeVer(quien, "mesas") && <Enlace href="/mesas" Icono={Armchair} titulo="Mesas" detalle="Agregar, cambiar el nombre o quitar" />}
         {puedeVer(quien, "equipo") && <Enlace href="/equipo" Icono={UsersRound} titulo="Equipo y permisos" detalle="Quién toma pedidos, cobra, cocina…" />}
+        {quien.esDueno && rolesDelLocal.length > 0 && <SelectorVerComo roles={rolesDelLocal} className={fila} />}
         {MARCA.contactoWhatsapp && (
           <a
             href={`https://wa.me/${MARCA.contactoWhatsapp}?text=${textoContacto}`}
@@ -87,7 +103,7 @@ export default async function Mas() {
           {contexto.restaurante?.es_demo && quien.esDueno && (
             <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} conPin={contexto.restaurante.reinicio_con_pin === true} />
           )}
-          <BotonSalir className={`${fila} text-tinta-2`} />
+          <BotonSalir className={`${fila} text-tinta-2`} conCodigo={contexto.perfil?.rol === "ayudante"} />
         </div>
       </main>
     </>

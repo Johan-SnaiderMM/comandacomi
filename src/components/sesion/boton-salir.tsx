@@ -18,13 +18,18 @@ function conTope<T>(promesa: Promise<T>, ms: number): Promise<T | null> {
  * Salir de la demo. Antes borra las copias guardadas en el celular (el service worker y la copia local del trabajo
  * sin conexión tienen datos del restaurante) y da de baja los avisos de este celular. Si quedan cambios sin subir
  * avisa: salir ahora los perdería.
+ *
+ * `conCodigo`: quien entró con un código de invitación no tiene contraseña; si sale, para volver necesita un código
+ * nuevo del dueño. Se le pregunta antes.
  */
-export function BotonSalir({ className }: { className?: string }) {
+export function BotonSalir({ className, conCodigo = false }: { className?: string; conCodigo?: boolean }) {
   const formulario = useRef<HTMLFormElement>(null);
   const campoEndpoint = useRef<HTMLInputElement>(null);
   const listoParaSalir = useRef(false);
+  const confirmado = useRef(!conCodigo);
   const reloj = useRef(0);
   const [aviso, setAviso] = useState<number | null>(null);
+  const [preguntando, setPreguntando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
 
@@ -58,6 +63,17 @@ export function BotonSalir({ className }: { className?: string }) {
     }, 12_000);
   }
 
+  function intentarSalir() {
+    if (saliendo) return;
+    if (!confirmado.current) {
+      setPreguntando(true);
+      return;
+    }
+    const quedan = obtenerMotor()?.porSubir() ?? 0;
+    if (quedan > 0) setAviso(quedan);
+    else void limpiarYSalir();
+  }
+
   async function subirYSalir() {
     const motor = obtenerMotor();
     setSubiendo(true);
@@ -77,10 +93,7 @@ export function BotonSalir({ className }: { className?: string }) {
           if (listoParaSalir.current) return; // segundo envío (el de verdad): ya se limpió todo
           // El primer toque no sale todavía: revisa que no se pierda nada y prepara la salida.
           e.preventDefault();
-          if (saliendo) return;
-          const quedan = obtenerMotor()?.porSubir() ?? 0;
-          if (quedan > 0) setAviso(quedan);
-          else void limpiarYSalir();
+          intentarSalir();
         }}
       >
         <input ref={campoEndpoint} type="hidden" name="endpoint" defaultValue="" />
@@ -89,6 +102,28 @@ export function BotonSalir({ className }: { className?: string }) {
           <span className="flex-1 text-left">{saliendo ? "Saliendo…" : "Salir de la demo"}</span>
         </button>
       </form>
+
+      {preguntando && (
+        <HojaInferior titulo="¿Salir de este celular?" onCerrar={() => setPreguntando(false)}>
+          <p className="text-base">Entraste con un código del dueño. Si sales, para volver a entrar vas a necesitar un código nuevo.</p>
+          <Button
+            variante="peligro"
+            tamano="lg"
+            bloque
+            className="mt-4"
+            onClick={() => {
+              confirmado.current = true;
+              setPreguntando(false);
+              intentarSalir();
+            }}
+          >
+            Sí, salir
+          </Button>
+          <Button variante="fantasma" bloque className="mt-1" onClick={() => setPreguntando(false)}>
+            Cancelar
+          </Button>
+        </HojaInferior>
+      )}
 
       {aviso !== null && (
         <HojaInferior titulo="Hay cambios sin subir" onCerrar={() => setAviso(null)}>

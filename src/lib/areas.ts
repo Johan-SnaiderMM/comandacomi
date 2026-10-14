@@ -18,17 +18,40 @@ export const TEXTO_AREA: Record<Area, { titulo: string; detalle: string }> = {
   cierre: { titulo: "Cuentas del día", detalle: "Ventas, ganancia y cierre de caja" },
 };
 
-/** Quien usa la app: qué áreas abre y si es el dueño (el menú, las mesas y el equipo son solo suyos). */
-export type Quien = { areas: Area[]; esDueno: boolean };
+/**
+ * Quien usa la app: qué áreas abre y si es el dueño (el menú, las mesas y el equipo son solo suyos).
+ * `viendoComo`: el dueño está mirando la app como la ve un rol (ver `VerComo`); mientras tanto no es "dueño".
+ */
+export type Quien = { areas: Area[]; esDueno: boolean; viendoComo?: string };
 
 /**
- * Quién es, a partir del perfil de la sesión. El dueño, todo. Si el perfil no trae áreas (la base todavía no tiene la
- * migración 19, o es una copia guardada sin conexión de antes) queda como era antes: todo abierto.
+ * "Ver como": el dueño mira la app como la ve un rol (para enseñarla, o para saber qué ve su mesero). Solo cambia lo
+ * que se MUESTRA en ese celular: la base lo sigue tratando como dueño. Viaja en una cookie con el nombre y las áreas.
  */
-export function quienEs(contexto: { perfil: { rol: string; areas?: readonly string[] } | null }): Quien {
+export type VerComo = { nombre: string; areas: Area[] };
+
+/** La cookie de "Ver como" → lo que se ve; null si no hay, o si no se entiende. */
+export function leerVerComo(valor: string | null | undefined): VerComo | null {
+  if (!valor) return null;
+  try {
+    const v = JSON.parse(valor) as { nombre?: unknown; areas?: unknown };
+    if (typeof v.nombre !== "string" || v.nombre.length === 0 || v.nombre.length > 30 || !Array.isArray(v.areas)) return null;
+    return { nombre: v.nombre, areas: AREAS.filter((a) => (v.areas as unknown[]).includes(a)) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Quién es, a partir del perfil de la sesión. El dueño, todo (salvo que esté viendo la app como un rol). Si el perfil
+ * no trae áreas (la base todavía no tiene la migración 19, o es una copia guardada sin conexión de antes) queda como
+ * era antes: todo abierto.
+ */
+export function quienEs(contexto: { perfil: { rol: string; areas?: readonly string[] } | null }, verComo: VerComo | null = null): Quien {
   const perfil = contexto.perfil;
   if (!perfil) return { areas: [], esDueno: false };
   const esDueno = perfil.rol === "dueno";
+  if (esDueno && verComo) return { areas: verComo.areas, esDueno: false, viendoComo: verComo.nombre };
   if (esDueno || !perfil.areas) return { areas: [...AREAS], esDueno };
   return { areas: AREAS.filter((a) => perfil.areas!.includes(a)), esDueno };
 }
@@ -66,6 +89,11 @@ export function puedeVer(quien: Quien, pantalla: Pantalla): boolean {
   if (quien.esDueno) return true;
   const pide: Regla["pide"] = PANTALLAS[pantalla].pide;
   return pide !== "dueno" && abre(quien, ...pide);
+}
+
+/** A dónde llega cada quien al entrar: la cocina (sin pedidos que ver), directo a la plancha; los demás, a Inicio. */
+export function inicioDe(quien: Quien): string {
+  return puedeVer(quien, "plancha") && !puedeVer(quien, "pendientes") ? "/plancha" : "/inicio";
 }
 
 export type Pestana = "inicio" | "pendientes" | "tomar" | "enLinea" | "plancha" | "fiado" | "mas";

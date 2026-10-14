@@ -18,6 +18,11 @@ export interface BaseDatos {
   usuario(): Promise<UsuarioBD | null>;
   /** Inicia sesión con el usuario de la demo (credenciales del servidor: DEMO_EMAIL / DEMO_PASSWORD). */
   entrarDemo(): Promise<{ error: string | null }>;
+  /**
+   * Abre una sesión anónima en este celular (sin correo ni contraseña): la usa quien entra al equipo con un código de
+   * invitación (migración 20). Después de esto, `rpc` ya va con esa sesión.
+   */
+  entrarAnonimo(): Promise<{ error: string | null }>;
   salir(): Promise<void>;
   /**
    * Sube una foto a Storage. La ruta debe empezar por el id del restaurante. Sin `bucket` va al privado de los
@@ -90,6 +95,17 @@ async function crearBdSupabase(): Promise<BaseDatos> {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) console.error(`[bd] entrar a la demo falló: ${error.status ?? "?"} ${error.code ?? ""} ${error.message}`);
       return { error: error ? "No se pudo entrar a la demo. Intenta de nuevo en un momento." : null };
+    },
+
+    async entrarAnonimo() {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (!error) return { error: null };
+      console.error(`[bd] sesión anónima falló: ${error.status ?? "?"} ${error.code ?? ""} ${error.message}`);
+      // Supabase la trae apagada por defecto: hay que encender "Allow anonymous sign-ins" (ver README).
+      if (error.code === "anonymous_provider_disabled") {
+        return { error: "Las invitaciones todavía no están encendidas en el servidor. Avísale al dueño." };
+      }
+      return { error: "No se pudo preparar este celular. Intenta de nuevo en un momento." };
     },
 
     async salir() {

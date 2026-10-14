@@ -331,5 +331,8 @@ export type RolEquipo = { id: string; nombre: string; areas: Area[]; personas: n
 /** Una persona del equipo: sus roles (ids) y lo que abre con ellos (el dueño, todo). */
 export type PersonaEquipo = { user_id: string; nombre: string; rol: "dueno" | "ayudante"; yo: boolean; roles: string[]; areas: Area[] };
 
-/** Más → Equipo (listar_equipo, solo el dueño). */
-export type Equipo = { areas: Area[]; roles: RolEquipo[]; personas: PersonaEquipo[] };
+/** Una invitación que espera a que la canjeen (con su código: solo la ve el dueño). */
+export type InvitacionEquipo = { id: string; nombre: string; codigo: string; expira_at: string; roles: string[] };
+
+/** Más → Equipo (listar_equipo, solo el dueño). `invitaciones` falta antes de la migración 20. */
+export type Equipo = { areas: Area[]; roles: RolEquipo[]; personas: PersonaEquipo[]; invitaciones?: InvitacionEquipo[] };

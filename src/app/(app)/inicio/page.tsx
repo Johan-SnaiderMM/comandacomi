@@ -4,12 +4,13 @@ import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { BotonGuia } from "@/components/guia/boton-guia";
 import { AvisoUrl } from "@/components/ui/aviso-url";
 import { botonVariantes } from "@/components/ui/button";
-import { puedeVer, quienEs } from "@/lib/areas";
-import { obtenerContexto, obtenerInicio } from "@/lib/datos/inicio";
+import { abre, puedeVer } from "@/lib/areas";
+import { obtenerInicio } from "@/lib/datos/inicio";
 import { formatearPesos } from "@/lib/dinero";
 import { fechaLarga } from "@/lib/fechas";
 import { cifrasDelDia, resumenDeInicio, veredictoDelDia, type CifrasDeInicio } from "@/lib/inicio";
 import { nombreCorto } from "@/lib/nombres";
+import { obtenerQuien } from "@/lib/permisos";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Inicio" };
@@ -107,10 +108,12 @@ type Acceso = { href: string; Icono: LucideIcon; texto: string; insignia?: numbe
  */
 export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
   const sp = await searchParams;
-  const [inicio, contexto] = await Promise.all([obtenerInicio(), obtenerContexto()]);
-  const quien = quienEs(contexto);
-  const cifras = cifrasDelDia(inicio);
-  const roles = contexto.perfil?.roles ?? [];
+  const { contexto, quien } = await obtenerQuien();
+  const inicio = await obtenerInicio();
+  // La base ya no le manda la plata a quien no la ve; además, el dueño que mira "como" un rol tampoco la ve aquí.
+  const cifras = abre(quien, "cierre") ? cifrasDelDia(inicio) : null;
+  const porCobrar = abre(quien, "fiado", "cierre") ? inicio.por_cobrar : null;
+  const roles = quien.viendoComo ? [quien.viendoComo] : (contexto.perfil?.roles ?? []);
 
   const verFiado = puedeVer(quien, "fiado");
   const verPendientes = puedeVer(quien, "pendientes");
@@ -120,7 +123,7 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
     puedeVer(quien, "gastos") && { href: "/gastos", Icono: Wallet, texto: "Gasto" },
     puedeVer(quien, "cierre") && { href: "/cierre", Icono: ReceiptText, texto: "Cierre del día" },
   ].filter((a): a is Acceso => Boolean(a));
-  const tarjetas = (inicio.por_cobrar !== null ? 1 : 0) + (verPendientes ? 1 : 0);
+  const tarjetas = (porCobrar !== null ? 1 : 0) + (verPendientes ? 1 : 0);
 
   return (
     <>
@@ -164,7 +167,7 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
 
         {tarjetas > 0 && (
           <div className={cn("grid gap-3", tarjetas === 2 && "grid-cols-2")}>
-            {inicio.por_cobrar !== null && <PorCobrar monto={inicio.por_cobrar} deudores={inicio.clientes_con_deuda ?? 0} abreFiado={verFiado} />}
+            {porCobrar !== null && <PorCobrar monto={porCobrar} deudores={inicio.clientes_con_deuda ?? 0} abreFiado={verFiado} />}
             {verPendientes && (
               <Link href="/pedidos" className={cn(tarjeta, "bg-sol")}>
                 <p className="flex items-center gap-1.5 text-sm font-bold uppercase leading-tight tracking-wide">

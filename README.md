@@ -176,6 +176,9 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 4. Abre `supabase/seed.sql`, cambia el correo de la línea marcada por el del usuario que acabas de crear y ejecútalo
    en el SQL Editor. Crea el restaurante ficticio y le carga los datos de ejemplo.
 5. **Authentication → Providers → Email:** desactiva *Allow new users to sign up* (que nadie se registre solo).
+   En **Authentication → Sign In / Providers**, enciende **Allow anonymous sign-ins**: así entra el equipo con su
+   código de invitación (cada celular recibe una sesión sin correo; sin un código válido no ve nada de ningún
+   restaurante). Sin esto, "Unirme al equipo" dice que las invitaciones no están encendidas.
 6. **Project Settings → API:** copia la *Project URL* y la *anon public key*.
 7. **Vercel → New Project** (importa el repositorio, o `vercel` desde la terminal) y define las variables de entorno:
 
@@ -202,7 +205,9 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > `20261005000017_carta_del_cliente.sql` y `20261005000018_demo_al_dia.sql`. Las cinco últimas van juntas (la 18
 > redefine los datos de ejemplo con todo lo de las cuatro anteriores); después, **Más → Reiniciar demo** para que la
 > demo tome las descripciones de los platos y Bebidas quede fuera de la plancha.
-> Luego `20261005000019_permisos_por_area.sql` (roles del equipo y permisos por área; al dueño no le cambia nada).
+> Luego `20261005000019_permisos_por_area.sql` (roles del equipo y permisos por área; al dueño no le cambia nada) y
+> `20261005000020_invitaciones_equipo.sql` (códigos de invitación, quitar del equipo, avisos por área y que reiniciar
+> la demo deje el equipo como nuevo), y enciende *Allow anonymous sign-ins* (paso 5).
 
 ### Antes de enseñarla (lista rápida)
 
@@ -267,6 +272,13 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
   candado está en la base: sin el área, la función de escritura falla y las tablas de plata no se leen. El dueño los
   arma en **Más → Equipo**; la barra de abajo, Inicio, Más y los botones de cada pantalla muestran a cada quien solo
   lo suyo, y una pantalla que no le toca explica «No tienes permiso» (`src/lib/areas.ts`).
+- **El equipo entra con un código** (migración `20261005000020_invitaciones_equipo.sql`): en Más → Equipo, *Agregar a
+  alguien* pide el nombre y los roles y da un código de 8 letras y números (un uso, 48 horas) con su QR y su enlace
+  para WhatsApp. En el celular de esa persona se abre `/unirme` (el QR y el enlace ya traen el código): la app le abre
+  una sesión anónima de Supabase y canjea el código. Sin correo ni contraseña. El dueño la puede quitar del equipo y
+  su celular pierde el acceso al instante. *Reiniciar demo* saca al equipo de la visita anterior.
+- **Ver la app como…** (Más, solo el dueño): muestra en ESE celular lo que ve un rol (para enseñar la demo). Es solo la
+  vista: la base lo sigue tratando como dueño. Una franja arriba dice «Viendo la app como…» con «Volver a dueño».
 - **Poco JavaScript:** una prueba impide que Zod (validación, solo servidor) llegue al navegador.
 - El proyecto usa Next.js 16: antes de escribir código lee la guía correspondiente en `node_modules/next/dist/docs/`
   (ver `AGENTS.md`).

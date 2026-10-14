@@ -1,6 +1,7 @@
 import { AlertaPedidosClientes } from "@/components/clientes/alerta-pedidos";
-import { abre, quienEs } from "@/lib/areas";
-import { obtenerContexto } from "@/lib/datos/inicio";
+import { BandaVerComo } from "@/components/equipo/banda-ver-como";
+import { abre } from "@/lib/areas";
+import { obtenerQuien } from "@/lib/permisos";
 import { exigirSesion } from "@/lib/sesion";
 
 /**
@@ -12,9 +13,10 @@ import { exigirSesion } from "@/lib/sesion";
  */
 export default async function LayoutCocina({ children }: LayoutProps<"/">) {
   await exigirSesion();
-  const quien = quienEs(await obtenerContexto());
+  const { quien } = await obtenerQuien();
   return (
     <div className="min-h-dvh bg-fondo">
+      {quien.viendoComo && <BandaVerComo nombre={quien.viendoComo} />}
       {abre(quien, "pedidos") && <AlertaPedidosClientes />}
       {children}
     </div>

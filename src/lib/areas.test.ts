@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AREAS, PANTALLAS, pestanasDe, puedeVer, quienEs, TEXTO_AREA, type Pantalla, type Quien } from "./areas";
+import { AREAS, inicioDe, leerVerComo, PANTALLAS, pestanasDe, puedeVer, quienEs, TEXTO_AREA, type Pantalla, type Quien } from "./areas";
 
 const yo = (rol: "dueno" | "ayudante", areas?: string[]) => quienEs({ perfil: { rol, areas } });
 const DUENO = yo("dueno", []);
@@ -62,6 +62,41 @@ describe("qué pantallas ve cada quien", () => {
     const todoMenosDueno = yo("ayudante", [...AREAS]);
     expect(puedeVer(todoMenosDueno, "mesas")).toBe(false);
     expect(puedeVer(todoMenosDueno, "equipo")).toBe(false);
+  });
+});
+
+describe("«Ver como» (el dueño mira la app como un rol)", () => {
+  const cookie = (v: unknown) => JSON.stringify(v);
+
+  it("el dueño pasa a ver solo lo de ese rol, y deja de ser «dueño» en pantalla", () => {
+    const visto = quienEs({ perfil: { rol: "dueno", areas: [] } }, leerVerComo(cookie({ nombre: "Mesero", areas: ["pedidos"] })));
+    expect(visto).toEqual({ areas: ["pedidos"], esDueno: false, viendoComo: "Mesero" });
+    expect(puedeVer(visto, "equipo")).toBe(false);
+    expect(pestanasDe(visto, false)).toEqual(["inicio", "pendientes", "tomar", "enLinea", "mas"]);
+  });
+
+  it("a alguien del equipo no le cambia nada (aunque traiga la cookie)", () => {
+    const verComo = leerVerComo(cookie({ nombre: "Caja", areas: ["caja"] }));
+    expect(quienEs({ perfil: { rol: "ayudante", areas: ["plancha"] } }, verComo)).toEqual({ areas: ["plancha"], esDueno: false });
+  });
+
+  it("una cookie dañada o inventada no se tiene en cuenta; áreas que no existen se ignoran", () => {
+    expect(leerVerComo(undefined)).toBeNull();
+    expect(leerVerComo("{no es json")).toBeNull();
+    expect(leerVerComo(cookie({ nombre: "", areas: [] }))).toBeNull();
+    expect(leerVerComo(cookie({ nombre: "X", areas: "caja" }))).toBeNull();
+    expect(leerVerComo(cookie({ nombre: "Jefe", areas: ["caja", "menu", "todo"] }))).toEqual({ nombre: "Jefe", areas: ["caja"] });
+  });
+});
+
+describe("a dónde llega cada quien", () => {
+  it("la cocina, directo a la plancha; los demás, a Inicio", () => {
+    expect(inicioDe(COCINA)).toBe("/plancha");
+    expect(inicioDe(MESERO)).toBe("/inicio");
+    expect(inicioDe(CAJA)).toBe("/inicio");
+    expect(inicioDe(DUENO)).toBe("/inicio");
+    expect(inicioDe(SIN_ROLES)).toBe("/inicio");
+    expect(inicioDe(yo("ayudante", ["plancha", "pedidos"]))).toBe("/inicio");
   });
 });
 

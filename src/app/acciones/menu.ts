@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { bd } from "@/lib/datos/bd";
 import { obtenerContexto } from "@/lib/datos/inicio";
@@ -18,6 +19,7 @@ import {
   FOTO_PLATO_MAX_BYTES,
 } from "@/lib/esquemas/menu";
 import { urlFotoPlato } from "@/lib/fotos";
+import { COOKIE_VER_COMO } from "@/lib/permisos";
 import { exigirSesion } from "@/lib/sesion";
 import { BUCKET_PLATOS } from "@/lib/supabase/servidor";
 
@@ -157,6 +159,8 @@ export async function reiniciarDemo(nombre: string, endpointDeEsteCelular: strin
     }
   }
   if (respuesta && respuesta.ok === false) return { ok: false, error: mensajeDeReinicioRechazado(respuesta) };
+  // Los roles se vuelven a crear al reiniciar: un "Ver como" de antes ya no aplica.
+  (await cookies()).delete(COOKIE_VER_COMO);
   refrescar();
   redirect("/inicio?reiniciada=1");
 }

@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { Flame } from "lucide-react";
 import { BarraAccion } from "@/components/layout/barra-accion";
+import { botonVariantes } from "@/components/ui/button";
 import { EntrarConDestino, FormularioEntrar } from "@/components/sesion/formulario-entrar";
 import { MARCA } from "@/lib/marca";
 
@@ -43,6 +45,11 @@ export default function Portada() {
           <p className="cifra text-4xl">$ 422.200</p>
         </div>
       </section>
+
+      {/* Para quien ya tiene su restaurante en la app (no la demo): entra con su correo y su contraseña. */}
+      <Link href="/entrar" className={`${botonVariantes({ variante: "secundario", bloque: true })} mt-6`}>
+        Ya tengo mi restaurante: entrar
+      </Link>
 
       <BarraAccion>
         <Suspense fallback={<FormularioEntrar />}>

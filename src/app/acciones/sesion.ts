@@ -7,9 +7,11 @@ import { inicioDe, type Area } from "@/lib/areas";
 import { bd } from "@/lib/datos/bd";
 import { ejecutar } from "@/lib/datos/llamar";
 import { destinoDeEntrada, destinoDesdeDireccion } from "@/lib/destinos";
-import { mensajeDeError } from "@/lib/errores";
+import { mensajeDeError, type Resultado } from "@/lib/errores";
+import { esquemaClaveNueva, esquemaEntrar } from "@/lib/esquemas/sesion";
 import { codigoValido, normalizarCodigo } from "@/lib/invitaciones";
-import { COOKIE_VER_COMO } from "@/lib/permisos";
+import { COOKIE_VER_COMO, obtenerQuien } from "@/lib/permisos";
+import { obtenerUsuario } from "@/lib/sesion";
 
 export type EstadoEntrada = { error: string | null };
 
@@ -62,6 +64,39 @@ export async function unirmeAlEquipo(_anterior: EstadoEntrada, formulario: FormD
   (await cookies()).delete(COOKIE_VER_COMO);
   revalidatePath("/", "layout");
   redirect(inicioDe({ areas: data.areas, esDueno: false }));
+}
+
+/**
+ * El dueño de un restaurante de verdad entra con su correo y su contraseña (la demo, en cambio, entra con un toque).
+ * Su cuenta la crea quien administra, en Supabase, y le da de alta el restaurante con `fn_crear_restaurante`.
+ */
+export async function entrarConClave(_anterior: EstadoEntrada, formulario: FormData): Promise<EstadoEntrada> {
+  const parsed = esquemaEntrar.safeParse({ correo: formulario.get("correo")?.toString() ?? "", clave: formulario.get("clave")?.toString() ?? "" });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisa el correo y la contraseña." };
+  let base;
+  try {
+    base = await bd();
+  } catch (e) {
+    console.error("[sesion] no se pudo abrir la base de datos:", e instanceof Error ? e.message : e);
+    return { error: "La app todavía no está configurada." };
+  }
+  const { error } = await base.entrarConClave(parsed.data.correo, parsed.data.clave);
+  if (error) return { error };
+  (await cookies()).delete(COOKIE_VER_COMO);
+  revalidatePath("/", "layout");
+  redirect("/inicio");
+}
+
+/** Cambiar la contraseña propia (Más → Mi contraseña). Solo cuentas con correo: la demo y el equipo no tienen. */
+export async function cambiarMiClave(entrada: unknown): Promise<Resultado> {
+  const parsed = esquemaClaveNueva.safeParse(entrada);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa la contraseña." };
+  const usuario = await obtenerUsuario();
+  if (!usuario?.email) return { ok: false, error: "Esta cuenta no tiene contraseña propia." };
+  const { contexto } = await obtenerQuien();
+  if (contexto.restaurante?.es_demo) return { ok: false, error: "La contraseña de la demo no se cambia desde la app." };
+  const { error } = await (await bd()).cambiarClave(parsed.data.clave);
+  return error ? { ok: false, error } : { ok: true };
 }
 
 /**

@@ -30,6 +30,10 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   equipo borra su perfil (y con él sus roles y sus avisos push); reiniciar la demo saca al equipo y vuelve a los roles
   de siempre. Los avisos push se filtran por área al suscribirse Y al enviar (`listar_destinos_push`). "Ver como" es
   solo vista (cookie `ver_como`, solo vale para el dueño): nunca relajar ni endurecer la base con ella.
+- Tres formas de entrar: la DEMO con un toque (portada, `DEMO_EMAIL`/`DEMO_PASSWORD` del servidor: cualquiera es su
+  dueño), el dueño de un restaurante DE VERDAD con su correo y contraseña (`/entrar`; la cuenta la crea quien administra
+  en Supabase y `fn_crear_restaurante` le da el local, migración 22) y el equipo con código (`/unirme`). La contraseña de
+  la demo nunca se cambia desde la app ("Mi contraseña" solo para dueños de restaurantes que no son demo).
 - Migraciones (`supabase/migrations/`): toda migración que agregue funciones termina con
   `select public.fn_aplicar_permisos();` (cierra EXECUTE a anon y a las `fn_*`/`requerir_*`) y se corre `npm run esquema`
   para regenerar `supabase/esquema-completo.sql` (una prueba lo verifica). Toda tabla nueva lleva `restaurante_id`

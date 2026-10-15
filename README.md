@@ -209,7 +209,24 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > Luego `20261005000019_permisos_por_area.sql` (roles del equipo y permisos por área; al dueño no le cambia nada) y
 > `20261005000020_invitaciones_equipo.sql` (códigos de invitación, quitar del equipo, avisos por área y que reiniciar
 > la demo deje el equipo como nuevo), y enciende *Allow anonymous sign-ins* (paso 5). Después
-> `20261005000021_dia_sin_cerrar.sql` (avisa del día que quedó sin cerrar y deja cerrarlo tarde).
+> `20261005000021_dia_sin_cerrar.sql` (avisa del día que quedó sin cerrar y deja cerrarlo tarde) y
+> `20261005000022_restaurante_de_verdad.sql` (dar de alta restaurantes de verdad, ver abajo).
+
+### Dar de alta un restaurante de verdad (no la demo)
+
+La demo la abre cualquiera con un toque, así que cualquiera es su dueño. Un restaurante de verdad no: su dueño entra
+con **su correo y su contraseña** en `/entrar` (en la portada: «Ya tengo mi restaurante: entrar»), y su equipo con
+códigos de invitación.
+
+1. **Supabase → Authentication → Users → Add user:** el correo del dueño y una contraseña temporal, con *Auto Confirm
+   User*. (No hace falta prender los registros: solo tú creas cuentas.)
+2. **SQL Editor:**
+   `select public.fn_crear_restaurante('correo@del-dueno.com', 'Nombre del local', 'Nombre del dueño');`
+   Crea el restaurante vacío (sin platos ni mesas: los arma el dueño en Más → Menú y Mesas), con los roles de siempre y
+   los pedidos en línea apagados. Devuelve el enlace para sus clientes.
+3. Entrégale al dueño su correo y la contraseña temporal. Al entrar, que la cambie en **Más → Mi contraseña**.
+4. ¿Olvidó la contraseña? En Supabase → Authentication → Users → el usuario → *Reset password* / cambiarla, y se la
+   das. (No hay correo de recuperación automático todavía.)
 
 ### Antes de enseñarla (lista rápida)
 

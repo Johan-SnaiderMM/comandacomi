@@ -22,7 +22,7 @@ function conTope<T>(promesa: Promise<T>, ms: number): Promise<T | null> {
  * `conCodigo`: quien entró con un código de invitación no tiene contraseña; si sale, para volver necesita un código
  * nuevo del dueño. Se le pregunta antes.
  */
-export function BotonSalir({ className, conCodigo = false }: { className?: string; conCodigo?: boolean }) {
+export function BotonSalir({ className, conCodigo = false, etiqueta = "Salir de la demo" }: { className?: string; conCodigo?: boolean; etiqueta?: string }) {
   const formulario = useRef<HTMLFormElement>(null);
   const campoEndpoint = useRef<HTMLInputElement>(null);
   const listoParaSalir = useRef(false);
@@ -99,7 +99,7 @@ export function BotonSalir({ className, conCodigo = false }: { className?: strin
         <input ref={campoEndpoint} type="hidden" name="endpoint" defaultValue="" />
         <button type="submit" className={className} disabled={saliendo}>
           <LogOut className="size-6 shrink-0" aria-hidden />
-          <span className="flex-1 text-left">{saliendo ? "Saliendo…" : "Salir de la demo"}</span>
+          <span className="flex-1 text-left">{saliendo ? "Saliendo…" : etiqueta}</span>
         </button>
       </form>
 

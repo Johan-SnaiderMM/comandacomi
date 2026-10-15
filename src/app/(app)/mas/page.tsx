@@ -5,6 +5,7 @@ import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { AvisosDelCelular } from "@/components/avisos/avisos-del-celular";
 import { SelectorVerComo } from "@/components/equipo/selector-ver-como";
 import { BotonGuia } from "@/components/guia/boton-guia";
+import { BotonClave } from "@/components/sesion/boton-clave";
 import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
 import { abre, puedeVer } from "@/lib/areas";
@@ -103,7 +104,13 @@ export default async function Mas() {
           {contexto.restaurante?.es_demo && quien.esDueno && (
             <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} conPin={contexto.restaurante.reinicio_con_pin === true} />
           )}
-          <BotonSalir className={`${fila} text-tinta-2`} conCodigo={contexto.perfil?.rol === "ayudante"} />
+          {/* Contraseña propia: solo el dueño de un restaurante de verdad (la demo entra con un toque; el equipo, con código). */}
+          {!contexto.restaurante?.es_demo && contexto.perfil?.rol === "dueno" && <BotonClave className={fila} />}
+          <BotonSalir
+            className={`${fila} text-tinta-2`}
+            conCodigo={contexto.perfil?.rol === "ayudante"}
+            etiqueta={contexto.restaurante?.es_demo ? "Salir de la demo" : "Salir"}
+          />
         </div>
       </main>
     </>

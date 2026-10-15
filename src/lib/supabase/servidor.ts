@@ -23,6 +23,10 @@ export interface BaseDatos {
    * invitación (migración 20). Después de esto, `rpc` ya va con esa sesión.
    */
   entrarAnonimo(): Promise<{ error: string | null }>;
+  /** El dueño de un restaurante de verdad entra con su correo y su contraseña (migración 22). */
+  entrarConClave(correo: string, clave: string): Promise<{ error: string | null }>;
+  /** Cambia la contraseña de quien tiene la sesión (el dueño, en Más → Mi contraseña). */
+  cambiarClave(nueva: string): Promise<{ error: string | null }>;
   salir(): Promise<void>;
   /**
    * Sube una foto a Storage. La ruta debe empezar por el id del restaurante. Sin `bucket` va al privado de los
@@ -106,6 +110,24 @@ async function crearBdSupabase(): Promise<BaseDatos> {
         return { error: "Las invitaciones todavía no están encendidas en el servidor. Avísale al dueño." };
       }
       return { error: "No se pudo preparar este celular. Intenta de nuevo en un momento." };
+    },
+
+    async entrarConClave(correo, clave) {
+      const { error } = await supabase.auth.signInWithPassword({ email: correo, password: clave });
+      if (!error) return { error: null };
+      if (error.code === "invalid_credentials") return { error: "El correo o la contraseña no coinciden. Revísalos." };
+      if (error.status === 429 || error.code === "over_request_rate_limit") return { error: "Demasiados intentos. Espera unos minutos y vuelve a probar." };
+      console.error(`[bd] entrar con contraseña falló: ${error.status ?? "?"} ${error.code ?? ""} ${error.message}`);
+      return { error: "No se pudo entrar. Intenta de nuevo en un momento." };
+    },
+
+    async cambiarClave(nueva) {
+      const { error } = await supabase.auth.updateUser({ password: nueva });
+      if (!error) return { error: null };
+      if (error.code === "same_password") return { error: "Esa ya es tu contraseña. Escribe una distinta." };
+      if (error.code === "weak_password") return { error: "Esa contraseña es muy fácil de adivinar. Usa otra más larga." };
+      console.error(`[bd] cambiar la contraseña falló: ${error.status ?? "?"} ${error.code ?? ""} ${error.message}`);
+      return { error: "No se pudo cambiar la contraseña. Intenta de nuevo en un momento." };
     },
 
     async salir() {

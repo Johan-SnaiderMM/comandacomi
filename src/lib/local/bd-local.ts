@@ -110,6 +110,19 @@ export async function crearBdLocal(): Promise<BaseDatos> {
       return { error: null };
     },
 
+    // Solo desarrollo: aquí no hay contraseñas guardadas. Basta con que exista un usuario con ese correo (y que no sea
+    // el de la demo, que entra con su botón).
+    async entrarConClave(correo) {
+      const r = await db.query<{ id: string }>(`select id from auth.users where lower(email) = lower($1) and email <> $2`, [correo, CORREO_LOCAL]);
+      if (!r.rows[0]) return { error: "El correo o la contraseña no coinciden. Revísalos." };
+      abrirSesion(r.rows[0].id);
+      return { error: null };
+    },
+
+    async cambiarClave() {
+      return { error: null };
+    },
+
     async salir() {
       recienEntrado = undefined;
       almacen.delete(COOKIE);

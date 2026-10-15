@@ -19,6 +19,8 @@ export type Snapshot = {
   version: 1;
   /** Cuándo se guardó (ISO). */
   guardadoEn: string;
+  /** Huella de los pedidos al guardarla (migración 24): si el pulso trae otra, la copia quedó vieja. */
+  huella?: string;
   contexto: Contexto;
   menu: MenuParaPedido;
   pendientes: PedidoPendiente[];

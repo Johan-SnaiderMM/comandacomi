@@ -8,7 +8,7 @@ import { leerVerComo } from "@/lib/areas";
 import { listarClientes } from "@/lib/datos/fiado";
 import { obtenerContexto } from "@/lib/datos/inicio";
 import { consultar } from "@/lib/datos/llamar";
-import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerMenuParaPedido } from "@/lib/datos/pedidos";
+import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerHuella, obtenerMenuParaPedido } from "@/lib/datos/pedidos";
 import { ErrorApp, esFalloPasajero, MENSAJE_GENERICO } from "@/lib/errores";
 import { alAgregarPlatos, alEntrarACocina, alQuedarListo } from "@/lib/push/eventos";
 import { argumentosDeOperacion, esquemaSobreOperacion } from "@/lib/esquemas/operacion";
@@ -63,6 +63,8 @@ export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOpera
 export async function obtenerSnapshot(): Promise<Snapshot | null> {
   if (!(await obtenerUsuario())) return null;
   try {
+    // La huella va primero (ver obtenerHuella). Sin ella (la base sin la migración 24) la copia sirve igual.
+    const huella = await obtenerHuella().catch(() => undefined);
     const [contexto, menu, pendientes, cobrados, clientes] = await Promise.all([
       obtenerContexto(),
       obtenerMenuParaPedido(),
@@ -76,7 +78,7 @@ export async function obtenerSnapshot(): Promise<Snapshot | null> {
       verComo && contexto.perfil?.rol === "dueno"
         ? { ...contexto, perfil: { ...contexto.perfil, rol: "ayudante" as const, areas: verComo.areas, roles: [verComo.nombre] } }
         : contexto;
-    return { version: 1, guardadoEn: new Date().toISOString(), contexto: visto, menu, pendientes, cobrados, clientes };
+    return { version: 1, guardadoEn: new Date().toISOString(), huella, contexto: visto, menu, pendientes, cobrados, clientes };
   } catch (e) {
     if (e instanceof ErrorApp) return null;
     throw e;

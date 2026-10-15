@@ -62,9 +62,19 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   (6 p. m. a 2 a. m.) se escribe tal cual. El interruptor sigue mandando: apagado, no se recibe aunque sea hora.
 - **QR para imprimir** (*En línea → Cartel con el QR*): un cartel listo para pegar en el mostrador. Se
   imprime (en la hoja sale solo el cartel) o se guarda como imagen para mandarla a una papelería.
-- **"Tiempo real" = consulta cada pocos segundos** (seguimiento 4 s, que se espacia si lleva rato igual; alerta 5 s;
-  plancha 4 s). Se detiene sola cuando el pedido termina o la pantalla no está a la vista. Es lo que permite probarlo en
-  el modo local sin servicios externos.
+- **"Tiempo real" = consulta cada pocos segundos**, sin websockets (así funciona también en el modo local sin servicios
+  externos). Se detiene sola cuando el pedido termina o la pantalla no está a la vista. Cada consulta cuesta (en Vercel
+  y en Supabase), así que se pregunta poco y liviano (migración `20261005000024_pulso.sql`):
+  - **El cliente** sigue su pedido cada 8 s los primeros 2 minutos, cada 11 s hasta los 10 y luego cada 20 s.
+  - **El personal** comparte UNA consulta por pantalla, el **pulso** (`/api/pulso`, `lib/pulso.ts`): la *huella* de
+    los pedidos (32 letras que cambian con cualquier pedido nuevo, plato agregado, quitado o listo, cobro, entrega o
+    anulación) y el resumen del aviso de pedidos en línea. Pendientes, la plancha y la copia sin conexión solo traen
+    sus datos si la huella cambió.
+  - **El ritmo se adapta** (`lib/ritmo.ts`): rápido cuando algo acaba de cambiar o alguien toca la pantalla, y cada vez
+    más espaciado mientras todo sigue igual, hasta un tope: plancha 4 → 10 s, aviso 5 → 20 s, Pendientes 8 → 20 s. Si no
+    puede llegar un pedido en línea (apagados o fuera del horario) y no hay ninguno esperando, el aviso pregunta cada
+    minuto. La plancha se trae completa al menos cada minuto (para que avancen las esperas) y la copia sin conexión
+    cada 5 minutos (el menú y los clientes no tienen huella).
 - **El dueño abre o cierra** la recepción desde *En línea*. Cerrada, el cliente ve el menú pero no puede
   enviar. El enlace sale del nombre del local y cambia si renombras la demo, pero **los enlaces anteriores siguen
   funcionando**: llevan al vigente (los 20 últimos; migración `20261005000013_enlaces_anteriores_y_platos_quitados.sql`).
@@ -264,7 +274,7 @@ src/app/(app)/        Pantallas con barra de navegación: Inicio, Pendientes, Fi
 src/app/(tarea)/      Pantallas de una sola tarea, sin barra: Tomar pedido, Cobrar, Cierre, Nuevo gasto, Ficha de cliente, QR para imprimir
 src/app/(cocina)/     La plancha, a todo el ancho (tableta o celular acostado)
 src/app/(publico)/    Lo que ve el CLIENTE sin cuenta: /pedir/<local> (menú y pedido) y /seguimiento/<código>
-src/app/api/          Consultas de las pantallas "en vivo": seguimiento (público, por código), plancha y por-confirmar (con sesión)
+src/app/api/          Consultas de las pantallas "en vivo": seguimiento (público, por código), pulso y plancha (con sesión)
 src/app/acciones/     Acciones del servidor: sync.ts (aplicarOperacion/obtenerSnapshot), clientes.ts, plancha.ts, publico.ts; validan con Zod y llaman funciones SQL
 src/app/sc/           App sin conexión: una página estática con los mismos componentes y la copia local
 src/lib/sync/         Trabajo sin conexión: tipos, vista local, motor de la cola, acciones del celular

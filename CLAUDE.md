@@ -93,6 +93,12 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   páginas públicas viven en `src/app/(publico)/` (ver `lib/rutas-publicas.ts`: ahí no corren ProveedorSync ni el
   service worker). "Tiempo real" = consulta periódica (GET `no-store`), no websockets. Cambios en esta parte: corre
   `npm run e2e:clientes`.
+- Consultas en vivo del personal (migración 24): cada consulta cuesta, así que una pantalla en vivo NO pone su propio
+  reloj: escucha el pulso de la pestaña (`lib/pulso.ts` → `/api/pulso` → `pulso()`), pide su ritmo (`lib/ritmo.ts`,
+  rápido tras un cambio o un toque, más espaciado si nada cambia) y trae sus datos solo si cambió la huella
+  (`huella_pedidos()`, que resume las filas de `pedidos` y `pedido_items` que se ven). La huella se pide ANTES que los
+  datos que acompaña (`obtenerHuella`). Si una pantalla en vivo empieza a mostrar algo que no vive en esas tablas,
+  agrégalo a `huella_pedidos()` o no se refrescará.
 - No agregar lo aplazado: facturación electrónica, inventario con recetas, gráficas, WhatsApp automático, impresión
   térmica, pagos en línea, multi-sede, costo de domicilio por zona. (El cartel del QR sí se imprime, con la impresora
   normal: `/qr` y las reglas `@media print` de `globals.css`.) Avisos push (`lib/push/`): la llave privada VAPID

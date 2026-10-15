@@ -72,7 +72,8 @@ async function crearBdSupabase(): Promise<BaseDatos> {
         try {
           for (const { name, value, options } of lista) almacen.set(name, value, options);
         } catch {
-          // Desde un Server Component no se pueden escribir cookies: proxy.ts ya refresca la sesión.
+          // Desde un Server Component no se pueden escribir cookies: proxy.ts ya refresca la sesión. En las rutas
+          // (/api/pulso, /api/plancha) sí se puede, y es lo que mantiene viva la sesión de la plancha (ver proxy.ts).
         }
       },
     },

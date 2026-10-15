@@ -98,7 +98,14 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   rápido tras un cambio o un toque, más espaciado si nada cambia) y trae sus datos solo si cambió la huella
   (`huella_pedidos()`, que resume las filas de `pedidos` y `pedido_items` que se ven). La huella se pide ANTES que los
   datos que acompaña (`obtenerHuella`). Si una pantalla en vivo empieza a mostrar algo que no vive en esas tablas,
-  agrégalo a `huella_pedidos()` o no se refrescará.
+  agrégalo a `huella_pedidos()` o no se refrescará. Las rutas que se consultan cada pocos segundos (`/api/pulso`,
+  `/api/plancha`, `/api/seguimiento`) NO pasan por `src/proxy.ts` (cada paso por ahí es otra ejecución que cobra
+  Vercel): una ruta así que pida sesión debe empezar con `await obtenerUsuario()`, que renueva la sesión y guarda la
+  cookie (`src/test/proxy.test.ts` lo exige).
+- Seguridad sin la app de por medio: `src/test/acceso-directo.test.ts` recorre TODAS las tablas y funciones y las
+  ataca como visitante (sin sesión, con sesión anónima sin local, y como dueño de otro local). Una tabla con algo
+  secreto (códigos, llaves, endpoints) va sin `grant select` y en su lista `TABLAS_SECRETAS`. Los avisos push solo
+  van a servicios de avisos conocidos (`lib/push/servicios.ts`): se valida al guardar y otra vez al enviar.
 - No agregar lo aplazado: facturación electrónica, inventario con recetas, gráficas, WhatsApp automático, impresión
   térmica, pagos en línea, multi-sede, costo de domicilio por zona. (El cartel del QR sí se imprime, con la impresora
   normal: `/qr` y las reglas `@media print` de `globals.css`.) Avisos push (`lib/push/`): la llave privada VAPID

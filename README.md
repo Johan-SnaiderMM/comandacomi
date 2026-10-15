@@ -75,6 +75,9 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
     puede llegar un pedido en línea (apagados o fuera del horario) y no hay ninguno esperando, el aviso pregunta cada
     minuto. La plancha se trae completa al menos cada minuto (para que avancen las esperas) y la copia sin conexión
     cada 5 minutos (el menú y los clientes no tienen huella).
+  - **Sin pasar por el proxy** (`src/proxy.ts`, el que renueva la sesión): el pulso, la plancha y el seguimiento se lo
+    saltan, para que cada consulta sea una sola ejecución en Vercel y no dos. El pulso y la plancha renuevan la sesión
+    ellos mismos (la plancha pasa el día en la misma pantalla y no la pierde).
 - **El dueño abre o cierra** la recepción desde *En línea*. Cerrada, el cliente ve el menú pero no puede
   enviar. El enlace sale del nombre del local y cambia si renombras la demo, pero **los enlaces anteriores siguen
   funcionando**: llevan al vigente (los 20 últimos; migración `20261005000013_enlaces_anteriores_y_platos_quitados.sql`).
@@ -322,6 +325,15 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 - **Aislamiento entre restaurantes demostrado con pruebas** (`src/test/aislamiento.test.ts`, Postgres real): un
   usuario del restaurante A no puede leer, insertar, modificar, anular ni subir fotos en el B, por ninguna tabla ni
   función; sin sesión no se ejecuta ninguna función ni se lee ninguna tabla.
+- **Alguien que le habla directo a Supabase** (sin la app, con la llave pública y hasta con una sesión anónima) no
+  logra nada: `src/test/acceso-directo.test.ts` recorre TODAS las tablas y TODAS las funciones que existan (también
+  las que se agreguen después). Nadie escribe tablas directo; lo secreto (códigos de invitación, avisos push, PIN) no lo
+  lee ni el personal; sin local no se ve ni una fila; y cada función, llamada con datos vacíos o con ids de otro local,
+  no cambia nada ni deja ver datos ajenos. Además, la app nunca le entrega al navegador la dirección ni la llave de
+  Supabase: todo pasa por el servidor.
+- **Avisos push solo a servicios de avisos de verdad** (`lib/push/servicios.ts`): Google, Mozilla, Apple y Microsoft.
+  Una dirección inventada se rechaza al guardarla y, si alguien la metió directo en la base, el servidor no le manda
+  nada y la borra. Así nadie puede usar el servidor para hacerle peticiones a otro sitio.
 - **Lo que puede hacer alguien SIN cuenta** se limita a las funciones SQL `publico_*` (`publico_menu`, `publico_crear_pedido`,
   `publico_ver_pedido`, `publico_cancelar_pedido` y las dos de avisos push); una prueba falla si aparece otra ejecutable por `anon` y ninguna
   tabla se puede leer sin sesión. El seguimiento se consulta por un código aleatorio (uuid) imposible de adivinar, que

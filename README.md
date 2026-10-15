@@ -225,6 +225,9 @@ códigos de invitación.
    Crea el restaurante vacío (sin platos ni mesas: los arma el dueño en Más → Menú y Mesas), con los roles de siempre y
    los pedidos en línea apagados. Devuelve el enlace para sus clientes.
 3. Entrégale al dueño su correo y la contraseña temporal. Al entrar, que la cambie en **Más → Mi contraseña**.
+   Su Inicio le muestra **Primeros pasos** (migración `20261005000023_primeros_pasos.sql`): arma tu menú, agrega mesas,
+   invita a tu equipo, toma tu primer pedido y recibe pedidos por internet. Cada paso se marca solo con lo que ya hay
+   y la guía se va cuando todo está hecho o con «Ya no mostrar» (en ese celular). En la demo no aparece.
 4. ¿Olvidó la contraseña? En Supabase → Authentication → Users → el usuario → *Reset password* / cambiarla, y se la
    das. (No hay correo de recuperación automático todavía.)
 

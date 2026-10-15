@@ -70,9 +70,21 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
   return (
     <>
       <div className="space-y-5 px-4 pt-3">
-        <p className="text-base text-tinta-2">
-          {totalPlatos} platos. Elige una categoría; toca un plato o una adición para cambiar su nombre o precio. El interruptor dice si hay hoy.
-        </p>
+        {categorias.length === 0 ? (
+          // Un local nuevo: se explica por dónde empezar (el botón "Categoría nueva" está abajo).
+          <section aria-label="Menú vacío" className="rounded-2xl border-2 border-dashed border-tinta/50 p-4">
+            <h2 className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight">Tu menú está vacío</h2>
+            <p className="mt-2 text-base leading-snug">
+              {esDueno
+                ? "Empieza por una categoría (por ejemplo Hamburguesas, Almuerzos o Bebidas) con el botón de abajo. Después le agregas sus platos con su precio."
+                : "El dueño todavía no ha armado el menú."}
+            </p>
+          </section>
+        ) : (
+          <p className="text-base text-tinta-2">
+            {totalPlatos} platos. Elige una categoría; toca un plato o una adición para cambiar su nombre o precio. El interruptor dice si hay hoy.
+          </p>
+        )}
         {error && (
           <Aviso tipo="error" onCerrar={() => setError(null)}>
             {error}
@@ -163,7 +175,8 @@ export function EditorMenu({ menu, esDueno }: { menu: MenuAdmin; esDueno: boolea
           </section>
         ))}
 
-        {(esDueno || menu.modificadores.some((m) => m.categoria_id === null)) && (
+        {/* Con el menú vacío no se muestran: primero va una categoría (no distraer del primer paso). */}
+        {categorias.length > 0 && (esDueno || menu.modificadores.some((m) => m.categoria_id === null)) && (
           <section aria-label="Adiciones para cualquier plato">
             <h2 className="font-display mb-1 text-2xl font-extrabold uppercase leading-none tracking-tight">Para cualquier plato</h2>
             <Adiciones

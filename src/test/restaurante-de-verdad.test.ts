@@ -53,6 +53,28 @@ describe("dar de alta un restaurante de verdad", () => {
     await expect(alta("otro@ejemplo.test", "Local", " ")).rejects.toThrow(/nombre del dueño/);
   });
 
+  it("primeros pasos: un local nuevo arranca en ceros y cada cosa que arma se cuenta", async () => {
+    type Pasos = { platos: number; mesas: number; personas: number; invitaciones: number; pedidos: number; en_linea: boolean };
+    const pasos = () => rpc<Pasos>(db, dueno, "primeros_pasos");
+    expect(await pasos()).toEqual({ platos: 0, mesas: 0, personas: 0, invitaciones: 0, pedidos: 0, en_linea: false });
+
+    const { id: categoria } = await rpc<{ id: string }>(db, dueno, "guardar_categoria", { p_id: null, p_nombre: "Asados", p_icono: "🍖", p_activa: true });
+    const { id: plato } = await rpc<{ id: string }>(db, dueno, "guardar_producto", {
+      p_id: null, p_categoria_id: categoria, p_nombre: "Pollo asado", p_precio: 28000, p_disponible: true, p_activo: true,
+    });
+    await rpc(db, dueno, "guardar_mesa", { p_id: null, p_nombre: "Mesa 1" });
+    const roles = (await rpc<{ roles: { id: string }[] }>(db, dueno, "listar_equipo")).roles;
+    await rpc(db, dueno, "crear_invitacion", { p_nombre: "Carlos", p_roles: [roles[0].id] });
+    await rpc(db, dueno, "crear_pedido", { p_tipo: "llevar", p_mesa_id: null, p_items: [{ producto_id: plato }] });
+    await rpc(db, dueno, "configurar_pedidos_en_linea", { p_activo: true });
+    expect(await pasos()).toEqual({ platos: 1, mesas: 1, personas: 0, invitaciones: 1, pedidos: 1, en_linea: true });
+
+    // Solo el dueño (es su guía).
+    const u = await usuario("ayudante-pasos@ejemplo.test");
+    await db.query(`insert into public.perfiles (user_id, restaurante_id, rol, nombre) values ($1, (select restaurante_id from public.perfiles where user_id = $2), 'ayudante', 'Ayudante')`, [u, dueno]);
+    await expect(rpc(db, u, "primeros_pasos")).rejects.toThrow(/Solo el dueño/);
+  });
+
   it("nadie lo puede llamar desde la app: solo desde el SQL Editor", async () => {
     await usuario("intruso@ejemplo.test");
     await expect(rpc(db, demo.userId, "fn_crear_restaurante", { p_correo: "intruso@ejemplo.test", p_nombre: "X", p_dueno: "Y" })).rejects.toThrow(/permission denied/);

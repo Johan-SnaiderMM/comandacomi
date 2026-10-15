@@ -1,16 +1,19 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { ChefHat, ClipboardList, Lightbulb, Lock, NotebookPen, ReceiptText, Smartphone, Wallet, type LucideIcon } from "lucide-react";
 import { EncabezadoPantalla } from "@/components/layout/encabezado-pantalla";
 import { BotonGuia } from "@/components/guia/boton-guia";
+import { PrimerosPasos } from "@/components/inicio/primeros-pasos";
 import { AvisoUrl } from "@/components/ui/aviso-url";
 import { botonVariantes } from "@/components/ui/button";
 import { abre, puedeVer } from "@/lib/areas";
-import { obtenerDiaSinCerrar, obtenerInicio } from "@/lib/datos/inicio";
+import { obtenerDiaSinCerrar, obtenerInicio, obtenerPrimerosPasos } from "@/lib/datos/inicio";
 import { formatearPesos } from "@/lib/dinero";
 import { fechaLarga } from "@/lib/fechas";
 import { cifrasDelDia, resumenDeInicio, veredictoDelDia, type CifrasDeInicio } from "@/lib/inicio";
 import { nombreCorto } from "@/lib/nombres";
 import { obtenerQuien } from "@/lib/permisos";
+import { COOKIE_PRIMEROS_PASOS, pasosDe } from "@/lib/primeros-pasos";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Inicio" };
@@ -109,11 +112,17 @@ type Acceso = { href: string; Icono: LucideIcon; texto: string; insignia?: numbe
 export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
   const sp = await searchParams;
   const { contexto, quien } = await obtenerQuien();
-  const [inicio, sinCerrar] = await Promise.all([
+  // Primeros pasos: solo el dueño de un local de verdad (no la demo), mientras no diga "Ya no mostrar" en este celular.
+  const conPasos =
+    quien.esDueno && contexto.restaurante?.es_demo === false && (await cookies()).get(COOKIE_PRIMEROS_PASOS)?.value !== "ocultos";
+  const [inicio, sinCerrar, datosPasos] = await Promise.all([
     obtenerInicio(),
     // Un día anterior con ventas que nadie cerró (si la base aún no lo sabe calcular, no se avisa).
     abre(quien, "cierre") ? obtenerDiaSinCerrar().catch(() => null) : null,
+    conPasos ? obtenerPrimerosPasos().catch(() => null) : null,
   ]);
+  // Se va sola cuando todo está hecho.
+  const pasosPendientes = datosPasos && pasosDe(datosPasos).some((p) => !p.hecho) ? datosPasos : null;
   // La base ya no le manda la plata a quien no la ve; además, el dueño que mira "como" un rol tampoco la ve aquí.
   const cifras = abre(quien, "cierre") ? cifrasDelDia(inicio) : null;
   const porCobrar = abre(quien, "fiado", "cierre") ? inicio.por_cobrar : null;
@@ -147,6 +156,8 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
           </BotonGuia>
         )}
         {sp.reiniciada === "1" && <AvisoUrl>Demo reiniciada: los datos de ejemplo están como nuevos.</AvisoUrl>}
+
+        {pasosPendientes && <PrimerosPasos datos={pasosPendientes} />}
 
         {/* Arriba de todo: es lo único pendiente de un día que ya pasó. */}
         {sinCerrar && (

@@ -3,7 +3,7 @@ import { ActualizadorEnVivo } from "@/components/layout/actualizador-en-vivo";
 import { SinPermiso } from "@/components/layout/sin-permiso";
 import { abre } from "@/lib/areas";
 import { listarPedidosPorConfirmar } from "@/lib/datos/clientes";
-import { listarPedidosCobradosHoy, listarPedidosPendientes } from "@/lib/datos/pedidos";
+import { listarPedidosCobradosHoy, listarPedidosPendientes, obtenerHuella } from "@/lib/datos/pedidos";
 import { revisarPermiso } from "@/lib/permisos";
 import { ListaPendientes } from "./lista-pendientes";
 import { PedidosPorConfirmar } from "./por-confirmar";
@@ -19,6 +19,8 @@ export default async function Pendientes({ searchParams }: PageProps<"/pedidos">
   // Aceptar o rechazar los pedidos de clientes es de quien toma pedidos.
   const aceptaEnLinea = abre(quien, "pedidos");
 
+  // La huella va primero (ver obtenerHuella): con ella la pantalla sabe si el pulso trae algo que no tiene.
+  const huella = await obtenerHuella().catch(() => null);
   const [pendientes, cobrados, porConfirmar] = await Promise.all([
     listarPedidosPendientes(),
     listarPedidosCobradosHoy(),
@@ -40,7 +42,7 @@ export default async function Pendientes({ searchParams }: PageProps<"/pedidos">
           restaurante={contexto.restaurante?.nombre ?? "el restaurante"}
           quien={quien}
         />
-        <ActualizadorEnVivo cadaMs={8000} />
+        <ActualizadorEnVivo huella={huella} />
       </main>
     </>
   );

@@ -208,7 +208,7 @@ async function correr() {
     await cliente.pagina.waitForURL(`${BASE}/`, { timeout: 30000 });
   }
   log("/plancha, /pedidos, /pedidos-en-linea e /inicio lo devuelven a la portada");
-  for (const ruta of ["/api/plancha", "/api/clientes/por-confirmar"]) {
+  for (const ruta of ["/api/plancha", "/api/pulso"]) {
     const r = await cliente.contexto.request.get(BASE + ruta);
     assert.equal(r.status(), 401, `${ruta} sin sesión debe dar 401`);
   }
@@ -404,9 +404,10 @@ async function correr() {
   await cliente.pagina.getByRole("heading", { name: "Pedido cancelado" }).waitFor({ timeout: 30000 });
   await cliente.pagina.getByText(/Cancelaste tu pedido/).waitFor();
   log("el cliente cancela mientras espera: queda cancelado");
-  const resumen = await dueno.contexto.request.get(`${BASE}/api/clientes/por-confirmar`);
-  const datosResumen = await resumen.json();
-  assert.equal(datosResumen.cantidad, 0, "no queda nada por confirmar");
+  const pulso = await dueno.contexto.request.get(`${BASE}/api/pulso`);
+  const datosPulso = await pulso.json();
+  assert.match(datosPulso.huella, /^[0-9a-f]{32}$/, "el pulso trae la huella de los pedidos");
+  assert.equal(datosPulso.porConfirmar.cantidad, 0, "no queda nada por confirmar");
   log("al dueño no le queda nada por confirmar");
 
   // ------------------------------------------------------------------------------------ 9. cerrado

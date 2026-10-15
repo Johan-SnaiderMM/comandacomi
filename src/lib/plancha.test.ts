@@ -108,6 +108,7 @@ describe("aviso de pedidos nuevos", () => {
   it("texto: un pedido con sus datos; varios, con la cuenta", () => {
     const uno: ResumenPorConfirmar = {
       activo: true,
+      atiende: true,
       cantidad: 1,
       recientes: [{ id: "a", numero: 137, tipo: "domicilio", total: 34500, contacto_nombre: "Marta", created_at: "2026-10-12T15:00:00Z" }],
     };

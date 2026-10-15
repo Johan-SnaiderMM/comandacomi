@@ -106,8 +106,10 @@ export type PedidoPorConfirmar = {
 };
 
 export type ResumenPorConfirmar = {
-  /** El restaurante recibe pedidos en línea (si no, la app pregunta con más calma). */
+  /** El restaurante recibe pedidos en línea. */
   activo: boolean;
+  /** Ahora puede llegar uno: en línea y dentro del horario de atención (si no, la app pregunta con más calma). */
+  atiende: boolean;
   cantidad: number;
   recientes: { id: string; numero: number; tipo: "llevar" | "domicilio"; total: number; contacto_nombre: string | null; created_at: string }[];
 };
@@ -140,6 +142,8 @@ export type PedidoPlancha = {
 export type Plancha = {
   /** Hora del servidor: las esperas se calculan contra ella, no contra el reloj del celular. */
   ahora: string;
+  /** Huella de los pedidos con que se armó (migración 24): si el pulso trae otra, hay algo nuevo. */
+  huella: string;
   pedidos: PedidoPlancha[];
 };
 

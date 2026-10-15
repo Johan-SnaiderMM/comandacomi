@@ -1,21 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { BellRing, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import type { ResumenPorConfirmar } from "@/lib/datos/tipos";
 import { formatearPesos } from "@/lib/dinero";
 import { idsNuevos, textoDeAviso } from "@/lib/plancha";
+import { obtenerPulso, type Pulso } from "@/lib/pulso";
+import { RITMO_AVISO, RITMO_AVISO_EN_CALMA } from "@/lib/ritmo";
 import { activarSonido, desbloquearConElPrimerToque, sonidoActivo, suscribirSonido, tocar, vibrar } from "@/lib/sonido";
 
-/** Cada cuánto se pregunta si hay pedidos nuevos de clientes (con la app a la vista). */
-const CADA_MS = 5_000;
-/** Si el restaurante no recibe pedidos en línea (y no hay ninguno pendiente) se pregunta con calma. */
-const CADA_SIN_PEDIDOS_EN_LINEA_MS = 60_000;
 /** Mientras haya pedidos sin atender, el sonido se repite. */
 const REPETIR_MS = 9_000;
-const VACIO: ResumenPorConfirmar = { activo: true, cantidad: 0, recientes: [] };
+const VACIO: ResumenPorConfirmar = { activo: true, atiende: true, cantidad: 0, recientes: [] };
+
+/**
+ * Cada cuánto pregunta el aviso: si ahora no puede llegar ningún pedido (en línea apagado o fuera del horario) y no hay
+ * ninguno esperando, con calma; si no, rápido y más espaciado mientras no llegue nada (lib/ritmo.ts).
+ */
+function ritmoDelAviso(ultimo: Pulso | null) {
+  if (!ultimo) return RITMO_AVISO;
+  const r = ultimo.porConfirmar;
+  if (!r) return null; // la base dice que esta persona no toma pedidos: no hace falta preguntar por esto
+  return r.atiende || r.cantidad > 0 ? RITMO_AVISO : RITMO_AVISO_EN_CALMA;
+}
 
 /*
  * Estado que debe sobrevivir a que el componente se vuelva a montar (al pasar de una pantalla con barra de navegación a
@@ -32,75 +41,50 @@ let silenciadoEnLaPestana = false;
  *
  * Importante: esto funciona con la app ABIERTA (en primer plano). Con la app cerrada hace falta una notificación push,
  * que es otro paso (ver README).
+ *
+ * No pregunta por su cuenta: escucha el pulso de la pestaña (`lib/pulso.ts`), que comparte con Pendientes y la plancha.
  */
 export function AlertaPedidosClientes() {
   const ruta = usePathname();
-  const [resumen, setResumen] = useState<ResumenPorConfirmar>(VACIO);
+  const [resumen, setResumen] = useState<ResumenPorConfirmar>(() => obtenerPulso()?.ultimo()?.porConfirmar ?? VACIO);
   const [silenciado, setSilenciadoEstado] = useState(() => silenciadoEnLaPestana);
   // En el servidor se asume que puede sonar (así el HTML inicial no trae el aviso de "activar sonido").
   const sonidoListo = useSyncExternalStore(suscribirSonido, sonidoActivo, () => true);
-  const sinSesion = useRef(false);
-  const ritmo = useRef(CADA_MS);
 
   const silenciar = useCallback((valor: boolean) => {
     silenciadoEnLaPestana = valor;
     setSilenciadoEstado(valor);
   }, []);
 
-  const consultar = useCallback(async () => {
-    if (sinSesion.current || document.visibilityState !== "visible") return;
-    try {
-      const r = await fetch("/api/clientes/por-confirmar", { cache: "no-store", credentials: "same-origin" });
-      if (r.status === 401) {
-        sinSesion.current = true; // sin sesión (portada, o la sesión venció): no se insiste
-        setResumen(VACIO);
-        return;
-      }
-      if (!r.ok) return;
-      const datos = (await r.json()) as ResumenPorConfirmar;
+  const recibir = useCallback(
+    (datos: ResumenPorConfirmar) => {
       const nuevos = idsNuevos(vistosEnLaPestana, datos.recientes);
       datos.recientes.forEach((x) => vistosEnLaPestana.add(x.id));
-      ritmo.current = datos.activo || datos.cantidad > 0 ? CADA_MS : CADA_SIN_PEDIDOS_EN_LINEA_MS;
       setResumen(datos);
       if (nuevos.length > 0) {
         silenciar(false);
         tocar("pedido-nuevo");
         vibrar("pedido-nuevo");
       }
-    } catch {
-      // sin señal: se vuelve a intentar en el próximo ciclo
-    }
-  }, [silenciar]);
+    },
+    [silenciar]
+  );
 
-  // Consulta periódica, al volver a la pestaña y cuando otra pantalla avisa que algo cambió (aceptar/rechazar/abrir).
+  // El pulso pregunta al ritmo del aviso, al volver a la pestaña y cuando otra pantalla avisa que algo cambió
+  // (aceptar/rechazar/abrir, con el evento "clientes:cambio").
   useEffect(() => {
-    let parado = false;
-    let reloj = 0;
-
-    const programar = () => {
-      window.clearTimeout(reloj); // nunca hay dos relojes a la vez
-      if (parado || sinSesion.current) return;
-      reloj = window.setTimeout(() => void ciclo(), ritmo.current);
-    };
-    const ciclo = async () => {
-      await consultar();
-      programar();
-    };
-
-    const ahora = () => void ciclo();
-    const alVolver = () => {
-      if (document.visibilityState === "visible") void ciclo();
-    };
-    void ciclo();
-    document.addEventListener("visibilitychange", alVolver);
-    window.addEventListener("clientes:cambio", ahora);
-    return () => {
-      parado = true;
-      window.clearTimeout(reloj);
-      document.removeEventListener("visibilitychange", alVolver);
-      window.removeEventListener("clientes:cambio", ahora);
-    };
-  }, [consultar]);
+    const pulso = obtenerPulso();
+    if (!pulso) return;
+    return pulso.escuchar({
+      ritmo: ritmoDelAviso,
+      alPulso: (p) => {
+        if (p.porConfirmar) recibir(p.porConfirmar);
+      },
+      alFallar: (f) => {
+        if (f === "sin-sesion") setResumen(VACIO); // la sesión venció: no hay a quién avisarle
+      },
+    });
+  }, [recibir]);
 
   // El navegador solo deja sonar tras un toque: el primero en cualquier parte de la app desbloquea el sonido.
   useEffect(() => desbloquearConElPrimerToque(), []);

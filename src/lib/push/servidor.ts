@@ -1,5 +1,6 @@
 import "server-only";
 import webpush from "web-push";
+import { servicioPushPermitido } from "./servicios";
 import type { Aviso, Destino } from "./tipos";
 
 /**
@@ -33,16 +34,18 @@ export type ResultadoEnvio = { enviados: number; caducados: string[] };
 
 /**
  * Manda el aviso a cada celular. Nunca lanza: un celular que ya no existe (404/410) se reporta en `caducados` para
- * limpiarlo; cualquier otro fallo solo queda en el registro del servidor.
+ * limpiarlo; cualquier otro fallo solo queda en el registro del servidor. Una dirección que no es de un servicio de
+ * avisos conocido (`servicios.ts`) ni se intenta: también va a `caducados`, para que la base la borre.
  */
 export async function enviarAviso(destinos: Destino[], aviso: Aviso): Promise<ResultadoEnvio> {
   const vacio: ResultadoEnvio = { enviados: 0, caducados: [] };
   if (destinos.length === 0 || !avisosConfigurados()) return vacio;
 
   const carga = JSON.stringify(aviso);
-  const resultado: ResultadoEnvio = { enviados: 0, caducados: [] };
+  const resultado: ResultadoEnvio = { enviados: 0, caducados: destinos.filter((d) => !servicioPushPermitido(d.endpoint)).map((d) => d.endpoint) };
+  if (resultado.caducados.length > 0) console.error(`[avisos] se saltaron ${resultado.caducados.length} direcciones que no son de un servicio de avisos`);
   await Promise.all(
-    destinos.map(async (d) => {
+    destinos.filter((d) => servicioPushPermitido(d.endpoint)).map(async (d) => {
       try {
         await webpush.sendNotification({ endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } }, carga, {
           TTL: 60 * 60, // si el celular está apagado, el aviso vale una hora

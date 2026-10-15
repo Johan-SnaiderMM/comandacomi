@@ -130,9 +130,9 @@ describe("validación de la suscripción", () => {
 
 describe("envío (web-push simulado)", () => {
   const destinos = [
-    { endpoint: "https://push.example/a", p256dh: "pa", auth: "aa" },
-    { endpoint: "https://push.example/b", p256dh: "pb", auth: "ab" },
-    { endpoint: "https://push.example/c", p256dh: "pc", auth: "ac" },
+    { endpoint: "https://fcm.googleapis.com/fcm/send/a", p256dh: "pa", auth: "aa" },
+    { endpoint: "https://updates.push.services.mozilla.com/wpush/v2/b", p256dh: "pb", auth: "ab" },
+    { endpoint: "https://web.push.apple.com/c", p256dh: "pc", auth: "ac" },
   ];
 
   beforeEach(() => {
@@ -183,5 +183,70 @@ describe("envío (web-push simulado)", () => {
     const { enviarAviso } = await import("./servidor");
     expect(await enviarAviso([], avisoDePrueba())).toEqual({ enviados: 0, caducados: [] });
     expect(mocks.enviar).not.toHaveBeenCalled();
+  });
+
+  it("una dirección que no es de un servicio de avisos ni se intenta: va a caducados para borrarla", async () => {
+    mocks.enviar.mockResolvedValue({ statusCode: 201 });
+    const consola = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { enviarAviso } = await import("./servidor");
+    const intruso = { endpoint: "https://atacante.example/recibir", p256dh: "px", auth: "ax" };
+    const r = await enviarAviso([destinos[0], intruso], avisoDePrueba());
+    expect(r).toEqual({ enviados: 1, caducados: [intruso.endpoint] });
+    expect(mocks.enviar).toHaveBeenCalledTimes(1);
+    expect(mocks.enviar.mock.calls[0][0]).toMatchObject({ endpoint: destinos[0].endpoint });
+    consola.mockRestore();
+  });
+});
+
+describe("a qué servicios de avisos puede apuntar un celular", () => {
+  beforeEach(() => vi.resetModules());
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("acepta los de los navegadores: Google, Mozilla, Apple y Microsoft", async () => {
+    const { servicioPushPermitido } = await import("./servicios");
+    for (const bueno of [
+      "https://fcm.googleapis.com/fcm/send/abc:def",
+      "https://fcm.googleapis.com/wp/abc",
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/QH1c",
+      "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    ]) {
+      expect(servicioPushPermitido(bueno), bueno).toBe(true);
+    }
+  });
+
+  it("rechaza cualquier otra dirección, también las que se disfrazan", async () => {
+    const { servicioPushPermitido } = await import("./servicios");
+    for (const malo of [
+      "https://atacante.example/x",
+      "https://fcm.googleapis.com.atacante.example/x", // el dominio de verdad al principio no basta
+      "https://falsofcm.googleapis.com/x", // tampoco un subdominio "parecido"
+      "https://fcm.googleapis.com:8443/x", // ni otro puerto
+      "https://usuario:clave@fcm.googleapis.com/x",
+      "http://fcm.googleapis.com/x", // ni sin https
+      "https://169.254.169.254/latest/meta-data",
+      "https://localhost/x",
+      "no es una dirección",
+      "",
+    ]) {
+      expect(servicioPushPermitido(malo), malo).toBe(false);
+    }
+  });
+
+  it("la validación de la suscripción lo exige, con un mensaje que entiende quien la ve", () => {
+    const r = esquemaSuscripcion.safeParse({
+      endpoint: "https://atacante.example/x",
+      keys: { p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM", auth: "tBHItJI5svbpez7KI4CCXg" },
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toMatch(/Este navegador no permite activar los avisos/);
+  });
+
+  it("el dominio de pruebas (.invalid) solo vale fuera de producción", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    expect((await import("./servicios")).servicioPushPermitido("https://push.invalid/e2e/personal")).toBe(true);
+    vi.resetModules();
+    vi.stubEnv("NODE_ENV", "production");
+    expect((await import("./servicios")).servicioPushPermitido("https://push.invalid/e2e/personal")).toBe(false);
   });
 });

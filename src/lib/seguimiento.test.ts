@@ -105,11 +105,12 @@ describe("cuándo dejar de consultar y cada cuánto", () => {
     expect(seguimientoTerminado("listo")).toBe(false);
   });
 
-  it("consulta rápido al principio y más espaciado si lleva rato igual", () => {
-    expect(intervaloDeConsulta(0)).toBe(4_000);
-    expect(intervaloDeConsulta(119)).toBe(4_000);
-    expect(intervaloDeConsulta(120)).toBe(8_000);
-    expect(intervaloDeConsulta(599)).toBe(8_000);
-    expect(intervaloDeConsulta(600)).toBe(15_000);
+  it("consulta más seguido al principio y más espaciado si lleva rato igual", () => {
+    expect(intervaloDeConsulta(0)).toBe(8_000);
+    expect(intervaloDeConsulta(119.9)).toBe(8_000);
+    expect(intervaloDeConsulta(120)).toBe(11_000);
+    expect(intervaloDeConsulta(599.9)).toBe(11_000);
+    expect(intervaloDeConsulta(600)).toBe(20_000);
+    expect(intervaloDeConsulta(3_600)).toBe(20_000);
   });
 });

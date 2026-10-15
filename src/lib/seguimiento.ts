@@ -69,9 +69,12 @@ export function seguimientoTerminado(etapa: EtapaPedido): boolean {
   return etapa === "entregado" || etapa === "cancelado";
 }
 
-/** Cada cuánto se consulta (ms): rápido al principio, más espaciado si lleva rato igual. */
+/**
+ * Cada cuánto se consulta (ms): más seguido al principio, más espaciado si lleva rato igual. Un pedido tarda minutos
+ * en cambiar de etapa: unos segundos de más no se notan, y cada consulta cuesta (ver README, "Consultas en vivo").
+ */
 export function intervaloDeConsulta(segundosDesdeCambio: number): number {
-  if (segundosDesdeCambio < 120) return 4_000;
-  if (segundosDesdeCambio < 600) return 8_000;
-  return 15_000;
+  if (segundosDesdeCambio < 120) return 8_000;
+  if (segundosDesdeCambio < 600) return 11_000;
+  return 20_000;
 }

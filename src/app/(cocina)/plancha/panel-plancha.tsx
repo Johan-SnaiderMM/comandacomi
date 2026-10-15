@@ -9,11 +9,16 @@ import { Aviso } from "@/components/ui/aviso";
 import type { PedidoPlancha, Plancha } from "@/lib/datos/tipos";
 import { MENSAJE_GENERICO } from "@/lib/errores";
 import { destinoDePedido, minutosDeEspera, platosNuevos, progresoDePedido, separarPlancha, textoDeEspera, urgenciaDeEspera } from "@/lib/plancha";
+import { obtenerPulso } from "@/lib/pulso";
+import { RITMO_PLANCHA } from "@/lib/ritmo";
 import { activarSonido, desbloquearConElPrimerToque, sonidoActivo, suscribirSonido, tocar, vibrar } from "@/lib/sonido";
 import { cn } from "@/lib/utils";
 
-/** Cada cuánto se pregunta por pedidos nuevos y platos marcados (con el panel a la vista). */
-const CADA_MS = 4_000;
+/**
+ * Aunque la huella no cambie, cada minuto se trae todo: así las esperas ("12 min") avanzan y los "listos hace poco"
+ * de hace más de 15 minutos se van.
+ */
+const REFRESCO_MS = 60_000;
 const CLAVE_SILENCIO = "plancha:silencio";
 
 /** Lo marcado en pantalla que el servidor todavía no confirmó (se ve al instante y se corrige si falla). */
@@ -63,8 +68,9 @@ function suscribirSilencio(oyente: () => void): () => void {
 /**
  * Panel de la plancha: lo que hay que cocinar, pedido por pedido y plato por plato. Un toque marca un plato listo (y el
  * cliente lo ve en su celular); cuando todos los platos de un pedido están listos, el pedido pasa solo a "listo".
- * Se actualiza solo cada pocos segundos; los pedidos nuevos llegan con sonido y vibración, y también los platos que
- * se le agregan a un pedido que ya estaba (esos quedan marcados "Agregado" hasta que se preparan).
+ * Se actualiza sola: escucha el pulso de la pestaña (`lib/pulso.ts`, como mucho cada 10 s) y trae la plancha solo si la
+ * huella de los pedidos cambió. Los pedidos nuevos llegan con sonido y vibración, y también los platos que se le
+ * agregan a un pedido que ya estaba (esos quedan marcados "Agregado" hasta que se preparan).
  * Usa todo el ancho de la pantalla (tableta o celular acostado): ver `(cocina)/layout.tsx`.
  */
 export function PanelPlancha({ inicial }: { inicial: Plancha }) {
@@ -82,6 +88,9 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
   const pedidosVistos = useRef<Set<string>>(new Set(inicial.pedidos.map((p) => p.id)));
   const platosVistos = useRef<Set<string>>(new Set(inicial.pedidos.flatMap((p) => p.items.map((i) => i.id))));
   const sinSesion = useRef(false);
+  // Con qué huella se armó lo que está en pantalla, y cuándo se trajo (ms).
+  const huella = useRef(inicial.huella);
+  const ultimaCarga = useRef(0);
 
   const consultar = useCallback(async () => {
     if (sinSesion.current || document.visibilityState !== "visible") return;
@@ -102,6 +111,8 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
         pedidosVistos.current.add(p.id);
         p.items.forEach((i) => platosVistos.current.add(i.id));
       });
+      huella.current = nuevo.huella;
+      ultimaCarga.current = Date.now();
       setDatos(nuevo);
       setSinConexion(false);
       // Lo que el servidor ya confirmó deja de ser una marca pendiente.
@@ -129,24 +140,22 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
 
   useEffect(() => {
     const dejarDeEscucharToque = desbloquearConElPrimerToque();
+    ultimaCarga.current = Date.now();
 
-    // Consulta periódica: la siguiente se programa al terminar la anterior (nunca dos a la vez).
-    let parado = false;
-    let reloj = 0;
-    const programar = () => {
-      window.clearTimeout(reloj);
-      if (parado || sinSesion.current) return;
-      reloj = window.setTimeout(() => void ciclo(), CADA_MS);
-    };
-    const ciclo = async () => {
-      await consultar();
-      programar();
-    };
-    const alVolver = () => {
-      if (document.visibilityState === "visible") void ciclo();
-    };
-    void ciclo();
-    document.addEventListener("visibilitychange", alVolver);
+    // El pulso pregunta (al ritmo de la plancha, compartido con el aviso de pedidos en línea) y solo si la huella cambió
+    // se trae la plancha completa.
+    const dejarElPulso = obtenerPulso()?.escuchar({
+      ritmo: () => RITMO_PLANCHA,
+      alPulso: (p) => {
+        setSinConexion(false);
+        if (p.huella !== huella.current || Date.now() - ultimaCarga.current >= REFRESCO_MS) void consultar();
+      },
+      alFallar: (f) => {
+        if (f === "sin-senal") return setSinConexion(true);
+        sinSesion.current = true; // la sesión venció: se vuelve a la portada para entrar de nuevo
+        router.replace("/");
+      },
+    });
 
     // Pantalla encendida mientras se cocina (si el navegador lo permite).
     let candado: WakeLockSentinel | null = null;
@@ -164,14 +173,12 @@ export function PanelPlancha({ inicial }: { inicial: Plancha }) {
     document.addEventListener("visibilitychange", reanudar);
 
     return () => {
-      parado = true;
-      window.clearTimeout(reloj);
+      dejarElPulso?.();
       dejarDeEscucharToque();
-      document.removeEventListener("visibilitychange", alVolver);
       document.removeEventListener("visibilitychange", reanudar);
       void candado?.release().catch(() => {});
     };
-  }, [consultar]);
+  }, [consultar, router]);
 
   function alternarSilencio() {
     guardarSilencio(!silencio);

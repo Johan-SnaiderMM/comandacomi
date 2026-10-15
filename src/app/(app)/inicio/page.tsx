@@ -5,7 +5,7 @@ import { BotonGuia } from "@/components/guia/boton-guia";
 import { AvisoUrl } from "@/components/ui/aviso-url";
 import { botonVariantes } from "@/components/ui/button";
 import { abre, puedeVer } from "@/lib/areas";
-import { obtenerInicio } from "@/lib/datos/inicio";
+import { obtenerDiaSinCerrar, obtenerInicio } from "@/lib/datos/inicio";
 import { formatearPesos } from "@/lib/dinero";
 import { fechaLarga } from "@/lib/fechas";
 import { cifrasDelDia, resumenDeInicio, veredictoDelDia, type CifrasDeInicio } from "@/lib/inicio";
@@ -72,7 +72,7 @@ function CuentasDelDia({ cifras, jornada }: { cifras: CifrasDeInicio; jornada: s
           <ReceiptText className="size-5" aria-hidden /> Ver el cierre del día
         </Link>
       ) : (
-        <p className="text-center text-sm leading-tight text-tinta-2">
+        <p className="text-center text-base leading-snug text-tinta-2">
           Ayer vendiste {formatearPesos(cifras.ventas_ayer)} y ganaste {formatearPesos(cifras.ganancia_ayer)}.
         </p>
       )}
@@ -88,7 +88,7 @@ function PorCobrar({ monto, deudores, abreFiado }: { monto: number; deudores: nu
         <NotebookPen className="size-4 shrink-0" aria-hidden /> Por cobrar
       </p>
       <p className={cn("cifra mt-2 text-[2rem]", monto > 0 && "text-aji")}>{formatearPesos(monto)}</p>
-      <p className="mt-1 text-sm text-tinta-2">{deudores === 0 ? "Nadie debe nada" : `${deudores} ${deudores === 1 ? "cliente debe" : "clientes deben"}`}</p>
+      <p className="mt-1 text-base text-tinta-2">{deudores === 0 ? "Nadie debe nada" : `${deudores} ${deudores === 1 ? "cliente debe" : "clientes deben"}`}</p>
     </>
   );
   return abreFiado ? (
@@ -109,7 +109,11 @@ type Acceso = { href: string; Icono: LucideIcon; texto: string; insignia?: numbe
 export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
   const sp = await searchParams;
   const { contexto, quien } = await obtenerQuien();
-  const inicio = await obtenerInicio();
+  const [inicio, sinCerrar] = await Promise.all([
+    obtenerInicio(),
+    // Un día anterior con ventas que nadie cerró (si la base aún no lo sabe calcular, no se avisa).
+    abre(quien, "cierre") ? obtenerDiaSinCerrar().catch(() => null) : null,
+  ]);
   // La base ya no le manda la plata a quien no la ve; además, el dueño que mira "como" un rol tampoco la ve aquí.
   const cifras = abre(quien, "cierre") ? cifrasDelDia(inicio) : null;
   const porCobrar = abre(quien, "fiado", "cierre") ? inicio.por_cobrar : null;
@@ -144,6 +148,20 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
         )}
         {sp.reiniciada === "1" && <AvisoUrl>Demo reiniciada: los datos de ejemplo están como nuevos.</AvisoUrl>}
 
+        {/* Arriba de todo: es lo único pendiente de un día que ya pasó. */}
+        {sinCerrar && (
+          <Link
+            href={`/cierre?fecha=${sinCerrar}`}
+            className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-tinta bg-sol-suave px-3 py-2 shadow-sello-chico active:translate-y-[2px] active:shadow-none"
+          >
+            <ReceiptText className="size-6 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block text-base font-bold">El {fechaLarga(sinCerrar).toLowerCase()} quedó sin cerrar</span>
+              <span className="block text-base text-tinta-2">Toca para cerrarlo</span>
+            </span>
+          </Link>
+        )}
+
         {cifras ? (
           <CuentasDelDia cifras={cifras} jornada={inicio.fecha} />
         ) : (
@@ -174,7 +192,7 @@ export default async function Inicio({ searchParams }: PageProps<"/inicio">) {
                   <ClipboardList className="size-4 shrink-0" aria-hidden /> Pendientes
                 </p>
                 <p className="cifra mt-2 text-[2rem]">{inicio.pedidos_pendientes}</p>
-                <p className="mt-1 text-sm">
+                <p className="mt-1 text-base">
                   {inicio.pedidos_pendientes === 0
                     ? "Todo al día"
                     : inicio.pedidos_sin_cobrar === 0

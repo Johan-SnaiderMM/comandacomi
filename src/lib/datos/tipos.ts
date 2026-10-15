@@ -287,6 +287,8 @@ export type CierreDelDia = {
   cierre: CierreDia | null;
   /** A qué día entra lo que se registre ahora; si el de `resumen` ya se cerró, es el siguiente. Falta antes de la migración 16. */
   jornada?: string;
+  /** Un día anterior con movimiento que quedó sin cerrar (YYYY-MM-DD), si no es el que se mira. Falta antes de la migración 21. */
+  sin_cerrar?: string | null;
   cierres_recientes: CierreReciente[];
 };
 

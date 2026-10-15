@@ -7,14 +7,14 @@ import { esquemaCierre } from "@/lib/esquemas/cierre";
 import { esquemaAnulacion } from "@/lib/esquemas/pedido";
 
 /**
- * Cierra el día de hoy. La base calcula ventas, gastos, ganancia y efectivo esperado por su cuenta
- * (no confía en cifras del celular); aquí solo viajan la base de la caja y lo que se contó.
+ * Cierra el día de trabajo (o, con `fecha`, uno anterior que quedó abierto). La base calcula ventas, gastos, ganancia y
+ * efectivo esperado por su cuenta (no confía en cifras del celular); aquí solo viajan la base de la caja y lo contado.
  */
 export async function cerrarDia(entrada: unknown): Promise<Resultado<{ diferencia: number }>> {
   const parsed = esquemaCierre.safeParse(entrada);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa el cierre." };
   const r = await ejecutar<{ diferencia: number }>("registrar_cierre", {
-    p_fecha: null,
+    p_fecha: parsed.data.fecha,
     p_base_caja: parsed.data.base,
     p_efectivo_contado: parsed.data.contado,
     p_notas: parsed.data.notas || null,

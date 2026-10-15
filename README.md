@@ -77,8 +77,9 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
   Los avisos no se quedan para siempre en celulares de visitas anteriores (migración `20261005000012_limpieza_avisos.sql`):
   **salir de la sesión** da de baja ese celular, **reiniciar la demo** da de baja todos menos el celular desde el que
   se reinicia, y con el tope de 30 celulares lleno entra el nuevo y sale el más antiguo.
-- **Enlaces por rol** (entran con un toque a la demo y abren esa pantalla): `/?ir=/plancha` (parrilla),
-  `/?ir=/pedidos` (mesero), y `/pedir/<local>` (cliente, sin cuenta).
+- **Enlaces directos** (entran con un toque a la demo y abren esa pantalla): `/?ir=/plancha`, `/?ir=/pedidos`, y
+  `/pedir/<local>` (cliente, sin cuenta). Ojo: `/?ir=` entra como DUEÑO (sirve para abrir la plancha en una tableta
+  durante una visita). Para que alguien use la app con SU rol (mesero, cocina…), invítalo desde **Más → Equipo**.
 - **Pagos:** el cliente paga al recibir (efectivo o Nequi); el cobro se hace en la app como cualquier pedido.
 - **Antiabuso (sin servicios externos, en la base):** como máximo 25 pedidos sin confirmar por restaurante, 3 por
   teléfono cada 30 min y 10 por minuto; 30 platos y 20 unidades por plato; campo trampa para programas. El cliente no puede
@@ -207,7 +208,8 @@ Los totales se ven "vivos" porque los datos se generan relativos a hoy (sin azar
 > demo tome las descripciones de los platos y Bebidas quede fuera de la plancha.
 > Luego `20261005000019_permisos_por_area.sql` (roles del equipo y permisos por área; al dueño no le cambia nada) y
 > `20261005000020_invitaciones_equipo.sql` (códigos de invitación, quitar del equipo, avisos por área y que reiniciar
-> la demo deje el equipo como nuevo), y enciende *Allow anonymous sign-ins* (paso 5).
+> la demo deje el equipo como nuevo), y enciende *Allow anonymous sign-ins* (paso 5). Después
+> `20261005000021_dia_sin_cerrar.sql` (avisa del día que quedó sin cerrar y deja cerrarlo tarde).
 
 ### Antes de enseñarla (lista rápida)
 

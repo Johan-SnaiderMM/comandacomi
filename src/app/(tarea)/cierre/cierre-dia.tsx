@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Pencil, Undo2 } from "lucide-react";
 import { anularCierre, cerrarDia } from "@/app/acciones/cierre";
@@ -35,11 +36,14 @@ function Fila({ etiqueta, valor, fuerte, className }: { etiqueta: string; valor:
  */
 export function CierreDia({
   datos,
+  fechaElegida = null,
   porCobrar,
   restaurante,
   horaCorte,
 }: {
   datos: CierreDelDia;
+  /** Un día anterior que quedó abierto (`/cierre?fecha=`); null = el día de trabajo. */
+  fechaElegida?: string | null;
   /** Total que le deben al restaurante (fiado), para el resumen. */
   porCobrar: number;
   restaurante: string;
@@ -50,7 +54,7 @@ export function CierreDia({
   const { resumen: r, cierre } = datos;
   const hoy = r.fecha;
   // Ya se cerró y todavía no llega la hora de corte: lo nuevo está entrando al día siguiente.
-  const siguiente = cierre && datos.jornada && datos.jornada !== r.fecha ? datos.jornada : null;
+  const siguiente = !fechaElegida && cierre && datos.jornada && datos.jornada !== r.fecha ? datos.jornada : null;
   const [base, setBase] = useState(cierre?.base_caja ?? datos.cierres_recientes[0]?.base_caja ?? 0);
   const [contado, setContado] = useState<number | null>(cierre?.efectivo_contado ?? null);
   const [notas, setNotas] = useState("");
@@ -85,7 +89,7 @@ export function CierreDia({
     if (contado === null) return;
     setError(null);
     empezar(async () => {
-      const res = await cerrarDia({ base, contado, notas });
+      const res = await cerrarDia({ base, contado, notas, fecha: fechaElegida });
       if (!res.ok) {
         setError(res.error);
         return;
@@ -96,18 +100,39 @@ export function CierreDia({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <EncabezadoPantalla titulo="Cierre del día" atras="/inicio" />
+      <EncabezadoPantalla titulo="Cierre del día" atras={fechaElegida ? "/cierre" : "/inicio"} />
       <main className="flex-1 space-y-3 px-4 pt-3 pb-[calc(var(--accion-h)+var(--seguro-abajo)+1rem)]">
         <div>
           <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">{fechaLarga(r.fecha)}</p>
-          {!cierre && <p className="text-base leading-snug text-tinta-2">Cuenta lo vendido hasta las {textoHoraCorte(horaCorte)}, o hasta que lo cierres.</p>}
+          {!cierre &&
+            (fechaElegida ? (
+              <p className="text-base leading-snug text-tinta-2">Este día quedó abierto. Ciérralo con la base y el efectivo que había en la caja esa noche.</p>
+            ) : (
+              <p className="text-base leading-snug text-tinta-2">Cuenta lo vendido hasta las {textoHoraCorte(horaCorte)}, o hasta que lo cierres.</p>
+            ))}
         </div>
+
+        {/* Un día anterior con ventas que nadie cerró (pasó la hora de corte sin cierre): se ofrece cerrarlo. */}
+        {!fechaElegida && datos.sin_cerrar && (
+          <section role="status" aria-label="Día sin cerrar" className="rounded-2xl border-2 border-tinta bg-sol-suave p-3">
+            <p className="text-lg font-bold leading-tight">El {fechaLarga(datos.sin_cerrar).toLowerCase()} quedó sin cerrar.</p>
+            <p className="mt-0.5 text-base text-tinta-2">Ciérralo para que sus cuentas queden guardadas. Lo de hoy no se mueve.</p>
+            <Link href={`/cierre?fecha=${datos.sin_cerrar}`} className={cn(botonVariantes({ variante: "secundario", bloque: true }), "mt-2")}>
+              Cerrar ese día
+            </Link>
+          </section>
+        )}
 
         {cierre && (
           <Aviso tipo="ok">
             Día cerrado ({horaCorta(cierre.created_at)}). Estas cifras quedaron guardadas.
             {siguiente && ` Lo que registres desde ahora cuenta para el ${fechaLarga(siguiente).toLowerCase()}.`}
           </Aviso>
+        )}
+        {cierre && fechaElegida && (
+          <Link href="/cierre" className={botonVariantes({ variante: "secundario", tamano: "lg", bloque: true })}>
+            Volver al día de hoy
+          </Link>
         )}
         {error && <Aviso tipo="error">{error}</Aviso>}
 
@@ -122,7 +147,7 @@ export function CierreDia({
             <p className={cn("cifra text-[2.75rem]", ganancia < 0 && "text-aji")}>{formatearPesos(ganancia)}</p>
           </div>
           {r.fiado_nuevo > 0 && !cierre && (
-            <p className="mt-1 text-sm text-tinta-2">Incluye {formatearPesos(r.fiado_nuevo)} que quedaron fiados hoy (aún no entran a la caja).</p>
+            <p className="mt-1 text-base text-tinta-2">Incluye {formatearPesos(r.fiado_nuevo)} que quedaron fiados {fechaElegida ? "ese día" : "hoy"} (aún no entran a la caja).</p>
           )}
         </section>
 
@@ -211,7 +236,7 @@ export function CierreDia({
                     <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2">
                       <span>
                         <span className="block text-base font-bold">{fechaRelativa(c.fecha, hoy)}</span>
-                        <span className="block text-sm text-tinta-2">{fechaCorta(c.fecha)} · {d.texto}</span>
+                        <span className="block text-base text-tinta-2">{fechaCorta(c.fecha)} · {d.texto}</span>
                       </span>
                       <span className="cifra text-2xl">{formatearPesos(c.ganancia)}</span>
                     </li>
@@ -231,7 +256,7 @@ export function CierreDia({
       )}
 
       {hoja === "base" && (
-        <HojaMonto titulo="Base de la caja" ayuda="Con cuánto efectivo abriste la caja hoy." inicial={base} onElegir={(v) => { setBase(v); setHoja(null); }} onCerrar={() => setHoja(null)} />
+        <HojaMonto titulo="Base de la caja" ayuda={`Con cuánto efectivo abriste la caja ${fechaElegida ? "ese día" : "hoy"}.`} inicial={base} onElegir={(v) => { setBase(v); setHoja(null); }} onCerrar={() => setHoja(null)} />
       )}
       {hoja === "contado" && (
         <HojaMonto

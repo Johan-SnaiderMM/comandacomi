@@ -53,7 +53,7 @@ export function HojaCategoria({
         </div>
 
         <div>
-          <p className="mb-1.5 text-sm font-bold">Ícono</p>
+          <p className="mb-1.5 text-base font-bold">Ícono</p>
           <div className="grid grid-cols-6 gap-1.5">
             {ICONOS_CATEGORIA.map((e) => (
               <button

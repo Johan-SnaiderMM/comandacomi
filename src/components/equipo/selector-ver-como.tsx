@@ -36,7 +36,7 @@ export function SelectorVerComo({ roles, className }: { roles: Rol[]; className?
         <Eye className="size-6 shrink-0" aria-hidden />
         <span className="flex-1 text-left leading-tight">
           Ver la app como…
-          <span className="block text-sm font-normal text-tinta-2">Lo que ve el mesero, la cocina, la caja</span>
+          <span className="block text-base font-normal text-tinta-2">Lo que ve el mesero, la cocina, la caja</span>
         </span>
         <ChevronRight className="size-5 shrink-0" aria-hidden />
       </button>
@@ -51,7 +51,7 @@ export function SelectorVerComo({ roles, className }: { roles: Rol[]; className?
                   type="button"
                   disabled={pendiente}
                   onClick={() => elegir(r.id)}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-xl border-2 border-tinta bg-papel px-3 py-2 text-left shadow-sello-chico active:translate-y-[2px] active:shadow-none disabled:opacity-60"
+                  className="flex min-h-14 w-full items-center gap-3 rounded-xl border-2 border-tinta bg-papel px-3 py-2 text-left shadow-sello-chico active:translate-y-[2px] active:shadow-none disabled:shadow-none disabled:text-tinta-2"
                 >
                   <span className="min-w-0 flex-1 leading-tight">
                     <span className="block text-lg font-bold">{r.nombre}</span>

@@ -175,7 +175,8 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
                   className={cn(
                     "relative flex flex-col overflow-hidden rounded-xl border-2 border-tinta shadow-sello-chico",
                     cant > 0 ? "bg-sol-suave" : "bg-papel",
-                    !p.disponible && "opacity-50"
+                    // Agotado: apagado pero legible (antes, al 50 % de opacidad, no se leía).
+                    !p.disponible && "border-dashed border-tinta/50 bg-fondo text-tinta-2 shadow-none"
                   )}
                 >
                   <button
@@ -184,25 +185,25 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
                     onClick={() => despachar({ tipo: "agregar", producto: p })}
                     className="flex min-h-20 flex-1 flex-col items-start justify-between gap-1 p-2 text-left active:bg-sol disabled:active:bg-transparent"
                   >
-                    <span className="text-base font-bold leading-tight">{p.nombre}</span>
+                    {/* Cuántos van en el pedido: al inicio del nombre (como en el tiquete), nunca encima de él. */}
+                    <span className="text-base font-bold leading-tight">
+                      {cant > 0 && (
+                        <span className="cifra mr-1 inline-flex min-w-7 items-center justify-center rounded-full bg-tinta px-1.5 align-[0.05em] text-lg leading-6 text-papel">
+                          {cant}×
+                        </span>
+                      )}
+                      {p.nombre}
+                    </span>
                     <span className="cifra text-2xl">{p.disponible ? formatearPesos(p.precio) : "Agotado"}</span>
                   </button>
                   {p.disponible && (
                     <button
                       type="button"
                       onClick={() => setExtras(p)}
-                      className="flex min-h-12 items-center justify-center gap-1.5 border-t-2 border-dashed border-tinta/40 text-sm font-bold active:bg-tinta/10"
+                      className="flex min-h-12 items-center justify-center gap-1.5 border-t-2 border-dashed border-tinta/40 text-base font-bold active:bg-tinta/10"
                     >
                       <SlidersHorizontal className="size-4" aria-hidden /> Extras y nota
                     </button>
-                  )}
-                  {cant > 0 && (
-                    <span
-                      aria-label={`${cant} en el pedido`}
-                      className="cifra pointer-events-none absolute top-1.5 right-1.5 flex min-w-7 items-center justify-center rounded-full border-2 border-tinta bg-tinta px-1.5 py-0.5 text-lg text-papel"
-                    >
-                      {cant}
-                    </span>
                   )}
                 </div>
               );
@@ -217,10 +218,10 @@ export function TomarPedido({ menu, agregar }: { menu: MenuParaPedido; agregar: 
           onClick={() => setHojaCarrito(true)}
           disabled={unidades === 0}
           aria-label={`Ver el pedido: ${unidades} platos, ${formatearPesos(total)}`}
-          className="flex min-h-14 w-[8.75rem] shrink-0 flex-col items-start justify-center rounded-xl border-2 border-tinta bg-papel px-3 leading-none shadow-sello transition-[transform,box-shadow] duration-75 active:translate-y-[3px] active:shadow-none disabled:opacity-40 disabled:shadow-none"
+          className="flex min-h-14 w-[8.75rem] shrink-0 flex-col items-start justify-center rounded-xl border-2 border-tinta bg-papel px-3 leading-none shadow-sello transition-[transform,box-shadow] duration-75 active:translate-y-[3px] active:shadow-none disabled:shadow-none disabled:border-dashed disabled:border-tinta/50 disabled:bg-fondo disabled:text-tinta-2"
         >
           <span className="cifra text-2xl">{formatearPesos(total)}</span>
-          <span className="mt-0.5 text-xs font-bold text-tinta-2">{unidades === 1 ? "1 plato" : `${unidades} platos`} · ver</span>
+          <span className="mt-0.5 text-sm font-bold text-tinta-2">{unidades === 1 ? "1 plato" : `${unidades} platos`} · ver</span>
         </button>
         <Button tamano="lg" className="flex-1" disabled={unidades === 0 || enviando} onClick={enviar}>
           {enviando ? "Enviando…" : "Enviar a cocina"}

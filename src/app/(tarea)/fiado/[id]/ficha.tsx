@@ -49,7 +49,7 @@ export function Ficha({ ficha, restaurante }: { ficha: FichaFiado; restaurante: 
                       <Badge variante={m.tipo === "cargo" ? "aji" : "listo"}>{m.tipo === "cargo" ? "Fiado" : "Abono"}</Badge>
                       {m.pedido_numero ? `Pedido #${m.pedido_numero}` : m.medio === "transferencia" ? "Nequi" : "Efectivo"}
                     </p>
-                    <p className="mt-0.5 text-sm text-tinta-2">
+                    <p className="mt-0.5 text-base text-tinta-2">
                       {fechaCorta(m.fecha)} · {horaCorta(m.created_at)}
                       {m.referencia && ` · ${m.referencia}`}
                     </p>
@@ -58,7 +58,7 @@ export function Ficha({ ficha, restaurante }: { ficha: FichaFiado; restaurante: 
                     {m.tipo === "cargo" ? "+" : "−"} {formatearPesos(m.monto)}
                   </p>
                 </div>
-                {m.anulado && <p className="mt-1 text-sm font-bold">Anulado: {m.anulado_motivo}</p>}
+                {m.anulado && <p className="mt-1 text-base font-bold">Anulado: {m.anulado_motivo}</p>}
                 {!m.anulado && m.tipo === "abono" && (
                   <Button variante="fantasma" className="mt-1 -ml-2" onClick={() => setAnulando({ id: m.id, monto: m.monto })}>
                     <Undo2 className="size-5" aria-hidden /> Anular abono

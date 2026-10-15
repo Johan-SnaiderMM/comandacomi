@@ -69,7 +69,7 @@ export function HojaDestino({ mesas, destino, onElegir, onCerrar }: Props) {
                 )}
               >
                 {m.nombre}
-                {m.pedido_abierto && <span className="text-xs font-bold">Ocupada</span>}
+                {m.pedido_abierto && <span className="text-sm font-bold">Ocupada</span>}
               </button>
             ))}
           </div>

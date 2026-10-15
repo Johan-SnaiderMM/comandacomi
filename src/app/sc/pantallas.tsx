@@ -72,7 +72,7 @@ export function InicioSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
                   <ClipboardList className="size-4" aria-hidden /> Pendientes
                 </span>
                 <span className="cifra text-[2rem]">{pendientes}</span>
-                <span className="text-sm font-normal">{porCobrar === 0 ? "Todos cobrados" : `${porCobrar} por cobrar`}</span>
+                <span className="text-base font-normal">{porCobrar === 0 ? "Todos cobrados" : `${porCobrar} por cobrar`}</span>
               </Enlace>
             )}
             {verFiado && (
@@ -81,7 +81,7 @@ export function InicioSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
                   <NotebookPen className="size-4" aria-hidden /> Por cobrar
                 </span>
                 <span className={cn("cifra text-[2rem]", deben > 0 && "text-aji")}>{formatearPesos(deben)}</span>
-                <span className="text-sm font-normal text-tinta-2">fiado</span>
+                <span className="text-base font-normal text-tinta-2">fiado</span>
               </Enlace>
             )}
           </div>
@@ -121,7 +121,7 @@ export function MasSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
             <Wallet className="size-6 shrink-0" aria-hidden />
             <span className="flex-1 leading-tight">
               Anotar un gasto
-              <span className="block text-sm font-normal text-tinta-2">Se guarda y se sube con la señal</span>
+              <span className="block text-base font-normal text-tinta-2">Se guarda y se sube con la señal</span>
             </span>
           </Enlace>
         )}
@@ -129,7 +129,7 @@ export function MasSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
           <RefreshCw className="size-6 shrink-0" aria-hidden />
           <span className="flex-1 leading-tight">
             Sincronización
-            <span className="block text-sm font-normal text-tinta-2">
+            <span className="block text-base font-normal text-tinta-2">
               {porSubir === 0 && problemas === 0 ? "Todo al día" : `${porSubir} por subir${problemas > 0 ? ` · ${problemas} con problema` : ""}`}
             </span>
           </span>
@@ -138,7 +138,7 @@ export function MasSC({ vista, quien }: { vista: Snapshot; quien: Quien }) {
           <UtensilsCrossed className="size-6 shrink-0" aria-hidden />
           <span className="flex-1 leading-tight">
             Cierre, menú y más
-            <span className="block text-sm font-normal">Necesitan señal: abrir la app normal</span>
+            <span className="block text-base font-normal">Necesitan señal: abrir la app normal</span>
           </span>
         </a>
       </main>
@@ -200,7 +200,7 @@ export function Sincronizacion({ vista }: { vista: Snapshot | null }) {
               {pendientes.map((o) => (
                 <li key={o.clave} className="px-3 py-2 text-base">
                   <span className="font-bold">{describirOperacion(o, vista)}</span>
-                  {o.intentos > 0 && <span className="block text-sm text-tinta-2">Intentos: {o.intentos}</span>}
+                  {o.intentos > 0 && <span className="block text-base text-tinta-2">Intentos: {o.intentos}</span>}
                 </li>
               ))}
             </ul>

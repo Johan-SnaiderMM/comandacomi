@@ -64,11 +64,11 @@ export function HojaAbono({
 
       <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border-2 border-tinta bg-papel px-3 py-1">
         <div>
-          <p className="text-xs font-bold uppercase leading-tight tracking-wide text-tinta-2">Abona</p>
+          <p className="text-sm font-bold uppercase leading-tight tracking-wide text-tinta-2">Abona</p>
           <p className={cn("cifra text-[2.25rem]", excede && "text-aji")}>{formatearPesos(monto)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-bold uppercase leading-tight tracking-wide text-tinta-2">Debe</p>
+          <p className="text-sm font-bold uppercase leading-tight tracking-wide text-tinta-2">Debe</p>
           <p className="cifra text-[2.25rem] text-aji">{formatearPesos(saldo)}</p>
         </div>
       </div>

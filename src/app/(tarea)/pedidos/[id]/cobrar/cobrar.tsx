@@ -112,13 +112,13 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
         <section aria-label="Total a cobrar" className="tiquete border-2 border-b-0 border-tinta px-3 pt-2 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-tinta-2">A cobrar</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">A cobrar</p>
               <p className="cifra text-[2.75rem]">{formatearPesos(aCobrar)}</p>
             </div>
             <button
               type="button"
               onClick={() => setHoja("propina")}
-              className="flex min-h-12 shrink-0 items-center gap-1 rounded-xl border-2 border-tinta bg-papel px-3 text-sm font-bold leading-tight shadow-sello-chico transition-[transform,box-shadow] duration-75 active:translate-y-[2px] active:shadow-none"
+              className="flex min-h-12 shrink-0 items-center gap-1 rounded-xl border-2 border-tinta bg-papel px-3 text-base font-bold leading-tight shadow-sello-chico transition-[transform,box-shadow] duration-75 active:translate-y-[2px] active:shadow-none"
             >
               <span className="text-left">
                 Propina
@@ -150,11 +150,11 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
           <>
             <div className="flex items-center justify-between gap-2 rounded-xl border-2 border-tinta bg-papel px-3 py-1">
               <div>
-                <p className="text-xs font-bold uppercase leading-tight tracking-wide text-tinta-2">Recibido</p>
+                <p className="text-sm font-bold uppercase leading-tight tracking-wide text-tinta-2">Recibido</p>
                 <p className="cifra text-[2.25rem]">{formatearPesos(recibido)}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs font-bold uppercase leading-tight tracking-wide text-tinta-2">{recibido === 0 || efectivo.alcanza ? "Vuelto" : "Faltan"}</p>
+                <p className="text-sm font-bold uppercase leading-tight tracking-wide text-tinta-2">{recibido === 0 || efectivo.alcanza ? "Vuelto" : "Faltan"}</p>
                 <p className={cn("cifra text-[2.25rem]", recibido > 0 && (efectivo.alcanza ? "text-listo" : "text-aji"))}>
                   {formatearPesos(recibido === 0 ? 0 : efectivo.alcanza ? efectivo.vuelto : efectivo.falta)}
                 </p>
@@ -195,7 +195,7 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
                 <div className="rounded-xl border-2 border-tinta bg-papel px-3 py-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-tinta-2">Paga en efectivo</p>
+                      <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">Paga en efectivo</p>
                       <p className="cifra text-4xl">{formatearPesos(pagaAhora)}</p>
                     </div>
                     <Button
@@ -235,7 +235,7 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
             >
               <span className="text-lg font-bold leading-tight">
                 {cliente ? cliente.nombre : "Elegir cliente"}
-                {cliente && <span className="block text-sm font-normal text-tinta-2">{cliente.saldo > 0 ? `Ya debe ${formatearPesos(cliente.saldo)}` : "Está al día"}</span>}
+                {cliente && <span className="block text-base font-normal text-tinta-2">{cliente.saldo > 0 ? `Ya debe ${formatearPesos(cliente.saldo)}` : "Está al día"}</span>}
               </span>
               <ChevronDown className="size-5 shrink-0" aria-hidden />
             </button>
@@ -245,14 +245,14 @@ export function Cobrar({ detalle, clientes: clientesIniciales }: { detalle: Pedi
                 <span className="cifra text-3xl text-aji">{formatearPesos(restoFiado)}</span>
               </p>
               {cliente && restoFiado > 0 && (
-                <p className="mt-1 text-sm text-tinta-2">Después de esto debería {formatearPesos(cliente.saldo + restoFiado)}.</p>
+                <p className="mt-1 text-base text-tinta-2">Después de esto debería {formatearPesos(cliente.saldo + restoFiado)}.</p>
               )}
             </div>
             {abonando ? (
               <>
                 <div className="flex items-center justify-between rounded-xl border-2 border-tinta bg-papel px-3 py-1.5">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-tinta-2">Paga ahora en efectivo</p>
+                    <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">Paga ahora en efectivo</p>
                     <p className="cifra text-4xl">{formatearPesos(pagaAhora)}</p>
                   </div>
                   <Button

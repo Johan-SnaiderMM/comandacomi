@@ -33,7 +33,7 @@ export function Segmentado<T extends string>({
             aria-checked={activo}
             onClick={() => onCambio(o.valor)}
             className={cn(
-              "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-tinta px-1 text-sm font-bold leading-tight transition-[transform,box-shadow] duration-75",
+              "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-tinta px-1 text-base font-bold leading-tight transition-[transform,box-shadow] duration-75",
               "active:translate-y-[2px] active:shadow-none",
               activo ? "bg-sol shadow-sello-chico" : "bg-papel text-tinta-2"
             )}

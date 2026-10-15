@@ -133,21 +133,21 @@ export function HojaPlato({
         </div>
 
         <div>
-          <p className="mb-1.5 text-sm font-bold">Precio</p>
+          <p className="mb-1.5 text-base font-bold">Precio</p>
           <button
             type="button"
             onClick={() => setEditandoPrecio(true)}
             className="flex min-h-14 w-full items-center justify-between rounded-xl border-2 border-tinta bg-papel px-3 shadow-sello-chico active:translate-y-[2px] active:shadow-none"
           >
             <span className="cifra text-4xl">{formatearPesos(precio)}</span>
-            <span className="flex items-center gap-1 text-sm font-bold text-tinta-2">
+            <span className="flex items-center gap-1 text-base font-bold text-tinta-2">
               <Pencil className="size-4" aria-hidden /> Cambiar
             </span>
           </button>
         </div>
 
         <div>
-          <p className="mb-1.5 text-sm font-bold">Categoría</p>
+          <p className="mb-1.5 text-base font-bold">Categoría</p>
           <div className="flex flex-wrap gap-2">
             {categorias.map((c) => (
               <button

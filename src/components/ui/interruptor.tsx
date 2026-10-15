@@ -36,7 +36,7 @@ export function Interruptor({
       <span aria-hidden className={cn("flex h-7 w-12 items-center rounded-full border-2 border-tinta px-0.5", activo ? "justify-end bg-listo" : "justify-start bg-papel")}>
         <span className="size-5 rounded-full border-2 border-tinta bg-papel" />
       </span>
-      <span className={cn("text-xs font-bold leading-none", activo ? "text-listo" : "text-aji")}>{activo ? textoActivo : textoInactivo}</span>
+      <span className={cn("text-sm font-bold leading-none", activo ? "text-listo" : "text-aji")}>{activo ? textoActivo : textoInactivo}</span>
     </button>
   );
 }

@@ -169,11 +169,11 @@ export function PedidosPorConfirmar({ pedidos, ahora, restaurante }: { pedidos: 
                 disabled={pendiente}
                 onClick={() => aceptar(aceptando, m)}
                 className={cn(
-                  "flex min-h-16 flex-col items-center justify-center rounded-xl border-2 border-tinta bg-papel text-tinta shadow-sello-chico transition-[transform,box-shadow] duration-75 active:translate-y-[2px] active:shadow-none disabled:opacity-40"
+                  "flex min-h-16 flex-col items-center justify-center rounded-xl border-2 border-tinta bg-papel text-tinta shadow-sello-chico transition-[transform,box-shadow] duration-75 active:translate-y-[2px] active:shadow-none disabled:shadow-none disabled:border-dashed disabled:border-tinta/50 disabled:bg-fondo disabled:text-tinta-2"
                 )}
               >
                 <span className="cifra text-3xl">{m}</span>
-                <span className="text-sm font-bold">min</span>
+                <span className="text-base font-bold">min</span>
               </button>
             ))}
           </div>

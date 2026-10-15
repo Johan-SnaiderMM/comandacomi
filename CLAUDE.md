@@ -36,7 +36,10 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   NOT NULL + RLS (una prueba falla si no).
 - Pruebas de SQL/RLS: Postgres real en memoria con PGlite (`src/test/base-datos.ts`), no hay Docker ni CLI de Supabase.
 - Diseño: objetivos táctiles ≥ 48 px, texto ≥ 16 px, acciones principales abajo, sin `hover`, sin scroll horizontal.
-  Verifica cada pantalla a 360×640 y 390×844.
+  Verifica cada pantalla a 360×640 y 390×844. Solo bajan a 14 px (`text-sm`) las etiquetas cortas en MAYÚSCULAS, las
+  insignias y lo que no cabe (la cuadrícula de categorías de gasto); las etiquetas de la barra de abajo van en 12 px.
+  Lo apagado (botón deshabilitado, plato agotado) se ve con borde punteado, fondo gris y texto legible: nunca con
+  `opacity`, que lo vuelve ilegible.
 - Los componentes `"use client"` NO pueden importar Zod ni `server-only` (directa ni indirectamente): una prueba
   (`src/test/peso-del-cliente.test.ts`) lo verifica. Las constantes que necesite el cliente viven fuera de `lib/esquemas/`.
 - Después de cobrar/guardar, la acción revalida todo (`revalidatePath("/", "layout")`) y la página refresca: una pantalla

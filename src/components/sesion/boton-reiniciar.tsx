@@ -43,7 +43,7 @@ export function BotonReiniciar({ className, nombreActual, conPin = false }: { cl
         <RotateCcw className="size-6 shrink-0" aria-hidden />
         <span className="flex-1 text-left leading-tight">
           Reiniciar demo
-          <span className="block text-sm font-normal text-tinta-2">Cambia el nombre del local y recarga los datos</span>
+          <span className="block text-base font-normal text-tinta-2">Cambia el nombre del local y recarga los datos</span>
         </span>
       </button>
 

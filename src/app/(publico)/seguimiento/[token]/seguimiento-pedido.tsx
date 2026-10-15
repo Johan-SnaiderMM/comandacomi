@@ -148,6 +148,9 @@ export function SeguimientoPedido({ token, inicial }: { token: string; inicial: 
 
         <PanelEstado etapa={p.etapa} domicilio={domicilio} restante={restante} motivo={p.motivo} />
 
+        {/* Justo debajo del estado: es lo que el cliente quiere hacer mientras espera (y así no tiene que bajar a buscarlo). */}
+        {!seguimientoTerminado(p.etapa) && <AvisarPedido token={token} />}
+
         {error && <Aviso tipo="error">{error}</Aviso>}
 
         {p.etapa !== "cancelado" && (
@@ -237,7 +240,6 @@ export function SeguimientoPedido({ token, inicial }: { token: string; inicial: 
         )}
 
         <div className="space-y-2">
-          {!seguimientoTerminado(p.etapa) && <AvisarPedido token={token} />}
           {p.etapa === "por_confirmar" && (
             <Button variante="secundario" tamano="lg" bloque onClick={() => setConfirmando(true)}>
               Cancelar pedido

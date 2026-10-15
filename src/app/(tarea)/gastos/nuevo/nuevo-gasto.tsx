@@ -93,7 +93,7 @@ export function NuevoGasto() {
         <EncabezadoPantalla titulo="Nuevo gasto" atras="/gastos" />
         <main className="flex flex-1 flex-col gap-3 px-4 pt-3 pb-[calc(var(--accion-h)+var(--seguro-abajo))]">
           <div className="rounded-xl border-2 border-tinta bg-papel px-3 py-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-tinta-2">¿Cuánto fue?</p>
+            <p className="text-sm font-bold uppercase tracking-wide text-tinta-2">¿Cuánto fue?</p>
             <p className="cifra text-[3.5rem]">{formatearPesos(monto)}</p>
           </div>
           <TecladoNumerico className="mt-auto" onTecla={(t) => setMonto((v) => aplicarTecla(v, t))} />
@@ -117,7 +117,7 @@ export function NuevoGasto() {
           className="flex min-h-14 items-center justify-between rounded-xl border-2 border-tinta bg-papel px-3 text-left active:bg-tinta/10"
         >
           <span className="cifra text-4xl">{formatearPesos(monto)}</span>
-          <span className="flex items-center gap-1 text-sm font-bold text-tinta-2">
+          <span className="flex items-center gap-1 text-base font-bold text-tinta-2">
             <Pencil className="size-4" aria-hidden /> Cambiar
           </span>
         </button>
@@ -158,7 +158,7 @@ export function NuevoGasto() {
         >
           <span className="leading-tight">
             Salió del efectivo de la caja
-            <span className="block text-sm font-normal text-tinta-2">{deCaja ? "Sí: baja el efectivo esperado" : "No: se pagó por transferencia"}</span>
+            <span className="block text-base font-normal text-tinta-2">{deCaja ? "Sí: baja el efectivo esperado" : "No: se pagó por transferencia"}</span>
           </span>
           <span aria-hidden className={cn("flex h-7 w-12 shrink-0 items-center rounded-full border-2 border-tinta px-0.5", deCaja ? "justify-end bg-listo" : "justify-start bg-papel")}>
             <span className="size-5 rounded-full border-2 border-tinta bg-papel" />

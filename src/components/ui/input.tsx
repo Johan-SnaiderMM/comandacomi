@@ -12,7 +12,7 @@ export function Input({ className, type = "text", autoComplete = "off", ...props
       autoComplete={autoComplete}
       className={cn(
         "min-h-12 w-full rounded-xl border-2 border-tinta bg-papel px-3 text-base text-tinta placeholder:text-tinta-2/70",
-        "disabled:opacity-50",
+        "disabled:border-dashed disabled:bg-fondo disabled:text-tinta-2",
         className
       )}
       {...props}

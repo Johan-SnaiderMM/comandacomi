@@ -60,7 +60,7 @@ export function ListaGastos({ dia, guardado }: { dia: GastosDelDia; guardado: nu
                     {!g.de_caja && <Badge className="no-underline">Pagado aparte</Badge>}
                   </p>
                   {g.nota && <p className="text-base text-tinta-2">{g.nota}</p>}
-                  <p className="text-sm text-tinta-2">{horaCorta(g.created_at)}</p>
+                  <p className="text-base text-tinta-2">{horaCorta(g.created_at)}</p>
                 </div>
                 <p className={cn("cifra text-2xl", g.anulado && "line-through opacity-60")}>{formatearPesos(g.monto)}</p>
               </div>
@@ -80,7 +80,7 @@ export function ListaGastos({ dia, guardado }: { dia: GastosDelDia; guardado: nu
               )}
 
               {g.anulado ? (
-                <p className="mt-1 text-sm font-bold">Anulado: {g.anulado_motivo}</p>
+                <p className="mt-1 text-base font-bold">Anulado: {g.anulado_motivo}</p>
               ) : (
                 <Button variante="fantasma" className="mt-1 -ml-2" onClick={() => setAnulando({ id: g.id, monto: g.monto, categoria: ETIQUETA_CATEGORIA[g.categoria] })}>
                   <Undo2 className="size-5" aria-hidden /> Anular

@@ -36,8 +36,8 @@ export function HojaCarrito({
             <li key={l.clave} className="flex items-center gap-3 py-3 first:pt-0">
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-bold leading-tight">{l.nombre}</p>
-                {l.adiciones.length > 0 && <p className="text-sm text-tinta-2">+ {l.adiciones.map((a) => a.nombre).join(", ")}</p>}
-                {l.notas && <p className="text-sm font-bold">“{l.notas}”</p>}
+                {l.adiciones.length > 0 && <p className="text-base text-tinta-2">+ {l.adiciones.map((a) => a.nombre).join(", ")}</p>}
+                {l.notas && <p className="text-base font-bold">“{l.notas}”</p>}
                 <p className="cifra mt-1 text-xl">{formatearPesos(subtotalDe(l))}</p>
               </div>
               <Stepper

@@ -49,7 +49,7 @@ export function ListaFiado({
               <Enlace href={`/fiado/${c.id}`} className="flex min-h-12 items-center justify-between gap-2 active:opacity-70">
                 <span className="min-w-0">
                   <span className="block truncate text-lg font-bold leading-tight">{c.nombre}</span>
-                  <span className={cn("block text-sm", dias >= 5 ? "font-bold text-aji" : "text-tinta-2")}>
+                  <span className={cn("block text-base", dias >= 5 ? "font-bold text-aji" : "text-tinta-2")}>
                     {c.debe_desde ? `Debe desde ${textoDias(dias)} · ${fechaCorta(c.debe_desde)}` : "Con deuda"}
                   </span>
                 </span>

@@ -76,7 +76,7 @@ export function HojaCliente({
                   className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border-2 border-tinta bg-papel px-3 text-left shadow-sello-chico transition-[transform,box-shadow] duration-75 active:translate-y-[2px] active:shadow-none"
                 >
                   <span className="text-lg font-bold leading-tight">{c.nombre}</span>
-                  <span className={`text-sm font-bold ${c.saldo > 0 ? "text-aji" : "text-tinta-2"}`}>{c.saldo > 0 ? `Debe ${formatearPesos(c.saldo)}` : "Al día"}</span>
+                  <span className={`text-base font-bold ${c.saldo > 0 ? "text-aji" : "text-tinta-2"}`}>{c.saldo > 0 ? `Debe ${formatearPesos(c.saldo)}` : "Al día"}</span>
                 </button>
               </li>
             ))}

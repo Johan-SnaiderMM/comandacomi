@@ -24,7 +24,7 @@ function Enlace({ href, Icono, titulo, detalle }: { href: string; Icono: LucideI
       <Icono className="size-6 shrink-0" aria-hidden />
       <span className="flex-1 leading-tight">
         {titulo}
-        <span className="block text-sm font-normal text-tinta-2">{detalle}</span>
+        <span className="block text-base font-normal text-tinta-2">{detalle}</span>
       </span>
       <ChevronRight className="size-5 shrink-0" aria-hidden />
     </Link>
@@ -54,7 +54,7 @@ export default async function Mas() {
               <Eye className="size-6 shrink-0" aria-hidden />
               <span className="flex-1 text-left leading-tight">
                 Volver a ver como dueño
-                <span className="block text-sm font-normal">Ahora la ves como {quien.viendoComo}</span>
+                <span className="block text-base font-normal">Ahora la ves como {quien.viendoComo}</span>
               </span>
             </button>
           </form>
@@ -64,7 +64,7 @@ export default async function Mas() {
             <Lightbulb className="size-6 shrink-0" aria-hidden />
             <span className="flex-1 text-left leading-tight">
               Recorrido guiado
-              <span className="block text-sm font-normal">Paso a paso: pedido, cobro, fiado y cierre</span>
+              <span className="block text-base font-normal">Paso a paso: pedido, cobro, fiado y cierre</span>
             </span>
           </BotonGuia>
         )}
@@ -94,7 +94,7 @@ export default async function Mas() {
             <MessageCircle className="size-6 shrink-0" aria-hidden />
             <span className="flex-1 leading-tight">
               Quiero esta app
-              <span className="block text-sm font-normal">Escríbenos por WhatsApp</span>
+              <span className="block text-base font-normal">Escríbenos por WhatsApp</span>
             </span>
             <ChevronRight className="size-5 shrink-0" aria-hidden />
           </a>

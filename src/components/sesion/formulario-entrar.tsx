@@ -20,11 +20,11 @@ export function FormularioEntrar({ ir = null }: { ir?: string | null }) {
         {pendiente ? "Entrando…" : "Entrar a la demo"}
       </Button>
       {estado.error ? (
-        <p role="alert" className="mt-2 text-center text-sm font-bold text-aji">
+        <p role="alert" className="mt-2 text-center text-base font-bold text-aji">
           {estado.error}
         </p>
       ) : (
-        <p className="mt-2 text-center text-sm text-tinta-2">
+        <p className="mt-2 text-center text-base text-tinta-2">
           {ir ? `Entras directo a ${DESTINOS_DE_ENTRADA[ir]}. ` : ""}Sin registro. Todos los datos son de ejemplo.
         </p>
       )}

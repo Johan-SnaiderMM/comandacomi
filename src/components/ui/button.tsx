@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils";
 /**
  * Botón "tecla de caja registradora": borde grueso y sombra dura que se hunde al tocar.
  * Tamaños táctiles: md = 48 px, lg = 56 px. Sin hover: el feedback es el hundimiento inmediato.
+ * Apagado: borde punteado, fondo gris y sin sombra, pero con el texto LEGIBLE (dice qué falta, p. ej. "Cuenta el
+ * efectivo para cerrar"); antes se ponía al 40 % de opacidad y no se alcanzaba a leer.
  */
 export const botonVariantes = cva(
   [
     "inline-flex select-none items-center justify-center gap-2 rounded-xl border-2 border-tinta text-center font-bold leading-tight",
     "transition-[transform,box-shadow] duration-75 active:translate-y-[3px] active:shadow-none",
-    "disabled:pointer-events-none disabled:opacity-40 disabled:shadow-none",
+    "disabled:pointer-events-none disabled:shadow-none disabled:border-dashed disabled:border-tinta/50 disabled:bg-fondo disabled:text-tinta-2",
   ],
   {
     variants: {

@@ -34,7 +34,7 @@ export function HojaPropina({
           Sin propina
         </button>
         <button type="button" className={cn(opcion, propina === sugerida && sugerida > 0 && !otra ? "bg-sol" : "bg-papel")} onClick={() => onElegir(sugerida)}>
-          10 %<span className="text-sm">{formatearPesos(sugerida)}</span>
+          10 %<span className="text-base">{formatearPesos(sugerida)}</span>
         </button>
         <button type="button" className={cn(opcion, otra ? "bg-sol" : "bg-papel")} onClick={() => setOtra(true)}>
           Otra

@@ -5,8 +5,8 @@
  */
 export type Ritmo = { minMs: number; maxMs: number };
 
-/** La plancha: un pedido nuevo no puede tardar más de 10 s en aparecer. */
-export const RITMO_PLANCHA: Ritmo = { minMs: 4_000, maxMs: 10_000 };
+/** La plancha: un pedido nuevo no puede tardar más de 8 s en aparecer. */
+export const RITMO_PLANCHA: Ritmo = { minMs: 4_000, maxMs: 8_000 };
 /** Pendientes: lo que cambia lo hace otra persona (la plancha, la caja, un cliente). */
 export const RITMO_PENDIENTES: Ritmo = { minMs: 8_000, maxMs: 20_000 };
 /** El aviso de pedidos en línea, mientras pueda llegar uno. */

@@ -75,8 +75,8 @@ describe("el pulso", () => {
     e.motor.escuchar({ ritmo: () => RITMO_PLANCHA });
     await e.soltar();
     await e.avanzar(60_000);
-    // 0 → +4 → +6 → +9 → +10 → +10…
-    expect(e.consultas.slice(0, 6)).toEqual([0, 4_000, 10_000, 19_000, 29_000, 39_000]);
+    // 0 → +4 → +6 → +8 → +8 → +8…
+    expect(e.consultas.slice(0, 6)).toEqual([0, 4_000, 10_000, 18_000, 26_000, 34_000]);
 
     e.responder(pulso("b"));
     const antes = e.consultas.length;

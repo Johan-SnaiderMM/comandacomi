@@ -71,7 +71,7 @@ Cliente envía ──▶ "Por confirmar" ──▶ el dueño ACEPTA (con minutos
     anulación) y el resumen del aviso de pedidos en línea. Pendientes, la plancha y la copia sin conexión solo traen
     sus datos si la huella cambió.
   - **El ritmo se adapta** (`lib/ritmo.ts`): rápido cuando algo acaba de cambiar o alguien toca la pantalla, y cada vez
-    más espaciado mientras todo sigue igual, hasta un tope: plancha 4 → 10 s, aviso 5 → 20 s, Pendientes 8 → 20 s. Si no
+    más espaciado mientras todo sigue igual, hasta un tope: plancha 4 → 8 s, aviso 5 → 20 s, Pendientes 8 → 20 s. Si no
     puede llegar un pedido en línea (apagados o fuera del horario) y no hay ninguno esperando, el aviso pregunta cada
     minuto. La plancha se trae completa al menos cada minuto (para que avancen las esperas) y la copia sin conexión
     cada 5 minutos (el menú y los clientes no tienen huella).

@@ -68,7 +68,7 @@ function suscribirSilencio(oyente: () => void): () => void {
 /**
  * Panel de la plancha: lo que hay que cocinar, pedido por pedido y plato por plato. Un toque marca un plato listo (y el
  * cliente lo ve en su celular); cuando todos los platos de un pedido están listos, el pedido pasa solo a "listo".
- * Se actualiza sola: escucha el pulso de la pestaña (`lib/pulso.ts`, como mucho cada 10 s) y trae la plancha solo si la
+ * Se actualiza sola: escucha el pulso de la pestaña (`lib/pulso.ts`, como mucho cada 8 s) y trae la plancha solo si la
  * huella de los pedidos cambió. Los pedidos nuevos llegan con sonido y vibración, y también los platos que se le
  * agregan a un pedido que ya estaba (esos quedan marcados "Agregado" hasta que se preparan).
  * Usa todo el ancho de la pantalla (tableta o celular acostado): ver `(cocina)/layout.tsx`.

@@ -89,7 +89,10 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   Se llaman desde el servidor con `consultarPublico`/`ejecutarPublico` (`lib/datos/llamar.ts`), nunca con tablas ni
   `service_role`. Un pedido con `origen = 'cliente'` NO está en cocina (`en_cocina`) hasta que el personal lo acepta
   (`confirmar_pedido_cliente`): toda función nueva que liste o cuente pedidos de cocina debe filtrar por `en_cocina`.
-  El seguimiento va por `token_seguimiento` (uuid) y devuelve solo ese pedido y solo lo que el cliente puede ver. Las
+  El seguimiento va por `token_seguimiento` (uuid) y devuelve solo ese pedido y solo lo que el cliente puede ver.
+  Ley 1581 (migración 25): `publico_crear_pedido` exige `p_acepta_datos = true` y guarda `datos_autorizados_at`; un
+  dato personal nuevo que se le pida al cliente se agrega también a la política (`/pedir/[slug]/datos`) y cambia su
+  fecha (`lib/publico/datos.ts`). Las
   páginas públicas viven en `src/app/(publico)/` (ver `lib/rutas-publicas.ts`: ahí no corren ProveedorSync ni el
   service worker). "Tiempo real" = consulta periódica (GET `no-store`), no websockets. Cambios en esta parte: corre
   `npm run e2e:clientes`.

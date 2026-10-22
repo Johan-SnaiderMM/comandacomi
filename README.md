@@ -331,6 +331,13 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
   lee ni el personal; sin local no se ve ni una fila; y cada función, llamada con datos vacíos o con ids de otro local,
   no cambia nada ni deja ver datos ajenos. Además, la app nunca le entrega al navegador la dirección ni la llave de
   Supabase: todo pasa por el servidor.
+- **Datos personales (Ley 1581 de 2012):** el cliente que pide en línea acepta la política de datos del restaurante
+  antes de enviar (casilla en la hoja del pedido; la política está en `/pedir/<local>/datos`, enlazada al pie del
+  menú). La base no recibe un pedido sin esa aceptación y guarda cuándo se dio (`pedidos.datos_autorizados_at`,
+  migración `20261005000025_autorizacion_datos.sql`): es la prueba que pide la ley. Al crear un cliente de fiado, la
+  pantalla le recuerda al personal pedirle permiso. Si cambia el texto de la política, cambia también su fecha
+  (`lib/publico/datos.ts`). Pendiente: que un abogado revise el texto, y los datos de contacto de cada restaurante
+  (dirección, teléfono o correo), que la app todavía no guarda.
 - **Avisos push solo a servicios de avisos de verdad** (`lib/push/servicios.ts`): Google, Mozilla, Apple y Microsoft.
   Una dirección inventada se rechaza al guardarla y, si alguien la metió directo en la base, el servidor no le manda
   nada y la borra. Así nadie puede usar el servidor para hacerle peticiones a otro sitio.

@@ -37,6 +37,7 @@ async function pedidoDeCliente(slug: string) {
     p_direccion: null,
     p_notas: null,
     p_items: [{ producto_id: producto.id, cantidad: 1 }],
+    p_acepta_datos: true,
   });
   await db.query(`update public.pedidos set created_at = created_at - interval '1 minute' where token_seguimiento = $1`, [r.token]);
   return r;
@@ -167,7 +168,7 @@ describe("aviso al personal de un pedido nuevo (visitante sin cuenta)", () => {
     const slugB = (await db.query<{ slug: string }>(`select slug from public.restaurantes where id = $1`, [B.restauranteId])).rows[0].slug;
     const r = await publico<{ token: string }>("publico_crear_pedido", {
       p_slug: slugB, p_tipo: "llevar", p_nombre: "Luis", p_telefono: "3125559999", p_direccion: null, p_notas: null,
-      p_items: [{ producto_id: menuB.productos.find((p) => p.nombre === "Perro caliente")!.id, cantidad: 1 }],
+      p_items: [{ producto_id: menuB.productos.find((p) => p.nombre === "Perro caliente")!.id, cantidad: 1 }], p_acepta_datos: true,
     });
     const d = await publico<{ destinos: Destino[] }>("publico_destinos_push", { p_token: r.token });
     expect(d.destinos.map((x) => x.endpoint)).not.toContain(soloDeA);
@@ -227,7 +228,7 @@ describe("limpieza: los celulares de visitas anteriores no se quedan para siempr
     const menuC = await rpc<Menu>(db, C.userId, "obtener_menu_para_pedido");
     const r = await publico<{ token: string }>("publico_crear_pedido", {
       p_slug: slugC, p_tipo: "llevar", p_nombre: "Ana", p_telefono: "3135550000", p_direccion: null, p_notas: null,
-      p_items: [{ producto_id: menuC.productos.find((p) => p.nombre === "Perro caliente")!.id, cantidad: 1 }],
+      p_items: [{ producto_id: menuC.productos.find((p) => p.nombre === "Perro caliente")!.id, cantidad: 1 }], p_acepta_datos: true,
     });
     const cliente = endpoint("cliente");
     await publico("publico_guardar_push_cliente", { p_token: r.token, p_endpoint: cliente, p_p256dh: p256dh, p_auth: auth });

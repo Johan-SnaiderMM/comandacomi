@@ -63,6 +63,7 @@ async function pedirComoCliente(slug: string, items: unknown[], extra: Record<st
     p_direccion: null,
     p_notas: null,
     p_items: items,
+    p_acepta_datos: true,
     ...extra,
   });
   if (!reciente) await db.query(`update public.pedidos set created_at = created_at - interval '10 minutes' where token_seguimiento = $1`, [r.token]);
@@ -561,5 +562,30 @@ describe("la demo", () => {
     await rpc(db, C.userId, "reiniciar_demo");
     expect(await seguir(r.token)).toBeNull();
     expect(await rpc<unknown[]>(db, C.userId, "listar_pedidos_por_confirmar")).toEqual([]);
+  });
+});
+
+describe("autorización de tratamiento de datos (Ley 1581, migración 25)", () => {
+  it("sin aceptar la política la base no recibe el pedido", async () => {
+    for (const acepta of [null, false]) {
+      await expect(pedirComoCliente(slugA, unPerroCaliente(menuA), { p_acepta_datos: acepta })).rejects.toThrow(/acepta el tratamiento de tus datos/);
+    }
+  });
+
+  it("cada pedido en línea guarda cuándo se dio la autorización (la prueba que pide la ley)", async () => {
+    const r = await pedirComoCliente(slugA, unPerroCaliente(menuA));
+    const fila = await db.query<{ autorizado: Date | null }>(`select datos_autorizados_at as autorizado from public.pedidos where token_seguimiento = $1`, [r.token]);
+    expect(fila.rows[0].autorizado).not.toBeNull();
+    // Los del mostrador no pasan por aquí: no llevan la marca.
+    const mostrador = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.pedidos where restaurante_id = $1 and origen <> 'cliente' and datos_autorizados_at is not null`,
+      [A.restauranteId]
+    );
+    expect(mostrador.rows[0].n).toBe(0);
+  });
+
+  it("no quedó la versión vieja de la función (por ella se podría pedir sin aceptar)", async () => {
+    const r = await db.query<{ n: number }>(`select count(*)::int as n from pg_proc where proname = 'publico_crear_pedido'`);
+    expect(r.rows[0].n).toBe(1);
   });
 });

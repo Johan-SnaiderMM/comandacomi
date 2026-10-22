@@ -62,7 +62,7 @@ const unPedido = async (slug = slugA) => {
   const m = await menuPublico(slug);
   return rpc<{ token: string }>(db, null, "publico_crear_pedido", {
     p_slug: slug, p_tipo: "llevar", p_nombre: "Marta Pérez", p_telefono: `310${String(Math.floor(1_000_000 + Math.random() * 8_999_999))}`,
-    p_direccion: null, p_notas: null, p_items: [{ producto_id: m.productos[0].id, cantidad: 1 }],
+    p_direccion: null, p_notas: null, p_items: [{ producto_id: m.productos[0].id, cantidad: 1 }], p_acepta_datos: true,
   });
 };
 

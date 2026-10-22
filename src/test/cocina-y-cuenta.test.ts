@@ -100,7 +100,7 @@ describe("lo que no se cocina no pasa por la plancha", () => {
   it("el pedido de un cliente con solo bebidas queda listo al aceptarlo, no antes", async () => {
     const slug = (await db.query<{ slug: string }>(`select slug from public.restaurantes where id = $1`, [rest])).rows[0].slug;
     const c = await rpc<{ token: string }>(db, null, "publico_crear_pedido", {
-      p_slug: slug, p_tipo: "llevar", p_nombre: "Marta Pérez", p_telefono: "3105550001", p_direccion: null, p_notas: null, p_items: [linea("Gaseosa 1,5 L")],
+      p_slug: slug, p_tipo: "llevar", p_nombre: "Marta Pérez", p_telefono: "3105550001", p_direccion: null, p_notas: null, p_items: [linea("Gaseosa 1,5 L")], p_acepta_datos: true,
     });
     const id = (await db.query<{ id: string }>(`select id from public.pedidos where token_seguimiento = $1`, [c.token])).rows[0].id;
     const seguir = () => rpc<{ pedido: { etapa: string }; items: { listo: boolean }[] }>(db, null, "publico_ver_pedido", { p_token: c.token });

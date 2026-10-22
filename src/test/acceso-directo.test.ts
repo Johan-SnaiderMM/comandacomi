@@ -127,7 +127,7 @@ beforeAll(async () => {
   const menuB = await rpc<{ productos: { id: string }[] }>(db, null, "publico_menu", { p_slug: slugB });
   const enLinea = await rpc<{ token: string }>(db, null, "publico_crear_pedido", {
     p_slug: slugB, p_tipo: "domicilio", p_nombre: "Comprador Secreto", p_telefono: "3117776655", p_direccion: "Calle Secreta 12-34",
-    p_notas: null, p_items: [{ producto_id: menuB.productos[0].id, cantidad: 1 }],
+    p_notas: null, p_items: [{ producto_id: menuB.productos[0].id, cantidad: 1 }], p_acepta_datos: true,
   });
   await rpc(db, null, "publico_guardar_push_cliente", { p_token: enLinea.token, p_endpoint: "https://fcm.googleapis.com/fcm/send/secreto-cliente-b", p_p256dh: P256DH, p_auth: AUTH });
   const persona = (await db.query<{ id: string }>(`insert into auth.users (email) values ('equipo-b@ejemplo.test') returning id`)).rows[0].id;

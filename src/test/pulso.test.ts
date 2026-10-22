@@ -88,7 +88,7 @@ describe("la huella de los pedidos", () => {
       await cambia(async () => {
         const r = await rpc<{ token: string }>(db, null, "publico_crear_pedido", {
           p_slug: slug, p_tipo: "llevar", p_nombre: "Marta Pérez", p_telefono: "3101234567", p_direccion: null, p_notas: null,
-          p_items: [{ producto_id: menu.productos[0].id, cantidad: 1 }],
+          p_items: [{ producto_id: menu.productos[0].id, cantidad: 1 }], p_acepta_datos: true,
         });
         token = r.token;
       })

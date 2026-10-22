@@ -248,6 +248,10 @@ export function PedirEnLinea({
             </ul>
           </section>
         ))}
+
+        <Link href={`/pedir/${restaurante.slug}/datos`} className="flex min-h-12 items-center justify-center text-base font-bold text-tinta-2 underline">
+          Cómo usamos tus datos
+        </Link>
       </main>
 
       {abierto && unidades > 0 && (

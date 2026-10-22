@@ -18,6 +18,8 @@ export const esquemaPedidoCliente = z
     telefono: z.string().trim().min(7, "Escribe tu número de celular.").max(20, "El celular es muy largo."),
     direccion: z.string().trim().max(120, "La dirección es muy larga (máximo 120 caracteres).").default(""),
     notas: z.string().trim().max(200, "La nota es muy larga (máximo 200 caracteres).").default(""),
+    /** La política de datos (Ley 1581): sin aceptarla no sale el pedido. La base lo exige también (migración 25). */
+    aceptaDatos: z.literal(true, "Para enviar el pedido, acepta el tratamiento de tus datos."),
     /** Campo trampa: está oculto en la pantalla; solo un programa lo llena. */
     sitio: z.string().max(0, "No se pudo enviar el pedido. Intenta de nuevo.").optional(),
     items: z.array(itemPublico).min(1, "Agrega al menos un plato.").max(30, "El pedido tiene demasiados platos (máximo 30)."),

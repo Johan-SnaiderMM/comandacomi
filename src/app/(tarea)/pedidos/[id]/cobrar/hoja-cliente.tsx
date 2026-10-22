@@ -50,6 +50,8 @@ export function HojaCliente({
             <Label htmlFor="cliente-tel">WhatsApp (para recordarle la deuda)</Label>
             <Input id="cliente-tel" type="tel" inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={20} placeholder="300 123 4567" />
           </div>
+          {/* Ley 1581: el restaurante necesita su permiso para guardar estos datos. */}
+          <p className="text-base text-tinta-2">Antes de guardarlo, pregúntale si está de acuerdo: su nombre y su WhatsApp quedan guardados para el fiado.</p>
           {error && (
             <p role="alert" className="text-base font-bold text-aji">
               {error}

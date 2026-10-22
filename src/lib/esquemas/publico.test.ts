@@ -8,9 +8,18 @@ const base = {
   nombre: "Marta Gómez",
   telefono: "300 123 4567",
   items: [{ productoId: U, cantidad: 2 }],
+  aceptaDatos: true as const,
 };
 
 describe("esquema del pedido de un cliente en línea", () => {
+  it("sin aceptar la política de datos no pasa (Ley 1581)", () => {
+    for (const aceptaDatos of [undefined, false, "si", 1]) {
+      const r = esquemaPedidoCliente.safeParse({ ...base, aceptaDatos });
+      expect(r.success, String(aceptaDatos)).toBe(false);
+      expect(r.error?.issues[0].message).toMatch(/acepta el tratamiento de tus datos/);
+    }
+  });
+
   it("acepta un pedido para recoger y rellena los vacíos", () => {
     const r = esquemaPedidoCliente.safeParse(base);
     expect(r.success).toBe(true);

@@ -18,14 +18,14 @@ type Tipo = "llevar" | "domicilio";
 
 const CLAVE_DATOS = "pedir:datos";
 
-type DatosGuardados = { nombre: string; telefono: string; direccion: string };
+type DatosGuardados = { nombre: string; telefono: string; direccion: string; aceptaDatos: boolean };
 
 function leerDatos(): DatosGuardados {
   try {
     const v = JSON.parse(window.localStorage.getItem(CLAVE_DATOS) ?? "{}") as Partial<DatosGuardados>;
-    return { nombre: v.nombre ?? "", telefono: v.telefono ?? "", direccion: v.direccion ?? "" };
+    return { nombre: v.nombre ?? "", telefono: v.telefono ?? "", direccion: v.direccion ?? "", aceptaDatos: v.aceptaDatos === true };
   } catch {
-    return { nombre: "", telefono: "", direccion: "" };
+    return { nombre: "", telefono: "", direccion: "", aceptaDatos: false };
   }
 }
 
@@ -53,6 +53,8 @@ export function HojaPedidoCliente({
   const [telefono, setTelefono] = useState(recordados.telefono);
   const [direccion, setDireccion] = useState(recordados.direccion);
   const [notas, setNotas] = useState("");
+  // La política de datos (Ley 1581). Si ya la aceptó en este celular sale marcada, pero cada pedido la envía de nuevo.
+  const [aceptaDatos, setAceptaDatos] = useState(recordados.aceptaDatos);
   const [sitio, setSitio] = useState(""); // campo trampa: una persona no lo ve ni lo llena
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState<number | null>(null); // número del pedido que ya salió
@@ -60,14 +62,18 @@ export function HojaPedidoCliente({
 
   const total = totalBorrador(borrador);
   const faltan =
-    borrador.lineas.length === 0 || nombre.trim().length < 2 || telefono.replace(/\D/g, "").length < 7 || (tipo === "domicilio" && direccion.trim().length < 5);
+    borrador.lineas.length === 0 ||
+    nombre.trim().length < 2 ||
+    telefono.replace(/\D/g, "").length < 7 ||
+    (tipo === "domicilio" && direccion.trim().length < 5) ||
+    !aceptaDatos;
 
   function enviar() {
     setError(null);
     empezar(async () => {
       let r;
       try {
-        r = await enviarPedidoCliente({ slug, tipo, nombre, telefono, direccion, notas, sitio, items: aItemsDeEnvio(borrador) });
+        r = await enviarPedidoCliente({ slug, tipo, nombre, telefono, direccion, notas, aceptaDatos, sitio, items: aItemsDeEnvio(borrador) });
       } catch {
         r = { ok: false as const, error: `${MENSAJE_GENERICO}` };
       }
@@ -76,7 +82,7 @@ export function HojaPedidoCliente({
         return;
       }
       try {
-        window.localStorage.setItem(CLAVE_DATOS, JSON.stringify({ nombre, telefono, direccion }));
+        window.localStorage.setItem(CLAVE_DATOS, JSON.stringify({ nombre, telefono, direccion, aceptaDatos }));
         window.localStorage.setItem(`pedido-en-curso:${slug}`, JSON.stringify({ token: r.datos.token, numero: r.datos.numero, at: Date.now() }));
       } catch {
         // sin localStorage el pedido se envía igual; solo no se recuerdan los datos
@@ -172,6 +178,16 @@ export function HojaPedidoCliente({
         <div>
           <Label htmlFor="cliente-notas">Algo más que debamos saber (opcional)</Label>
           <Input id="cliente-notas" value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={200} placeholder={tipo === "domicilio" ? "Ej.: casa azul, tocar el timbre" : "Ej.: paso en 15 minutos"} />
+        </div>
+        <div>
+          <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-tinta bg-papel px-3 py-2">
+            <input type="checkbox" checked={aceptaDatos} onChange={(e) => setAceptaDatos(e.target.checked)} className="size-6 shrink-0 accent-[var(--color-tinta)]" />
+            <span className="text-base leading-tight">Acepto que el restaurante use mis datos para atender este pedido.</span>
+          </label>
+          {/* En otra pestaña: así no se pierde lo que ya escribió. */}
+          <a href={`/pedir/${slug}/datos`} target="_blank" rel="noopener" className="flex min-h-12 items-center text-base font-bold underline">
+            Lee cómo se usan tus datos
+          </a>
         </div>
         <div aria-hidden className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
           <label>

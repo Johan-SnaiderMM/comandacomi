@@ -27,6 +27,7 @@ export async function enviarPedidoCliente(entrada: unknown): Promise<Resultado<P
     p_direccion: v.tipo === "domicilio" ? v.direccion : null,
     p_notas: v.notas || null,
     p_items: v.items.map((i) => ({ producto_id: i.productoId, cantidad: i.cantidad, adiciones: i.adiciones, notas: i.notas || null })),
+    p_acepta_datos: v.aceptaDatos,
   });
   // Aviso push al dueño (con la app cerrada). Sale DESPUÉS de responderle al cliente y nunca lo hace esperar.
   if (r.ok) after(() => alLlegarPedidoCliente(r.datos.token));

@@ -136,6 +136,12 @@ async function auditarPantalla(page, nombre, { estricto = true } = {}) {
       if (estilo.visibility === "hidden" || estilo.display === "none") continue;
       // los enlaces dentro de un párrafo de texto corrido no cuentan (son texto)
       if (el.tagName === "A" && el.closest("p") && rect.height < 30) continue;
+      // una casilla dentro de su etiqueta se toca por toda la etiqueta: se mide la etiqueta
+      const etiqueta = el.tagName === "INPUT" && el.closest("label");
+      if (etiqueta) {
+        const r2 = etiqueta.getBoundingClientRect();
+        if (r2.height >= 44 && r2.width >= 44) continue;
+      }
       if (rect.height < 44 || rect.width < 44) {
         chicos.push(`${el.tagName.toLowerCase()} «${(el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 30)}» ${Math.round(rect.width)}×${Math.round(rect.height)}`);
       }
@@ -252,6 +258,13 @@ async function correr() {
   await cliente.pagina.getByLabel(/Tu celular/).fill("300 123 4567");
   await cliente.pagina.getByLabel(/Dirección/).fill("Cra 7 #8-9, barrio Centro");
   await cliente.pagina.getByLabel(/Algo más/).fill("Casa azul, tocar el timbre");
+  // Ley 1581: con todo lleno, sin aceptar la política de datos todavía no se puede enviar.
+  assert.equal(await cliente.pagina.getByRole("button", { name: /^Enviar pedido/ }).isDisabled(), true, "sin aceptar los datos no se envía");
+  const politica = await cliente.contexto.request.get(`${BASE}/pedir/${slug}/datos`);
+  assert.equal(politica.status(), 200);
+  assert.match(await politica.text(), /Ley 1581/);
+  await cliente.pagina.getByLabel(/Acepto que el restaurante use mis datos/).check();
+  log("la política de datos se puede leer y hay que aceptarla para enviar (la próxima vez sale marcada)");
   await captura(cliente.pagina, "cliente-hoja-pedido");
   await auditarPantalla(cliente.pagina, "hoja del pedido 360×640");
   await cliente.pagina.getByRole("button", { name: /^Enviar pedido/ }).click();

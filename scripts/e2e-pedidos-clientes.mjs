@@ -40,7 +40,7 @@ const VAPID = webpush.generateVAPIDKeys();
 const PUERTO = Number(process.env.E2E_PUERTO ?? 3202);
 const BASE = `http://localhost:${PUERTO}`;
 
-// ------------------------------------------------------------------------------------------------ utilidades
+// Utilidades
 let navegador;
 let servidor;
 let n = 0;
@@ -154,7 +154,7 @@ async function auditarPantalla(page, nombre, { estricto = true } = {}) {
   return r;
 }
 
-// ======================================================================================================= prueba
+// Prueba
 async function correr() {
   console.log("\n══ Pedidos en línea y plancha · desarrollo con base local ══");
   fs.rmSync(path.resolve(".local-e2e/clientes"), { recursive: true, force: true });
@@ -173,7 +173,6 @@ async function correr() {
   const cliente = await celular(360, 640);
   const todos = [dueno, cocina, cliente];
 
-  // ---------------------------------------------------------------------------------------------- 1. el dueño
   console.log("\n1. El dueño entra, abre los pedidos en línea y obtiene el enlace");
   await ir(dueno.pagina, "/");
   await dueno.pagina.getByRole("button", { name: "Entrar a la demo" }).click();
@@ -207,7 +206,6 @@ async function correr() {
   }
   log("rutas del personal compiladas");
 
-  // ------------------------------------------------------------------------------ 2. lo que NO debe pasar
   console.log("\n2. Un visitante sin cuenta no entra a lo del personal ni lee datos ajenos");
   for (const ruta of ["/plancha", "/pedidos", "/pedidos-en-linea", "/inicio"]) {
     await ir(cliente.pagina, ruta);
@@ -223,11 +221,12 @@ async function correr() {
   assert.equal(raro.status(), 404);
   assert.equal((await cliente.contexto.request.get(`${BASE}/api/seguimiento/no-es-un-codigo`)).status(), 400);
   log("un código de seguimiento inexistente da 404 y uno mal formado 400");
-  const noExiste = await cliente.pagina.goto(`${BASE}/pedir/no-existe-este-local`);
-  assert.equal(noExiste.status(), 404);
-  log("un enlace de restaurante que no existe da 404");
+  // Con pantalla de carga la respuesta sale antes de saber si el local existe: llega con 200 y Next marca noindex.
+  await cliente.pagina.goto(`${BASE}/pedir/no-existe-este-local`);
+  await cliente.pagina.getByRole("heading", { name: "Este enlace ya no está disponible" }).waitFor({ timeout: 60000 });
+  assert.equal(await cliente.pagina.locator('meta[name="robots"][content*="noindex"]').count() > 0, true, "la pantalla de no existe no se indexa");
+  log("un enlace de restaurante que no existe muestra «ya no está disponible» y no se indexa");
 
-  // ------------------------------------------------------------------------- 3. el cliente pide a domicilio
   console.log("\n3. El cliente abre el enlace y pide a domicilio");
   await ir(cliente.pagina, `/pedir/${slug}`);
   await cliente.pagina.getByRole("heading", { level: 1, name: /Picnic Delicias/i }).waitFor({ timeout: 60000 });
@@ -284,7 +283,6 @@ async function correr() {
   await auditarPantalla(cliente.pagina, "seguimiento 390×844");
   await cliente.pagina.setViewportSize({ width: 360, height: 640 });
 
-  // ----------------------------------------------------------------------------- 4. la alerta del dueño
   console.log("\n4. El dueño recibe la alerta y acepta con un tiempo estimado");
   const alerta = dueno.pagina.getByRole("alert").filter({ hasText: "¡Pedido nuevo!" });
   await alerta.waitFor({ timeout: 40000 });
@@ -328,7 +326,6 @@ async function correr() {
   log("el cliente ve «Lo están preparando» con el tiempo estimado, sin recargar");
   await captura(cliente.pagina, "cliente-preparando");
 
-  // ------------------------------------------------------------------------------ 5. la plancha
   console.log("\n5. La plancha marca plato por plato y el cliente lo ve en vivo");
   const pedidoPlancha = cocina.pagina.locator("li", { hasText: "Domicilio · Camila Prueba" }).filter({ hasText: `#${numero}` });
   await pedidoPlancha.waitFor({ timeout: 30000 });
@@ -357,7 +354,6 @@ async function correr() {
   await esperar(async () => (await cocina.pagina.getByRole("region", { name: "Listos hace poco" }).count()) > 0, 20000);
   log("en la plancha el pedido pasa a «Listos hace poco»");
 
-  // ------------------------------------------------------------------------------ 6. entregado
   console.log("\n6. El dueño lo entrega y el seguimiento termina");
   await ir(dueno.pagina, "/pedidos");
   const enLista = dueno.pagina.locator("li", { hasText: `#${numero}` }).filter({ hasText: "Camila Prueba" });
@@ -378,7 +374,6 @@ async function correr() {
   const enCurso = await cliente.pagina.evaluate((s) => localStorage.getItem(`pedido-en-curso:${s}`), slug);
   assert.equal(enCurso, null, "un pedido terminado ya no es 'en curso'");
 
-  // ------------------------------------------------------------------------------ 7. rechazado
   console.log("\n7. Un pedido que el restaurante rechaza");
   await ir(cliente.pagina, `/pedir/${slug}`);
   await cliente.pagina.getByRole("group", { name: "Categorías" }).getByRole("button", { name: /Perros/ }).click();
@@ -388,6 +383,8 @@ async function correr() {
   await cliente.pagina.getByLabel(/Tu celular/).fill("300 123 4567");
   await cliente.pagina.getByRole("button", { name: /^Enviar pedido/ }).click();
   await cliente.pagina.waitForURL(/\/seguimiento\//, { timeout: 60000 });
+  // Primero se ve la pantalla de carga (sin número): se espera el encabezado de verdad.
+  await cliente.pagina.locator("header").getByText(/Pedido #\d+/).waitFor({ timeout: 30000 });
   const numero2 = /Pedido #(\d+)/i.exec(await cliente.pagina.locator("header").innerText())[1];
   await cliente.pagina.getByText(/Para recoger/).first().waitFor();
   await ir(dueno.pagina, "/pedidos");
@@ -402,7 +399,6 @@ async function correr() {
   log("rechazado con motivo: el cliente ve «Pedido cancelado» y el motivo");
   await captura(cliente.pagina, "cliente-rechazado");
 
-  // ------------------------------------------------------------------------- 8. cancelado por el cliente
   console.log("\n8. El cliente se arrepiente antes de que lo acepten");
   await ir(cliente.pagina, `/pedir/${slug}`);
   await cliente.pagina.getByRole("group", { name: "Categorías" }).getByRole("button", { name: /Bebidas/ }).click();
@@ -423,7 +419,6 @@ async function correr() {
   assert.equal(datosPulso.porConfirmar.cantidad, 0, "no queda nada por confirmar");
   log("al dueño no le queda nada por confirmar");
 
-  // ------------------------------------------------------------------------------------ 9. cerrado
   console.log("\n9. El dueño cierra los pedidos en línea");
   await ir(dueno.pagina, "/pedidos-en-linea");
   await dueno.pagina.getByRole("button", { name: "Dejar de recibir pedidos" }).click();
@@ -437,7 +432,6 @@ async function correr() {
   await dueno.pagina.getByRole("heading", { name: "Recibiendo pedidos" }).waitFor({ timeout: 30000 });
   log("el dueño vuelve a abrir los pedidos");
 
-  // ------------------------------------------------------------------------------------ 10. el celular del cliente
   console.log("\n10. Lo que no debe haber en el celular del cliente");
   const claves = await cliente.pagina.evaluate(() => Object.keys(localStorage));
   assert.ok(!claves.some((k) => k.startsWith("sc:")), `el cliente no debe tener copia ni cola del personal: ${claves.join(", ")}`);
@@ -445,7 +439,6 @@ async function correr() {
   assert.equal(registros, 0, "el cliente no debe tener service worker");
   log("sin copia local, cola ni service worker del personal en el celular del cliente");
 
-  // ---------------------------------------------------------------------------------- 11. avisos push
   console.log("\n11. Avisos push: los celulares se suscriben y el servidor intenta avisarles");
   // El servicio de avisos del navegador (FCM) no se puede usar en una prueba: se simula la suscripción con un
   // destino que no existe (.invalid). Lo que se comprueba es TODO lo nuestro: guardar, leer, y que el servidor intente enviar.
@@ -527,7 +520,6 @@ async function correr() {
   await seccion.getByRole("button", { name: "Activar avisos" }).waitFor({ timeout: 30000 });
   log("el dueño desactiva los avisos de su celular");
 
-  // ------------------------------------------------------------------- 12. los avisos no se quedan para siempre
   console.log("\n12. Avisos push: reiniciar la demo y salir dan de baja los celulares");
   await cocina.contexto.grantPermissions(["notifications"], { origin: BASE });
   await cocina.contexto.addInitScript(falsoPush, "cocina");
@@ -582,7 +574,7 @@ async function correr() {
   servidor = null;
 }
 
-// =========================================================================================================== main
+// Principal
 let codigo = 0;
 try {
   navegador = await chromium.launch({ executablePath: CHROME, headless: true });

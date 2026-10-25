@@ -34,7 +34,7 @@ if (!CHROME) {
 }
 fs.mkdirSync(CAPTURAS, { recursive: true });
 
-// ------------------------------------------------------------------------------------------------ utilidades
+// Utilidades
 let navegador;
 let servidor;
 let n = 0;
@@ -101,7 +101,7 @@ async function tomarPedidoParaLlevar(page, platos) {
   await page.getByRole("button", { name: "Enviar a cocina" }).click();
 }
 
-// ======================================================================================================= FASE 1
+// Fase 1
 async function faseDev() {
   console.log("\n══ FASE 1 · desarrollo con base local ══");
   const PUERTO = 3200;
@@ -283,7 +283,7 @@ async function faseDev() {
   servidor = null;
 }
 
-// ======================================================================================================= FASE 2
+// Fase 2
 async function faseProd() {
   console.log("\n══ FASE 2 · compilada para producción, con service worker ══");
   const PUERTO = 3201;
@@ -398,7 +398,7 @@ async function faseProd() {
   servidor = null;
 }
 
-// =========================================================================================================== main
+// Principal
 let codigo = 0;
 try {
   navegador = await chromium.launch({ executablePath: CHROME, headless: true });

@@ -361,7 +361,7 @@ public/               sw.js (service worker: estáticos + app sin conexión), of
 Facturación electrónica, recetas/inventario con descuento, gráficas, WhatsApp automático u oficial, impresión
 térmica, pagos en línea y multi-sede. Tampoco: costo de domicilio por zona, seguimiento del repartidor en mapa ni
 CAPTCHA (el antiabuso va en la base). (Sin conexión funciona el trabajo del mostrador; el cierre, el menú, las mesas,
-las anulaciones —incluido quitar un plato— y los pedidos en línea esperan a tener señal.)
+las anulaciones (incluido quitar un plato) y los pedidos en línea esperan a tener señal.)
 
 ## Problemas frecuentes
 

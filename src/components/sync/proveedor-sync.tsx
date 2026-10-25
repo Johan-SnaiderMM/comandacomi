@@ -14,11 +14,8 @@ const COPIA_VIEJA_MS = 5 * 60_000;
 const ENTRE_COPIAS_MS = 30_000;
 
 /**
- * Mantiene el trabajo sin conexión andando mientras la app está abierta (no pinta nada): sube lo pendiente apenas
- * vuelve la señal o la app vuelve a primer plano, y mantiene fresca la copia local (menú, pendientes, clientes).
- * Para saber si la copia quedó vieja escucha el pulso de la pestaña (`lib/pulso.ts`) sin pedirle consultas: si la
- * huella de los pedidos ya no es la de la copia, la renueva.
- * En la portada no hace nada (todavía no hay sesión) ni en las páginas del cliente (pedir y seguir su pedido).
+ * Sube lo pendiente al volver la señal y renueva la copia local cuando la huella del pulso ya no es la suya (solo
+ * escucha, no pide consultas). No corre en la portada ni en las páginas del cliente.
  */
 export function ProveedorSync() {
   const ruta = usePathname();

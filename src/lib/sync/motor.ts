@@ -1,19 +1,6 @@
 /**
- * Motor del trabajo sin conexión: guarda la copia local y la cola de operaciones, las ejecuta directo cuando hay
- * señal y las encola cuando no, y las sube en orden al volver la conexión.
- *
- * Reglas que lo hacen seguro:
- *  - Cada operación lleva una clave propia que el servidor recuerda: si la respuesta se pierde y se reintenta, no se
- *    repite (ver aplicar_operacion en la base).
- *  - Se suben en el MISMO orden en que ocurrieron (cobrar un pedido depende de haberlo creado).
- *  - Con operaciones pendientes, una nueva nunca se salta la fila: primero se vacía la cola.
- *  - Un rechazo del servidor (el plato ya no existe, el pedido ya estaba cobrado) no se reintenta: queda "fallida"
- *    con su motivo para que una persona la revise. Un fallo de red sí se reintenta, y también un fallo pasajero del
- *    servidor (la base no contestó): ese no es culpa de la operación.
- *  - Con la red caída nadie espera: mientras el último intento haya fallado, lo nuevo se guarda de inmediato y la
- *    subida sigue por detrás. La primera subida que sale bien devuelve todo al modo directo.
- *
- * No depende de React ni del navegador: se prueba con un almacén en memoria y una red falsa.
+ * Motor sin conexión: cola de operaciones que se sube EN ORDEN, cada una con su clave para que un reintento no la repita.
+ * Un rechazo de la base queda "fallida" para que alguien lo revise; un fallo de red o pasajero se reintenta solo.
  */
 import type { Almacen } from "./almacen";
 import type {
@@ -85,7 +72,7 @@ export class Motor {
     this.est = { ...this.est, ops: cola.ops };
   }
 
-  // -------------------------------------------------------------------------------------------------- lectura
+  // Lectura
 
   estado(): EstadoMotor {
     return this.est;
@@ -114,15 +101,11 @@ export class Motor {
     return this.est.ops.filter((o) => o.estado === "fallida");
   }
 
-  // ------------------------------------------------------------------------------------------------ operaciones
+  // Operaciones
 
   /**
-   * Hace una operación: si hay señal y la cola está vacía la manda directo y devuelve el resultado real; si no hay
-   * señal (o falla la red, o el servidor no pudo atender) la guarda en la cola con la misma clave y devuelve
-   * `pendiente: true`. Un rechazo del servidor se devuelve como error: la persona lo ve y corrige, no se encola.
-   *
-   * Si el último intento falló (`sinRed`), ni siquiera prueba: guarda de una vez y la subida sigue por detrás. Así,
-   * con la señal mala, solo el primer toque espera; los demás responden al instante.
+   * Con señal y la cola vacía, manda directo; si no, encola con la misma clave (`pendiente: true`). Tras un fallo
+   * (`sinRed`) ni prueba: guarda de una vez, así con mala señal solo el primer toque espera.
    */
   async ejecutar<T extends TipoOperacion>(tipo: T, datos: DatosOperacion[T]): Promise<ResultadoEjecucion> {
     const op = { clave: this.nuevoId(), tipo, datos, ocurridoEn: this.ahora().toISOString() } as Operacion;
@@ -161,7 +144,7 @@ export class Motor {
     return enCola;
   }
 
-  // ------------------------------------------------------------------------------------------------ sincronizar
+  // Sincronizar
 
   /**
    * Sube lo pendiente, en orden. Si ya hay una subida en marcha, espera a esa (y, si quedó algo que esa no alcanzó a
@@ -250,7 +233,7 @@ export class Motor {
     return true;
   }
 
-  // ------------------------------------------------------------------------------------- revisar lo que falló
+  // Revisar lo que falló
 
   reintentar(clave: string): void {
     this.marcar(clave, { estado: "pendiente", error: undefined, intentos: 0, fallosServidor: undefined });
@@ -279,7 +262,7 @@ export class Motor {
     this.avisar();
   }
 
-  // ---------------------------------------------------------------------------------------------------- interno
+  // Interno
 
   private marcar(clave: string, cambios: Partial<OperacionEnCola>) {
     this.cambiar({ ops: this.est.ops.map((o) => (o.clave === clave ? ({ ...o, ...cambios } as OperacionEnCola) : o)) });

@@ -1,10 +1,8 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Barra de acción fija en el borde inferior, donde llega el pulgar ("Enviar a cocina", "Cobrar").
- * Con `sobreNav` se apoya encima de la barra de navegación; sin ella, en el borde de la pantalla.
- * Respeta la zona segura inferior y sube con el teclado (viewport `resizes-content`).
- * Las pantallas que la usan agregan `pb-accion` / `pb-nav-accion` para que nada quede debajo.
+ * Barra de acción fija abajo, donde llega el pulgar (`sobreNav`: encima de la barra de navegación). La pantalla que la
+ * usa agrega `pb-accion` o `pb-nav-accion`, o su último contenido queda debajo.
  */
 export function BarraAccion({
   children,

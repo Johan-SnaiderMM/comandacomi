@@ -7,10 +7,8 @@ import { BUCKET_FOTOS, BUCKET_PLATOS, RUTA_FOTO, type BaseDatos, type RespuestaB
 import { huellaMigraciones, leerMigraciones, reclamosJwt, SUPABASE_MINIMO } from "./esquema-supabase";
 
 /**
- * MODO LOCAL DE DESARROLLO (DEMO_BD=local): las mismas migraciones y funciones de supabase/, corriendo en
- * un Postgres embebido (PGlite) guardado en .local/. Permite desarrollar y probar la app completa sin
- * cuenta de Supabase. Nunca se usa en producción (ver abrirBD). La "sesión" es una cookie con el id del
- * usuario: solo para desarrollo.
+ * Modo local de desarrollo (DEMO_BD=local): las mismas migraciones en un Postgres embebido (PGlite) en .local/, nunca
+ * en producción. La "sesión" es una cookie con el id del usuario.
  */
 
 const CORREO_LOCAL = "demo@local.test";

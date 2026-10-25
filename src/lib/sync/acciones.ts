@@ -1,12 +1,8 @@
 "use client";
 
 /**
- * Las acciones que cambian datos, vistas desde el celular. Cada una hace lo mismo con o sin señal: con señal y la
- * cola vacía manda la operación y devuelve el resultado real del servidor; sin señal la guarda, la muestra de una
- * vez en pantalla (ver vista.ts) y devuelve un resultado provisional marcado con `pendiente: true`.
- *
- * Un error de validación del servidor (el plato ya no existe, el pedido ya está cobrado) se devuelve como error y no
- * se encola: la persona lo ve en el momento y lo corrige.
+ * Las acciones que cambian datos, iguales con o sin señal: sin señal se guardan y se muestran de una vez (`pendiente:
+ * true`, ver vista.ts). Un rechazo del servidor no se encola: vuelve como error para corregirlo en el momento.
  */
 import type { EstadoPedido, TipoPedido } from "@/lib/datos/tipos";
 import { validarCobro, type MedioAbono, type PagoPlan } from "@/lib/dinero";
@@ -30,7 +26,7 @@ async function hacer<T extends TipoOperacion>(tipo: T, datos: DatosOperacion[T])
   return { ok: true, pendiente: false, datos: (r.datos ?? {}) as Record<string, unknown> };
 }
 
-// ------------------------------------------------------------------------------------------------- pedidos
+// Pedidos
 
 export type EntradaEnvio = {
   tipo: TipoPedido;
@@ -81,7 +77,7 @@ export async function cambiarEstado(pedidoId: string, estado: EstadoPedido): Pro
   return r.ok ? { ok: true } : r;
 }
 
-// --------------------------------------------------------------------------------------------------- cobro
+// Cobro
 
 export type Cobrado = { numero: number; total: number; propina: number; cobrado: number; vuelto: number; fiado: number; pendiente: boolean };
 
@@ -113,7 +109,7 @@ export async function cobrarPedido(e: { pedidoId: string; propina: number; pagos
   };
 }
 
-// ---------------------------------------------------------------------------------------------------- fiado
+// Fiado
 
 export type ClienteNuevo = { id: string; nombre: string; telefono: string | null; pendiente: boolean };
 
@@ -142,7 +138,7 @@ export async function registrarAbono(e: { clienteId: string; monto: number; medi
   return { ok: true, datos: { saldo: Math.max(0, saldoActual - e.monto), pendiente: true } };
 }
 
-// -------------------------------------------------------------------------------------------------- gastos
+// Gastos
 
 export async function registrarGasto(e: DatosOperacion["gasto"]): Promise<Resultado<{ pendiente: boolean }>> {
   const r = await hacer("gasto", e);
@@ -150,7 +146,7 @@ export async function registrarGasto(e: DatosOperacion["gasto"]): Promise<Result
 }
 
 
-// ------------------------------------------------------------------------------------ solo con señal
+// Solo con señal
 
 const SIN_SENAL = "Sin conexión: esto necesita señal. Inténtalo cuando vuelva.";
 

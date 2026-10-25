@@ -1,8 +1,6 @@
 /**
- * La vista que se le muestra a quien trabaja sin conexión: la última copia del servidor (Snapshot) con las
- * operaciones de la cola aplicadas encima, en orden. Es lógica pura (sin React ni red) y solo calcula lo que la
- * pantalla necesita para seguir trabajando; el servidor sigue siendo quien decide cuando las operaciones suben
- * (precios, número de pedido, saldos definitivos).
+ * Lo que ve quien trabaja sin conexión: la última copia del servidor con la cola aplicada encima, en orden. Es una
+ * vista provisional: precios, números de pedido y saldos los decide el servidor cuando todo sube.
  */
 import type { ClienteFiado, ItemPedidoResumen, PedidoCobrado, PedidoPendiente } from "@/lib/datos/tipos";
 import { totalPedido } from "@/lib/dinero";
@@ -178,11 +176,8 @@ export function vistaDe(s: Snapshot, ops: OperacionEnCola[]): Snapshot {
 }
 
 /**
- * La lista de pendientes que mandó el servidor, con lo que está en la cola encima: los cambios de estado y los cobros
- * que todavía no suben. Es para la app normal cuando la señal se cae sin salir de la pantalla: lo que la persona acaba
- * de tocar se sigue viendo hecho, en vez de devolverse a como estaba. (Los pedidos nuevos y los platos agregados no
- * se pintan aquí: necesitan el menú, que solo tiene la copia completa de `vistaDe`.)
- * Aplicarla sobre una lista que ya trae esos cambios da lo mismo. Sin nada que aplicar devuelve la misma lista.
+ * Pendientes del servidor con los cambios de estado y cobros de la cola encima, para que lo recién tocado no se
+ * devuelva si cae la señal. Aplicarla dos veces da lo mismo; los pedidos nuevos los pinta `vistaDe`.
  */
 export function pendientesConCola(pendientes: PedidoPendiente[], ops: OperacionEnCola[]): PedidoPendiente[] {
   let lista = pendientes;

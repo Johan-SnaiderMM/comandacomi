@@ -6,10 +6,8 @@ import { minutosDesde, textoEspera } from "@/lib/fechas";
 import { cn } from "@/lib/utils";
 
 /**
- * Tiempo de espera de un pedido. El primer valor se calcula con la hora del servidor (así el HTML del servidor
- * y el del celular coinciden) y después se actualiza cada 30 s con el reloj del celular.
- * Pasa a rojo a los 20 min (es lo que la cocina debe atender primero); si ya se entregó, solo falta cobrar
- * y no se marca como urgente (`alertar` = false).
+ * Espera de un pedido: arranca con la hora del servidor (para que coincidan los dos HTML) y sigue con el reloj del
+ * celular. Pasa a rojo a los 20 min, salvo si ya se entregó y solo falta cobrar (`alertar` = false).
  */
 export function Espera({ desde, ahora, alertar = true }: { desde: string; ahora: string; alertar?: boolean }) {
   const [min, setMin] = useState(() => minutosDesde(desde, new Date(ahora).getTime()));

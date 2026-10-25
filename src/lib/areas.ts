@@ -1,8 +1,6 @@
 /**
- * Las áreas del local: lo que un rol del equipo puede abrir. El dueño las abre todas.
- * La misma lista vive en la base (`fn_areas`, migración 19), que es la que de verdad pone el candado. Aquí se decide
- * solo qué se MUESTRA (pestañas, botones, pantallas), para que nadie se tope con algo que la base le va a rechazar.
- * `src/test/permisos-por-area.test.ts` verifica que las dos listas sean iguales.
+ * Las áreas que un rol puede abrir (el dueño, todas). El candado lo pone la base (`fn_areas`, migración 19); aquí solo
+ * se decide qué se MUESTRA. Una prueba exige que las dos listas sean iguales.
  */
 export const AREAS = ["pedidos", "plancha", "caja", "fiado", "gastos", "cierre"] as const;
 

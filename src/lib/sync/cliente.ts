@@ -52,7 +52,7 @@ export function obtenerMotor(): Motor | null {
   return motor;
 }
 
-// ----------------------------------------------------------------------------------------- estado de la red
+// Estado de la red
 
 let enLineaActual = true;
 let redIniciada = false;
@@ -87,7 +87,7 @@ export function useEnLinea(): boolean {
   );
 }
 
-// ---------------------------------------------------------------------------------------- estado del motor
+// Estado del motor
 
 const ESTADO_VACIO: EstadoMotor = { snapshot: null, ops: [], sincronizando: false, sinRed: false, sinSesion: false };
 

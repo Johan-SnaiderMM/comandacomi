@@ -17,11 +17,8 @@ import { obtenerUsuario } from "@/lib/sesion";
 import type { RespuestaOperacion, Snapshot } from "@/lib/sync/tipos";
 
 /**
- * Aplica UNA operación (hecha con o sin señal). Llega con su clave: si ya se aplicó antes, la base devuelve el
- * mismo resultado en vez de repetirla. Sin sesión no redirige (la cola sigue guardada): avisa con `sinSesion`.
- *
- * Distingue dos clases de "no": el rechazo de la base por una regla del negocio (definitivo: la persona lo revisa) y
- * el fallo pasajero (la base no contestó): ese se marca `reintentable` para que el celular lo vuelva a intentar solo.
+ * Aplica UNA operación por su clave (repetida, la base devuelve el mismo resultado). Sin sesión avisa con `sinSesion`
+ * en vez de redirigir; un fallo pasajero de la base vuelve `reintentable`, un rechazo del negocio no.
  */
 export async function aplicarOperacion(entrada: unknown): Promise<RespuestaOperacion> {
   const sobre = esquemaSobreOperacion.safeParse(entrada);

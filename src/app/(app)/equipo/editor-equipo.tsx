@@ -30,10 +30,8 @@ function areasDeRoles(roles: RolEquipo[], ids: string[]): Area[] {
 }
 
 /**
- * Más → Equipo (solo el dueño). Arriba los roles del local: cada uno abre algunas partes de la app (Tomar pedidos,
- * Plancha, Cobrar…). Abajo las personas, cada una con uno o varios roles: ve la suma. El dueño lo ve todo siempre.
- * Para sumar a alguien: "Agregar a alguien" da un código (con enlace y QR) que esa persona usa en SU celular.
- * Lo que se decide aquí lo hace cumplir la base de datos, no solo la pantalla.
+ * Más → Equipo (solo el dueño): roles del local arriba y personas abajo, cada una con uno o varios roles (ve la suma).
+ * «Agregar a alguien» da un código para SU celular. Lo que se decide aquí lo hace cumplir la base.
  */
 export function EditorEquipo({ equipo, restaurante }: { equipo: Equipo; restaurante: string }) {
   const [hojaRol, setHojaRol] = useState<{ rol: RolEquipo | null } | null>(null);

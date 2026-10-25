@@ -1,11 +1,8 @@
 "use client";
 
 /**
- * Navegación que sirve igual en la app normal y en la app sin conexión (/sc).
- *
- * Los componentes siempre hablan en rutas de la app ("/pedidos", "/pedidos/<id>/cobrar"). En la app normal esas
- * rutas son páginas de Next. En la app sin conexión todo vive en una sola página y la ruta va en el # de la dirección
- * (#/pedidos): este archivo traduce, así los mismos componentes funcionan en los dos lados.
+ * Navegación que sirve en la app normal y en /sc: los componentes hablan en rutas ("/pedidos") y en /sc, que es una
+ * sola página, este archivo las traduce al # de la dirección (#/pedidos).
  */
 import { createContext, useContext, type ComponentProps } from "react";
 import Link from "next/link";

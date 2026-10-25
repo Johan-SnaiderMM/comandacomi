@@ -33,13 +33,8 @@ const TEXTOS: Record<ZonaDeRuta, { titulo: string; texto: string; pedido: string
 };
 
 /**
- * Pantalla de "no existe" (404) con la firma de la app: un tiquete de comanda devuelta. Es UNA sola para toda la app
- * (la usa `app/not-found.tsx`, que atiende tanto las direcciones que no existen como los `notFound()` de las páginas) y
- * cambia el texto según a quién le habla: al personal le ofrece volver al inicio; al cliente que venía a pedir o a ver
- * su pedido le explica qué hacer, sin mandarlo a la entrada de la app del personal.
- *
- * `data-pantalla="no-existe"` le avisa a la sincronización del trabajo sin conexión que aquí no hay nada que subir ni
- * refrescar (una acción del servidor lanzada desde una dirección que no existe falla y se confundiría con "sin señal").
+ * La única pantalla de "no existe": cambia el texto según a quién le habla (a un cliente nunca lo manda a la app del
+ * personal). `data-pantalla="no-existe"` frena la sincronización, que aquí confundiría el fallo con falta de señal.
  */
 export function PantallaNoExiste() {
   const ruta = usePathname();

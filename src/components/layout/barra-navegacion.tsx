@@ -24,13 +24,8 @@ const DENTRO_DE_MAS = ["/gastos", "/menu", "/mesas", "/fiado", "/equipo"];
 const TODO: Quien = { areas: [...AREAS], esDueno: false };
 
 /**
- * Barra de navegación inferior (zona del pulgar). Hasta cinco destinos de 72 px de alto; el central ("Tomar pedido")
- * es la acción más frecuente y sobresale. La pestaña activa se marca con relleno amarillo Y con `aria-current`, no
- * solo con color.
- *
- * Las pestañas dependen de lo que abre quien entra (ver `pestanasDe`): el dueño y el mesero ven Inicio, Pendientes,
- * Tomar, En línea y Más; la cocina, Inicio, Plancha y Más. `sinConexion`: en la app sin conexión (/sc) la cuarta es
- * Fiado, porque los pedidos en línea necesitan señal y el fiado sí se trabaja sin ella.
+ * Barra inferior: las pestañas salen de lo que abre quien entra (`pestanasDe`) y la activa se marca con relleno Y con
+ * `aria-current`. En /sc (`sinConexion`) la cuarta es Fiado, porque los pedidos en línea necesitan señal.
  */
 export function BarraNavegacion({ pendientes = 0, sinConexion = false, quien = TODO }: { pendientes?: number; sinConexion?: boolean; quien?: Quien }) {
   const ruta = useRuta();

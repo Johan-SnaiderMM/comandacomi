@@ -1,11 +1,6 @@
 /**
- * ÚNICO lugar donde se calcula dinero en la interfaz: totales, propina, vuelto, fiado y cierre del día.
- *
- * Reglas:
- *  - COP no usa decimales: todo es un número ENTERO de pesos. Nada de floats ni de "centavos".
- *  - Estos cálculos son para MOSTRAR y dar respuesta inmediata al tocar. El servidor (funciones SQL)
- *    vuelve a calcular todo desde la base y es la verdad; una prueba compara ambos para que no se contradigan.
- *  - Redondeos siempre al peso o a múltiplos de 500/1.000 con Math.round/ceil sobre enteros.
+ * El único lugar donde la interfaz calcula dinero, siempre en pesos ENTEROS (sin decimales). Es para mostrar al
+ * instante: la base vuelve a calcularlo todo y es la que vale (una prueba compara las dos cuentas).
  */
 
 export type Pesos = number;
@@ -19,9 +14,7 @@ export const ETIQUETA_MEDIO: Record<MedioPago, string> = {
   fiado: "Fiado",
 };
 
-// ---------------------------------------------------------------------
 // Formato y lectura
-// ---------------------------------------------------------------------
 
 /** Convierte cualquier número a pesos enteros (redondea; descarta NaN/Infinity). */
 export function aPesos(n: number): Pesos {
@@ -46,9 +39,7 @@ export function leerPesos(texto: string): Pesos {
   return digitos ? Number(digitos) : 0;
 }
 
-// ---------------------------------------------------------------------
 // Pedido
-// ---------------------------------------------------------------------
 
 export type LineaPedido = {
   precio: Pesos;
@@ -70,9 +61,7 @@ export function totalPedido(lineas: LineaPedido[]): Pesos {
   return sumar(lineas.map(subtotalLinea));
 }
 
-// ---------------------------------------------------------------------
 // Cobro
-// ---------------------------------------------------------------------
 
 /** Propina sugerida (por defecto 10 %), redondeada al múltiplo de 500 más cercano. Es SIEMPRE opcional. */
 export function propinaSugerida(total: Pesos, porcentaje = 10): Pesos {
@@ -114,12 +103,8 @@ export type PagoPlan = {
 };
 
 /**
- * Arma los pagos del cobro según lo elegido en pantalla:
- *  - efectivo: un pago por todo lo que se cobra, con lo recibido (el vuelto sale de ahí).
- *  - transferencia (Nequi/banco): un pago, con referencia opcional; o, si paga una parte en efectivo (`pagaAhora`), esa
- *    parte en efectivo y el resto por transferencia (pago dividido).
- *  - fiado: todo a la cuenta del cliente; o, si paga una parte ahora, esa parte en efectivo y el resto a fiado.
- * La parte en efectivo de un pago dividido se recibe exacta: no lleva vuelto.
+ * Los pagos del cobro. Con `pagaAhora`, Nequi y fiado se dividen: esa parte en efectivo (exacta, sin vuelto) y el resto
+ * por el otro medio. El vuelto solo existe en el cobro todo en efectivo.
  */
 export function planDePagos(e: {
   medio: MedioPago;
@@ -164,9 +149,7 @@ export function validarCobro(total: Pesos, propina: Pesos, pagos: PagoPlan[]): V
   return { ok: true, vuelto, fiado };
 }
 
-// ---------------------------------------------------------------------
 // Fiado
-// ---------------------------------------------------------------------
 
 export type MovimientoFiado = { tipo: "cargo" | "abono"; monto: Pesos; anulado?: boolean };
 
@@ -182,9 +165,7 @@ export function validarAbono(saldo: Pesos, abono: Pesos): { ok: true; saldoNuevo
   return { ok: true, saldoNuevo: saldo - abono };
 }
 
-// ---------------------------------------------------------------------
 // Cierre del día
-// ---------------------------------------------------------------------
 
 export type DatosCierre = {
   /** Pedidos cobrados ese día (total SIN propina). */

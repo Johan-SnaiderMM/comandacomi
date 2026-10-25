@@ -1,8 +1,6 @@
 /**
- * Sonidos y vibración de los avisos (pedido nuevo, plato listo). Sin archivos de audio: se generan con la Web Audio
- * API (cero bytes que descargar). Los navegadores solo dejan sonar después de un toque de la persona, por eso
- * `activarSonido()` se llama desde un evento táctil. `sonidoActivo()` dice si ya puede sonar y `suscribirSonido()`
- * avisa cuando eso cambia (el audio se reanuda de forma asíncrona), para pintarlo con `useSyncExternalStore`.
+ * Sonidos y vibración de los avisos, generados con la Web Audio API (sin archivos). El navegador solo deja sonar tras un
+ * toque, por eso `activarSonido()` va en un evento táctil.
  */
 
 type Patron = "pedido-nuevo" | "plato-listo";
@@ -60,10 +58,8 @@ export function sonidoActivo(): boolean {
 }
 
 /**
- * Desbloquea el audio con el primer toque de la persona en cualquier parte de la pantalla. Escucha `click` (no
- * `pointerdown`) a propósito: `click` llega DESPUÉS de lo que la persona tocó, así que si el aviso de "activar sonido"
- * desaparece al activarse y la pantalla se corre, el botón que estaba tocando ya recibió su toque. Devuelve la función
- * que deja de escuchar.
+ * Desbloquea el audio con el primer toque en cualquier parte. Escucha `click`, no `pointerdown`: llega después del toque,
+ * así si el aviso de "activar sonido" desaparece y la pantalla se corre, el botón tocado ya recibió su toque.
  */
 export function desbloquearConElPrimerToque(): () => void {
   const alTocar = () => {

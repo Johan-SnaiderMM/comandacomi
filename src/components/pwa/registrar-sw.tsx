@@ -9,10 +9,8 @@ const PRECARGA_CADA_MS = 6 * 60 * 60 * 1000;
 const CLAVE_PRECARGA = "sc:precarga";
 
 /**
- * Registra el service worker (solo en producción: en desarrollo estorba al recargar en caliente; para probarlo allí
- * se activa con NEXT_PUBLIC_SW_EN_DEV=1). Con señal le pide guardar la app sin conexión, para que ya esté lista
- * cuando falte la señal. No se registra en las páginas del cliente (pedir y seguir su pedido): a un cliente no le
- * sirve la app del personal y bajarla le gastaría datos.
+ * Registra el service worker solo en producción (en desarrollo, con NEXT_PUBLIC_SW_EN_DEV=1) y le pide guardar la app
+ * sin conexión. Nunca en las páginas del cliente: bajar la app del personal le gastaría datos.
  */
 export function RegistrarServiceWorker() {
   const publica = esRutaPublica(usePathname());

@@ -1,8 +1,6 @@
 /**
- * Recorrido guiado de la demo. Sin librerías: una lista de pasos, un estado mínimo (el paso actual, guardado en
- * sessionStorage para que sobreviva a los cambios de pantalla) y un resaltado del botón que hay que tocar.
- *
- * Cliente y servidor pueden importar este archivo: no usa Zod ni nada del servidor.
+ * Recorrido guiado de la demo, sin librerías: los pasos, el paso actual (en sessionStorage, para que sobreviva a los
+ * cambios de pantalla) y el aro sobre el botón que hay que tocar.
  */
 
 export type PasoGuia = {
@@ -98,9 +96,7 @@ export function pasoEnRuta(paso: number, ruta: string): boolean {
   return PASOS[paso]?.ruta.test(ruta) ?? false;
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
 // Estado compartido (useSyncExternalStore). `abierta` solo vive en memoria; `paso` también en sessionStorage.
-// ---------------------------------------------------------------------------------------------------------------------
 
 export type EstadoGuia = { paso: number; abierta: boolean } | null;
 

@@ -126,12 +126,8 @@ export async function cambiarDisponibilidad(productoId: string, disponible: bool
 }
 
 /**
- * Borra lo creado en la demo, vuelve a cargar los datos de ejemplo y le pone el nombre del local que se va a visitar.
- * Solo restaurantes de demostración. También da de baja los avisos de los celulares que los activaron en la visita
- * anterior; `endpointDeEsteCelular` (si tiene avisos) es el único que se conserva: el de quien enseña la demo.
- *
- * Si la demo tiene PIN (lo define quien administra la base), la base lo exige: un PIN equivocado no reinicia nada y, a
- * los cinco intentos, bloquea el reinicio unos minutos. El PIN nunca se guarda ni se compara aquí: solo viaja.
+ * Reinicia la demo con el nombre del local a visitar y da de baja los avisos de la visita anterior, salvo los de
+ * `endpointDeEsteCelular` (quien enseña). El PIN solo viaja: lo comprueba la base, que bloquea tras cinco fallos.
  */
 export async function reiniciarDemo(nombre: string, endpointDeEsteCelular: string | null = null, pin = ""): Promise<Resultado> {
   const parsed = esquemaNombreRestaurante.safeParse(nombre);

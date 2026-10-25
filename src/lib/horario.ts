@@ -1,13 +1,6 @@
 /**
- * Horario de atención de los pedidos en línea. Lógica pura (sin React, sin red, sin Zod): la usa también el navegador.
- *
- * Formato (igual que restaurantes.horario en la base): 7 posiciones, 0 = domingo … 6 = sábado; cada una es null (ese
- * día no se atiende) o { abre, cierra } en "HH:MM" de Bogotá. Si `cierra` es menor que `abre`, la franja pasa de
- * medianoche (18:00 → 02:00 atiende hasta las 2 a. m. del día siguiente). Sin horario (null) siempre se atiende: manda
- * solo el interruptor.
- *
- * `abiertoPorHorario` hace la misma cuenta que fn_abierto_por_horario en la base (una prueba las compara). La base es
- * quien decide si un pedido entra; esto es para explicarle a la gente por qué está cerrado y cuándo abre.
+ * Horario (lógica pura): 7 días, 0 = domingo, cada uno null o { abre, cierra } "HH:MM" de Bogotá; si `cierra` < `abre`
+ * pasa de medianoche y sin horario siempre se atiende. Decide la base (fn_abierto_por_horario); esto solo lo explica.
  */
 
 export type Franja = { abre: string; cierra: string };

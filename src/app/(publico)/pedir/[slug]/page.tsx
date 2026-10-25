@@ -28,15 +28,8 @@ function conFotos(menu: MenuPublico): MenuPublico {
 }
 
 /**
- * Panel del cliente: el menú del restaurante y el pedido. Es público: sin cuenta ni contraseña. Un enlace que no
- * existe muestra la pantalla de "no existe".
- *
- * Un enlace ANTERIOR del restaurante (cambió de nombre) sigue sirviendo: la base lo encuentra y aquí se pasa al
- * vigente. La redirección es temporal a propósito: si el local vuelve a su nombre de antes, ese enlace vuelve a ser el
- * bueno, y un navegador que hubiera guardado una redirección "para siempre" quedaría dando vueltas.
- *
- * Si está cerrado por horario, "cuándo abre" se calcula aquí (una sola vez, en el servidor) y viaja como texto: así
- * no depende del reloj del celular del cliente.
+ * Menú del cliente (público). Un enlace anterior del local pasa al vigente con redirección TEMPORAL: si el local vuelve a
+ * su nombre de antes, ese enlace vuelve a servir. «Cuándo abre» se calcula aquí, no con el reloj del celular.
  */
 export default async function PaginaPedir({ params }: PageProps<"/pedir/[slug]">) {
   const { slug } = await params;

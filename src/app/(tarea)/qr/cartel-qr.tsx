@@ -12,10 +12,8 @@ const origenDelNavegador = () => window.location.origin;
 const origenDelServidor = () => "";
 
 /**
- * Cartel con el código QR para pedir, listo para imprimir y pegar en el mostrador o en las mesas. Dos salidas:
- *  - "Imprimir": la hoja sale solo con el cartel (el resto de la pantalla no se imprime; ver globals.css). En el celular,
- *    el mismo botón deja guardarlo como PDF.
- *  - "Guardar imagen": un PNG para mandarlo por WhatsApp a la papelería o subirlo a redes.
+ * Cartel del QR para el mostrador. «Imprimir» saca solo el cartel (reglas de impresión en globals.css; en el celular
+ * sirve para guardarlo como PDF) y «Guardar imagen» da un PNG para mandarlo a la papelería.
  */
 export function CartelQr({ slug, nombre }: { slug: string; nombre: string }) {
   const origen = useSyncExternalStore(sinSuscripcion, origenDelNavegador, origenDelServidor);

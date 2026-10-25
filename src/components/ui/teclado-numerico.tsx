@@ -5,11 +5,8 @@ import { FILAS_TECLADO, type Tecla } from "@/lib/teclado";
 import { cn } from "@/lib/utils";
 
 /**
- * Teclado numérico en pantalla para montos (efectivo recibido, propina, abono). No usa el teclado del sistema:
- * así nunca tapa el botón principal, responde al instante y no provoca zoom. Teclas de 48 px mínimo.
- *
- * Solo avisa QUÉ tecla se tocó (`onTecla`); quien lo usa la aplica con `setValor((v) => aplicarTecla(v, tecla))`,
- * así cada toque se suma al valor más reciente aunque lleguen dos seguidos antes de volver a dibujar.
+ * Teclado de montos en pantalla: el del sistema tapaba el botón principal. Solo avisa qué tecla se tocó; aplícala con
+ * `setValor((v) => aplicarTecla(v, tecla))` para no perder dos toques seguidos.
  */
 export function TecladoNumerico({ onTecla, className }: { onTecla: (tecla: Tecla) => void; className?: string }) {
   return (

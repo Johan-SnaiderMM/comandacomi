@@ -1,10 +1,6 @@
 /**
- * Postgres REAL en memoria (PGlite) con lo mínimo de Supabase que las migraciones dan por existente
- * (roles anon/authenticated, auth.uid()/auth.jwt(), privilegios por defecto) y TODAS las migraciones
- * de supabase/migrations aplicadas. Sirve para probar el SQL y el RLS de verdad, sin Docker.
- *
- * Cada llamada de `como()` simula una petición de Supabase: abre una transacción, cambia al rol
- * `authenticated` (o `anon`) y fija el JWT; si la función falla, se revierte todo.
+ * Postgres real en memoria (PGlite) con lo mínimo de Supabase y TODAS las migraciones, para probar el SQL y el RLS de
+ * verdad. Cada `como()` es una petición: una transacción con el rol y el JWT de quien pregunta.
  */
 import { PGlite } from "@electric-sql/pglite";
 import { leerMigraciones, reclamosJwt, SUPABASE_MINIMO } from "@/lib/local/esquema-supabase";

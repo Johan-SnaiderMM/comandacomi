@@ -1,10 +1,6 @@
 /**
- * Avisos push desde el navegador: pedir permiso, suscribirse y darse de baja. Nada de esto toca la base: la
- * suscripción que devuelve `activar` se guarda llamando a las acciones de src/app/acciones/avisos.ts.
- *
- * Dos alcances (cada uno con su service worker, para que el cliente NO baje la app del personal):
- *   - "personal": /sw.js con alcance "/" (el mismo que da el trabajo sin conexión).
- *   - "cliente": /sw-cliente.js con alcance "/seguimiento/" (solo recibe avisos de su pedido).
+ * Avisos push en el navegador (no toca la base). Dos service workers para que el cliente NO baje la app del personal:
+ * "personal" (/sw.js, alcance "/") y "cliente" (/sw-cliente.js, alcance "/seguimiento/").
  */
 import type { SuscripcionJson } from "./tipos";
 

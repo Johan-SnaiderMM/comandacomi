@@ -1,9 +1,6 @@
 /**
- * A qué servicios de avisos puede apuntar un celular. La dirección (`endpoint`) la entrega el navegador al
- * suscribirse y SIEMPRE es de su propio servicio de avisos: Google (Chrome, Android, Edge en Android, Samsung,
- * Opera), Mozilla (Firefox), Apple (Safari, iPhone) o Microsoft (Edge en Windows). Cualquier otra dirección no viene de
- * un navegador: alguien la escribió a mano para que NUESTRO servidor le mande peticiones a donde él quiera. Se rechaza
- * al guardar y, por si alguien la metió directo en la base, también se salta al enviar.
+ * La dirección de un aviso siempre es del servicio del navegador (Google, Mozilla, Apple, Microsoft). Otra la escribió
+ * alguien para usar nuestro servidor contra otro sitio: se rechaza al guardar y se salta al enviar.
  */
 
 /** Dominios de los servicios de avisos de los navegadores (el dominio exacto o cualquier subdominio). */

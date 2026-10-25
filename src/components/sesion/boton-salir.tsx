@@ -15,12 +15,8 @@ function conTope<T>(promesa: Promise<T>, ms: number): Promise<T | null> {
 }
 
 /**
- * Salir de la demo. Antes borra las copias guardadas en el celular (el service worker y la copia local del trabajo
- * sin conexión tienen datos del restaurante) y da de baja los avisos de este celular. Si quedan cambios sin subir
- * avisa: salir ahora los perdería.
- *
- * `conCodigo`: quien entró con un código de invitación no tiene contraseña; si sale, para volver necesita un código
- * nuevo del dueño. Se le pregunta antes.
+ * Salir: borra lo guardado en el celular y da de baja sus avisos; avisa si quedan cambios sin subir. `conCodigo`: quien
+ * entró con invitación no tiene contraseña y para volver necesita otro código, así que se le pregunta antes.
  */
 export function BotonSalir({ className, conCodigo = false, etiqueta = "Salir de la demo" }: { className?: string; conCodigo?: boolean; etiqueta?: string }) {
   const formulario = useRef<HTMLFormElement>(null);

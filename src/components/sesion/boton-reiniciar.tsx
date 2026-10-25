@@ -10,12 +10,8 @@ import { Label } from "@/components/ui/label";
 import { suscripcionActual } from "@/lib/push/cliente";
 
 /**
- * Reiniciar demo: borra lo creado en la demo (pedidos, gastos, cuentas, cambios al menú), le pone el nombre del local
- * que se va a visitar y vuelve a cargar los datos de ejemplo. Pide confirmación porque no se puede deshacer. La base
- * solo lo permite en restaurantes de demostración.
- *
- * `conPin`: la demo tiene PIN (lo pone quien la administra, desde la base) y sin él no se reinicia. Así un visitante con
- * el enlace no la reinicia en plena visita. El PIN lo comprueba la base, no esta pantalla.
+ * Reiniciar demo (pide confirmación: no se deshace). `conPin`: la demo tiene PIN, para que un visitante con el enlace
+ * no la reinicie en plena visita; lo comprueba la base, no esta pantalla.
  */
 export function BotonReiniciar({ className, nombreActual, conPin = false }: { className?: string; nombreActual: string; conPin?: boolean }) {
   const [abierta, setAbierta] = useState(false);

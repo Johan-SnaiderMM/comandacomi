@@ -7,10 +7,8 @@ export type RespuestaBD<T> = { data: T; error: null } | { data: null; error: Err
 export type UsuarioBD = { id: string; email: string | null };
 
 /**
- * Lo único que la app necesita de la base de datos. Hay dos implementaciones con la misma forma:
- *  - Supabase (producción y desarrollo normal).
- *  - PGlite local (DEMO_BD=local, solo fuera de producción) para desarrollar sin cuenta de Supabase.
- * Toda la app habla con la base SOLO por funciones RPC (ver supabase/migrations).
+ * Lo único que la app necesita de la base, con dos implementaciones: Supabase y PGlite local (DEMO_BD=local, nunca en
+ * producción). Toda la app habla con la base SOLO por funciones RPC.
  */
 export interface BaseDatos {
   rpc<T = unknown>(nombre: string, args?: Record<string, unknown>): Promise<RespuestaBD<T>>;

@@ -3,10 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * Botón "tecla de caja registradora": borde grueso y sombra dura que se hunde al tocar.
- * Tamaños táctiles: md = 48 px, lg = 56 px. Sin hover: el feedback es el hundimiento inmediato.
- * Apagado: borde punteado, fondo gris y sin sombra, pero con el texto LEGIBLE (dice qué falta, p. ej. "Cuenta el
- * efectivo para cerrar"); antes se ponía al 40 % de opacidad y no se alcanzaba a leer.
+ * Botón "tecla de caja registradora": se hunde al tocar (sin hover). Apagado: borde punteado y fondo gris, con el texto
+ * LEGIBLE porque dice qué falta (al 40 % de opacidad no se alcanzaba a leer).
  */
 export const botonVariantes = cva(
   [

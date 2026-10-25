@@ -54,11 +54,8 @@ export function separarPlancha(pedidos: PedidoPlancha[]): { porPreparar: PedidoP
 }
 
 /**
- * Trabajo NUEVO para la cocina desde la última consulta: por cada pedido, los platos por preparar que antes no estaban.
- * Sirve para dos casos con una sola regla: el pedido que acaba de llegar (todos sus platos son nuevos) y el pedido que
- * ya estaba y al que le agregaron platos ("la mesa pidió más"). Se mira plato por plato, no pedido por pedido: mirando
- * solo el pedido, los platos agregados llegaban sin sonar.
- * Un plato que ya se había visto y vuelve a quedar por preparar (alguien lo desmarcó) no cuenta como nuevo.
+ * Platos por preparar que no estaban en la consulta anterior, plato por plato: así también suenan los que se agregan a
+ * un pedido que ya estaba. Uno que ya se había visto y alguien desmarcó no cuenta como nuevo.
  */
 export function platosNuevos(vistos: ReadonlySet<string>, pedidos: Pick<PedidoPlancha, "id" | "items">[]): { pedidoId: string; items: string[] }[] {
   return pedidos.flatMap((p) => {

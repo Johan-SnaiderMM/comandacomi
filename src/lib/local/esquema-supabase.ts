@@ -1,8 +1,6 @@
 /**
- * Lo mínimo de Supabase que las migraciones dan por existente (roles, auth.users, auth.uid()/auth.jwt()),
- * para correr TODO el SQL del proyecto en un Postgres local (PGlite) sin Docker ni cuenta de Supabase.
- * Lo usan las pruebas (src/test/base-datos.ts) y el modo local de desarrollo (DEMO_BD=local).
- * Módulo puro: sin dependencias de Next ni del servidor.
+ * Lo mínimo de Supabase que las migraciones dan por existente (roles, auth.users, auth.uid()), para correr todo el SQL
+ * en PGlite sin Docker. Lo usan las pruebas y el modo local (DEMO_BD=local).
  */
 import crypto from "node:crypto";
 import fs from "node:fs";

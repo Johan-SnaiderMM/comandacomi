@@ -35,14 +35,8 @@ const vistosEnLaPestana = new Set<string>();
 let silenciadoEnLaPestana = false;
 
 /**
- * Aviso de pedidos de clientes en línea. Mientras haya alguno por confirmar: franja grande que parpadea, sonido y
- * vibración repetidos, y el título de la pestaña titila. "Silenciar" apaga el ruido hasta que llegue otro pedido, pero
- * una franja pequeña se queda arriba hasta que se atienda (en la lista, no tapa el botón de volver).
- *
- * Importante: esto funciona con la app ABIERTA (en primer plano). Con la app cerrada hace falta una notificación push,
- * que es otro paso (ver README).
- *
- * No pregunta por su cuenta: escucha el pulso de la pestaña (`lib/pulso.ts`), que comparte con Pendientes y la plancha.
+ * Aviso de pedidos en línea por confirmar (con la app abierta): parpadea, suena y el título titila hasta que se atienden;
+ * «Silenciar» deja solo una franja chica. No pregunta por su cuenta: escucha el pulso (`lib/pulso.ts`).
  */
 export function AlertaPedidosClientes() {
   const ruta = usePathname();

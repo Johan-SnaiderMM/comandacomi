@@ -1,15 +1,6 @@
 /**
- * El pedido a medio armar, guardado en el celular. Antes vivía solo en la pantalla: tocar la alerta de un pedido nuevo,
- * una notificación, la flecha de volver o recargar lo borraba. Ahora vive aquí (en memoria y en el almacenamiento del
- * celular), así se puede salir de la pantalla y retomarlo.
- *
- * Reglas:
- *  - Se vence: pasado `vigenciaMs` desde el último cambio se descarta (un pedido viejo no debe aparecer solo).
- *  - `extra` (para el personal: para quién es el pedido) solo se conserva si hay platos. Un destino elegido sin platos
- *    no se arrastra al pedido siguiente: se volvería a mandar a la mesa equivocada sin darse cuenta.
- *  - Al enviar el pedido se llama `olvidar()`.
- *
- * Sin React: se lee con `useSyncExternalStore(a.suscribir, a.leer, () => a.vacio)`. En el servidor siempre está vacío.
+ * El pedido a medio armar, en memoria y en el celular: salir de la pantalla o recargar no lo borra. Se vence solo, y el
+ * destino (`extra`) se descarta si no hay platos, para no mandar el pedido siguiente a la mesa equivocada.
  */
 import { BORRADOR_VACIO, reducir, type Accion, type Borrador, type LineaBorrador } from "@/lib/pedido-borrador";
 import { almacenLocal, type Almacen } from "@/lib/sync/almacen";

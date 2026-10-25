@@ -47,11 +47,8 @@ export function resumenDeInicio(i: CifrasDeInicio): ResumenDeInicio {
 export type Veredicto = { titulo: string; detalle: string; tono: "bien" | "alerta" | "neutro" };
 
 /**
- * La pregunta del dueño es "¿voy ganando hoy?". Se responde en una frase, sin tecnicismos.
- * (Ganancia aproximada = ventas − gastos; en la mañana los gastos de compras suelen ir por delante.)
- *
- * `diaCerrado`: el dueño ya cerró el día de trabajo y todavía no llega la hora de corte. Sin nada nuevo no es un "día
- * sin movimiento": es un día que ya terminó.
+ * «¿Voy ganando hoy?» en una frase (ganancia aproximada = ventas − gastos). Con `diaCerrado` (ya cerró y no llega la
+ * hora de corte), sin nada nuevo no es un día sin movimiento: es un día que terminó.
  */
 export function veredictoDelDia(ventas: Pesos, gastos: Pesos, diaCerrado = false): Veredicto {
   const ganancia = ventas - gastos;

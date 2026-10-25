@@ -1,9 +1,6 @@
 /**
- * El pulso: UNA consulta periódica por pestaña, compartida por todo lo que está "en vivo" en la pantalla (el aviso de
- * pedidos en línea, Pendientes, la plancha y la copia sin conexión). Pregunta a /api/pulso, que devuelve pocos bytes
- * (la huella de los pedidos y el resumen del aviso, migración 24), y cada parte decide si con eso tiene que traer sus
- * datos. El ritmo lo piden las partes (lib/ritmo.ts): rápido si algo cambió o alguien está tocando la pantalla, cada
- * vez más espaciado mientras todo sigue igual. Con la pestaña oculta no pregunta; al volver, pregunta de una vez.
+ * El pulso: UNA consulta periódica por pestaña (`/api/pulso`: huella de los pedidos y resumen del aviso), compartida por
+ * todo lo que está en vivo, al ritmo que piden las partes (lib/ritmo.ts). Con la pestaña oculta no pregunta.
  */
 import type { ResumenPorConfirmar } from "@/lib/datos/tipos";
 import { esperaSiguiente, ritmoCombinado, type Ritmo } from "@/lib/ritmo";

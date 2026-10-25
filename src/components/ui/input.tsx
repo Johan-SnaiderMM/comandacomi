@@ -11,7 +11,8 @@ export function Input({ className, type = "text", autoComplete = "off", ...props
       type={type}
       autoComplete={autoComplete}
       className={cn(
-        "min-h-12 w-full rounded-xl border-2 border-tinta bg-papel px-3 text-base text-tinta placeholder:text-tinta-2/70",
+        // El ejemplo (placeholder) al 80 %: más claro que lo escrito, pero con 5,8:1 sobre blanco (al 70 % no llegaba a 4,5).
+        "min-h-12 w-full rounded-xl border-2 border-tinta bg-papel px-3 text-base text-tinta placeholder:text-tinta-2/80",
         "disabled:border-dashed disabled:bg-fondo disabled:text-tinta-2",
         className
       )}
@@ -26,7 +27,7 @@ export function Textarea({ className, autoComplete = "off", ...props }: React.Co
     <textarea
       autoComplete={autoComplete}
       className={cn(
-        "min-h-24 w-full rounded-xl border-2 border-tinta bg-papel px-3 py-2 text-base text-tinta placeholder:text-tinta-2/70",
+        "min-h-24 w-full rounded-xl border-2 border-tinta bg-papel px-3 py-2 text-base text-tinta placeholder:text-tinta-2/80",
         className
       )}
       {...props}

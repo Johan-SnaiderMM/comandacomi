@@ -51,10 +51,16 @@ export function ListaGastos({ dia, guardado }: { dia: GastosDelDia; guardado: nu
           {dia.gastos.map((g) => (
             <li key={g.id} className={cn("rounded-xl border-2 border-tinta bg-papel p-3", g.anulado && "bg-tinta/5")}>
               <div className="flex items-start gap-3">
-                <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-lg border-2 border-tinta bg-sol-suave", g.anulado && "opacity-50")}>
+                {/* Anulado: tachado y apagado como el resto de la app (borde punteado, fondo gris), sin transparencia. */}
+                <span
+                  className={cn(
+                    "flex size-11 shrink-0 items-center justify-center rounded-lg border-2 border-tinta",
+                    g.anulado ? "border-dashed bg-fondo text-tinta-2" : "bg-sol-suave"
+                  )}
+                >
                   <IconoCategoria nombre={ICONO[g.categoria]} className="size-6" />
                 </span>
-                <div className={cn("min-w-0 flex-1", g.anulado && "line-through opacity-60")}>
+                <div className={cn("min-w-0 flex-1", g.anulado && "line-through")}>
                   <p className="flex flex-wrap items-center gap-x-2 text-base font-bold leading-tight">
                     {ETIQUETA_CATEGORIA[g.categoria]}
                     {!g.de_caja && <Badge className="no-underline">Pagado aparte</Badge>}
@@ -62,7 +68,7 @@ export function ListaGastos({ dia, guardado }: { dia: GastosDelDia; guardado: nu
                   {g.nota && <p className="text-base text-tinta-2">{g.nota}</p>}
                   <p className="text-base text-tinta-2">{horaCorta(g.created_at)}</p>
                 </div>
-                <p className={cn("cifra text-2xl", g.anulado && "line-through opacity-60")}>{formatearPesos(g.monto)}</p>
+                <p className={cn("cifra text-2xl", g.anulado && "text-tinta-2 line-through")}>{formatearPesos(g.monto)}</p>
               </div>
 
               {g.foto_path && !g.anulado && (

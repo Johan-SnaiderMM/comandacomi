@@ -16,7 +16,6 @@
   --color-tinta-2: #3c4046; /* texto secundario: 9:1 sobre blanco */
   --color-fondo: #e8eaec;
   --color-papel: #ffffff;
-  --color-linea: #c4c9cf;
 
   --color-sol: #ffc20e; /* acción principal */
   --color-sol-suave: #fff3c4;
@@ -83,9 +82,12 @@ textarea {
   font-size: max(1rem, 16px);
 }
 
-:focus-visible {
-  outline: 3px solid var(--color-tinta);
-  outline-offset: 2px;
+/* En la capa base para que una pantalla pueda cambiarle el color (p. ej. sobre fondo negro, `focus-visible:outline-sol`). */
+@layer base {
+  :focus-visible {
+    outline: 3px solid var(--color-tinta);
+    outline-offset: 2px;
+  }
 }
 
 /* Objetivo táctil mínimo. */

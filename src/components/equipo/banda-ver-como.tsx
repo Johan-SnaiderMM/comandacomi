@@ -17,7 +17,8 @@ export function BandaVerComo({ nombre }: { nombre: string }) {
           Viendo la app como <span className="text-sol">{nombre}</span>
         </span>
       </p>
-      <button type="submit" className="min-h-12 shrink-0 rounded-xl border-2 border-papel px-3 text-base font-bold active:bg-papel/20">
+      {/* Sobre la franja negra el anillo de foco negro no se vería: aquí va amarillo. */}
+      <button type="submit" className="min-h-12 shrink-0 rounded-xl border-2 border-papel px-3 text-base font-bold active:bg-papel/20 focus-visible:outline-sol">
         Volver a dueño
       </button>
     </form>

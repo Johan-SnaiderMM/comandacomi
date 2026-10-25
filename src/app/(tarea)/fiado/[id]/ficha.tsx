@@ -44,7 +44,8 @@ export function Ficha({ ficha, restaurante }: { ficha: FichaFiado; restaurante: 
             {ficha.movimientos.map((m) => (
               <li key={m.id} className={cn("rounded-xl border-2 border-tinta bg-papel p-3", m.anulado && "bg-tinta/5")}>
                 <div className="flex items-start justify-between gap-2">
-                  <div className={cn(m.anulado && "line-through opacity-60")}>
+                  {/* Anulado: tachado, sin transparencia (al 60 % el texto gris no se alcanzaba a leer). */}
+                  <div className={cn(m.anulado && "line-through")}>
                     <p className="flex items-center gap-2 text-base font-bold">
                       <Badge variante={m.tipo === "cargo" ? "aji" : "listo"}>{m.tipo === "cargo" ? "Fiado" : "Abono"}</Badge>
                       {m.pedido_numero ? `Pedido #${m.pedido_numero}` : m.medio === "transferencia" ? "Nequi" : "Efectivo"}
@@ -54,7 +55,7 @@ export function Ficha({ ficha, restaurante }: { ficha: FichaFiado; restaurante: 
                       {m.referencia && ` · ${m.referencia}`}
                     </p>
                   </div>
-                  <p className={cn("cifra text-2xl", m.anulado && "line-through opacity-60", !m.anulado && (m.tipo === "cargo" ? "text-aji" : "text-listo"))}>
+                  <p className={cn("cifra text-2xl", m.anulado ? "text-tinta-2 line-through" : m.tipo === "cargo" ? "text-aji" : "text-listo")}>
                     {m.tipo === "cargo" ? "+" : "−"} {formatearPesos(m.monto)}
                   </p>
                 </div>

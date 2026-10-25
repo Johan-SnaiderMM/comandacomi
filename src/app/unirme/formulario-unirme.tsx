@@ -33,7 +33,7 @@ export function FormularioUnirme({ codigo = "" }: { codigo?: string }) {
         spellCheck={false}
         enterKeyHint="go"
         placeholder="K7MP-2XQ9"
-        className="h-16 w-full rounded-xl border-2 border-tinta bg-papel px-4 text-center font-mono text-3xl font-bold tracking-[0.2em] uppercase placeholder:text-tinta/25"
+        className="h-16 w-full rounded-xl border-2 border-tinta bg-papel px-4 text-center font-mono text-3xl font-bold tracking-[0.2em] uppercase placeholder:text-tinta/50"
       />
       <Button type="submit" tamano="lg" bloque disabled={pendiente || !listo}>
         {pendiente ? "Entrando…" : "Unirme al equipo"}

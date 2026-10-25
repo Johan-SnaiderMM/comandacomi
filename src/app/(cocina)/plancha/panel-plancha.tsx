@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BellOff, Check, ChefHat, ChevronLeft, CloudOff, Undo2 } from "lucide-react";
+import { Bell, BellOff, Check, ChefHat, ChevronLeft, CloudOff, Hourglass, TriangleAlert, Undo2 } from "lucide-react";
 import { deshacerPedidoListo, marcarItemListo, marcarPedidoListo } from "@/app/acciones/plancha";
 import { Aviso } from "@/components/ui/aviso";
 import type { PedidoPlancha, Plancha } from "@/lib/datos/tipos";
@@ -66,12 +66,8 @@ function suscribirSilencio(oyente: () => void): () => void {
 }
 
 /**
- * Panel de la plancha: lo que hay que cocinar, pedido por pedido y plato por plato. Un toque marca un plato listo (y el
- * cliente lo ve en su celular); cuando todos los platos de un pedido están listos, el pedido pasa solo a "listo".
- * Se actualiza sola: escucha el pulso de la pestaña (`lib/pulso.ts`, como mucho cada 8 s) y trae la plancha solo si la
- * huella de los pedidos cambió. Los pedidos nuevos llegan con sonido y vibración, y también los platos que se le
- * agregan a un pedido que ya estaba (esos quedan marcados "Agregado" hasta que se preparan).
- * Usa todo el ancho de la pantalla (tableta o celular acostado): ver `(cocina)/layout.tsx`.
+ * Plancha: un toque marca un plato listo y, con todos listos, el pedido pasa solo a "listo". Escucha el pulso y trae
+ * los pedidos solo si cambió la huella; lo nuevo (pedidos y platos agregados) llega con sonido y vibración.
  */
 export function PanelPlancha({ inicial }: { inicial: Plancha }) {
   const [datos, setDatos] = useState<Plancha>(inicial);
@@ -355,12 +351,16 @@ function TarjetaPedido({
           <span className="cifra mr-2 text-3xl">#{p.numero}</span>
           <span className="text-xl font-extrabold leading-tight">{destinoDePedido(p)}</span>
         </p>
+        {/* La urgencia se ve por el color Y por la forma (triángulo / reloj de arena): un cocinero daltónico también la distingue. */}
         <span
           className={cn(
-            "shrink-0 rounded-full border-2 border-tinta px-2.5 py-0.5 text-base font-extrabold leading-tight",
+            "flex shrink-0 items-center gap-1 rounded-full border-2 border-tinta px-2.5 py-0.5 text-base font-extrabold leading-tight",
             urgencia === "urgente" ? "bg-aji text-papel" : urgencia === "atencion" ? "bg-sol text-tinta" : "bg-papel text-tinta"
           )}
         >
+          {urgencia === "urgente" && <TriangleAlert className="size-4" strokeWidth={3} aria-hidden />}
+          {urgencia === "atencion" && <Hourglass className="size-4" strokeWidth={3} aria-hidden />}
+          {urgencia !== "normal" && <span className="sr-only">{urgencia === "urgente" ? "Urgente: " : "Atención: "}</span>}
           {textoDeEspera(espera)}
         </span>
       </div>

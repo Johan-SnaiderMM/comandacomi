@@ -8,6 +8,7 @@ import { BotonGuia } from "@/components/guia/boton-guia";
 import { BotonClave } from "@/components/sesion/boton-clave";
 import { BotonReiniciar } from "@/components/sesion/boton-reiniciar";
 import { BotonSalir } from "@/components/sesion/boton-salir";
+import { SelectorTema } from "@/components/ui/selector-tema";
 import { abre, puedeVer } from "@/lib/areas";
 import { listarEquipo } from "@/lib/datos/equipo";
 import { MARCA } from "@/lib/marca";
@@ -100,6 +101,7 @@ export default async function Mas() {
             <ChevronRight className="size-5 shrink-0" aria-hidden />
           </a>
         )}
+        <SelectorTema />
         <div className="space-y-3 pt-3">
           {contexto.restaurante?.es_demo && quien.esDueno && (
             <BotonReiniciar className={fila} nombreActual={contexto.restaurante.nombre} conPin={contexto.restaurante.reinicio_con_pin === true} />

@@ -3,7 +3,8 @@ import { Barlow_Condensed } from "next/font/google";
 import { GuiaRecorrido } from "@/components/guia/guia-recorrido";
 import { ProveedorSync } from "@/components/sync/proveedor-sync";
 import { RegistrarServiceWorker } from "@/components/pwa/registrar-sw";
-import { COLOR_TEMA, MARCA } from "@/lib/marca";
+import { COLOR_TEMA, COLOR_TEMA_OSCURO, MARCA } from "@/lib/marca";
+import { SCRIPT_TEMA } from "@/lib/tema";
 import "./globals.css";
 
 // Única fuente web: títulos y cifras grandes (dos pesos, solo latín) para cuidar la carga en gama baja.
@@ -34,14 +35,21 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1, // sin maximumScale: el zoom con los dedos sigue disponible
   viewportFit: "cover", // respeta las zonas seguras (notch, barra de gestos)
-  themeColor: COLOR_TEMA,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: COLOR_TEMA },
+    { media: "(prefers-color-scheme: dark)", color: COLOR_TEMA_OSCURO },
+  ],
   // El teclado del sistema reduce la altura de la página, así la barra de acción queda SOBRE el teclado.
   interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={barlow.variable}>
+    <html lang="es" className={barlow.variable} suppressHydrationWarning>
+      <head>
+        {/* Pone el tema elegido antes de pintar, para que no se vea un destello del otro. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body>
         {children}
         <GuiaRecorrido />

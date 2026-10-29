@@ -11,5 +11,7 @@ export const MARCA = {
 
 /** Color de la barra del sistema y del lienzo de la PWA (mismo gris que el fondo de la app). */
 export const COLOR_TEMA = "#e8eaec";
+/** Lo mismo en modo oscuro (`fondo` oscuro de globals.css). */
+export const COLOR_TEMA_OSCURO = "#121110";
 /** Amarillo de marca (íconos y pantalla de carga). */
 export const COLOR_MARCA = "#ffc20e";

@@ -15,6 +15,7 @@
   --color-tinta: #16140f;
   --color-tinta-2: #3c4046; /* texto secundario: 9:1 sobre blanco */
   --color-fondo: #e8eaec;
+  --color-marco: #16140f; /* lo que se ve fuera de la columna en pantallas grandes */
   --color-papel: #ffffff;
 
   --color-sol: #ffc20e; /* acción principal */
@@ -31,6 +32,90 @@
   --shadow-sello-chico: 0 2px 0 0 var(--color-tinta);
 }
 
+/*
+ * Modo oscuro. Sin elección, sigue al celular (`prefers-color-scheme`); en «Más → Apariencia» se puede fijar claro u
+ * oscuro (`data-tema` en <html>, ver src/lib/tema.ts). Los dos bloques de abajo llevan los MISMOS colores (una prueba lo
+ * compara). Solo en pantalla: al imprimir (el cartel del QR) sigue la paleta clara. Sobre un relleno amarillo (`bg-sol`),
+ * rojo (`bg-aji`) o verde (`bg-listo`) la letra y las líneas vuelven a su color de siempre, también las que se heredan.
+ */
+:root {
+  color-scheme: light;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    color-scheme: dark;
+    --color-tinta: #f2efe6;
+    --color-tinta-2: #c3c7cc;
+    --color-fondo: #121110;
+    --color-papel: #1f1d19;
+    --color-marco: #000000;
+    --color-sol-suave: #3d3310;
+    /* aji y listo se aclaran porque se usan como TEXTO y borde; como relleno (bg-aji, bg-listo) vuelven a su tono fuerte. */
+    --color-aji: #ff8074;
+    --color-aji-suave: #43201c;
+    --color-listo: #5fd08a;
+    --color-listo-suave: #163b26;
+  }
+  :root:not([data-tema="claro"]) .bg-sol,
+  :root:not([data-tema="claro"]) .active\:bg-sol:active {
+    --color-tinta: #16140f;
+    --color-tinta-2: #3c4046;
+    color: var(--color-tinta);
+  }
+  :root:not([data-tema="claro"]) .bg-aji {
+    --color-aji: #c8261a;
+    --color-tinta: #16140f;
+    --color-papel: #ffffff;
+    color: var(--color-papel);
+  }
+  :root:not([data-tema="claro"]) .bg-listo {
+    --color-listo: #12703a;
+    --color-tinta: #16140f;
+    --color-papel: #ffffff;
+    color: var(--color-papel);
+  }
+  :root:not([data-tema="claro"]) .alerta-parpadeo {
+    --color-tinta: #16140f;
+  }
+}
+@media screen {
+  :root[data-tema="oscuro"] {
+    color-scheme: dark;
+    --color-tinta: #f2efe6;
+    --color-tinta-2: #c3c7cc;
+    --color-fondo: #121110;
+    --color-papel: #1f1d19;
+    --color-marco: #000000;
+    --color-sol-suave: #3d3310;
+    /* aji y listo se aclaran porque se usan como TEXTO y borde; como relleno (bg-aji, bg-listo) vuelven a su tono fuerte. */
+    --color-aji: #ff8074;
+    --color-aji-suave: #43201c;
+    --color-listo: #5fd08a;
+    --color-listo-suave: #163b26;
+  }
+  :root[data-tema="oscuro"] .bg-sol,
+  :root[data-tema="oscuro"] .active\:bg-sol:active {
+    --color-tinta: #16140f;
+    --color-tinta-2: #3c4046;
+    color: var(--color-tinta);
+  }
+  :root[data-tema="oscuro"] .bg-aji {
+    --color-aji: #c8261a;
+    --color-tinta: #16140f;
+    --color-papel: #ffffff;
+    color: var(--color-papel);
+  }
+  :root[data-tema="oscuro"] .bg-listo {
+    --color-listo: #12703a;
+    --color-tinta: #16140f;
+    --color-papel: #ffffff;
+    color: var(--color-papel);
+  }
+  :root[data-tema="oscuro"] .alerta-parpadeo {
+    --color-tinta: #16140f;
+  }
+}
+
 :root {
   --tap: 3rem; /* 48 px: objetivo táctil mínimo */
   --tap-lg: 3.5rem; /* 56 px: acciones principales */
@@ -43,7 +128,7 @@
 html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
-  background: var(--color-tinta);
+  background: var(--color-marco);
 }
 
 body {

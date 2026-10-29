@@ -39,6 +39,11 @@ El enunciado completo está en `PROMPT-DEMO-RESTAURANTES.md` (solo local, no ver
   para regenerar `supabase/esquema-completo.sql` (una prueba lo verifica). Toda tabla nueva lleva `restaurante_id`
   NOT NULL + RLS (una prueba falla si no).
 - Pruebas de SQL/RLS: Postgres real en memoria con PGlite (`src/test/base-datos.ts`), no hay Docker ni CLI de Supabase.
+- Modo oscuro: sigue al celular (`prefers-color-scheme`) y se puede fijar en «Más → Apariencia» (`src/lib/tema.ts` y
+  `SelectorTema`; `data-tema` en `<html>`). Los colores salen SIEMPRE de los tokens de `globals.css`: nada de `bg-white`,
+  `text-black` ni hex sueltos. Sobre un relleno `bg-sol`, `bg-aji` o `bg-listo` la letra y las líneas vuelven a su color
+  de siempre (reglas al final de los bloques oscuros); `aji` y `listo` se aclaran en oscuro porque se usan como texto.
+  Los dos bloques oscuros llevan los mismos colores y `contraste.test.ts` mide cada par en claro y en oscuro.
 - Diseño: objetivos táctiles ≥ 48 px, texto ≥ 16 px, acciones principales abajo, sin `hover`, sin scroll horizontal.
   Verifica cada pantalla a 360×640 y 390×844. Solo bajan a 14 px (`text-sm`) las etiquetas cortas en MAYÚSCULAS, las
   insignias y lo que no cabe (la cuadrícula de categorías de gasto); las etiquetas de la barra de abajo van en 12 px.

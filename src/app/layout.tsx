@@ -29,6 +29,17 @@ export const metadata: Metadata = {
   },
   appleWebApp: { capable: true, title: MARCA.nombre, statusBarStyle: "default" },
   other: { "mobile-web-app-capable": "yes" },
+  // Vista previa al compartir el enlace (LinkedIn, WhatsApp): la imagen vive en `icons/` porque el proxy no pasa por ahí.
+  metadataBase: new URL("https://comandacomi.vercel.app"),
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: MARCA.nombre,
+    title: `${MARCA.nombre} · demo`,
+    description: "PWA para restaurantes pequeños: pedidos, fiado y cierre del día. Datos ficticios.",
+    images: [{ url: "/icons/og.png", width: 1200, height: 627, alt: "Comanda: pedidos, fiado y cierre del día para restaurantes" }],
+  },
+  twitter: { card: "summary_large_image", title: `${MARCA.nombre} · demo`, images: ["/icons/og.png"] },
 };
 
 export const viewport: Viewport = {

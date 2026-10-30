@@ -34,12 +34,12 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_CO",
-    siteName: MARCA.nombre,
-    title: `${MARCA.nombre} · demo`,
+    siteName: "Comanda",
+    title: "Comanda · demo",
     description: "PWA para restaurantes pequeños: pedidos, fiado y cierre del día. Datos ficticios.",
     images: [{ url: "/icons/og.png", width: 1200, height: 627, alt: "Comanda: pedidos, fiado y cierre del día para restaurantes" }],
   },
-  twitter: { card: "summary_large_image", title: `${MARCA.nombre} · demo`, images: ["/icons/og.png"] },
+  twitter: { card: "summary_large_image", title: "Comanda · demo", images: ["/icons/og.png"] },
 };
 
 export const viewport: Viewport = {
